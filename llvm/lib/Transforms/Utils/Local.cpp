@@ -1028,6 +1028,11 @@ CanRedirectPredsOfEmptyBBToSucc(BasicBlock *BB, BasicBlock *Succ,
   if (!BB->hasNPredecessorsOrMore(2))
     return false;
 
+  if (any_of(BBPreds, [](const BasicBlock *Pred) {
+        return isa<IndirectBrInst>(Pred->getTerminator());
+      }))
+    return false;
+
   // Get the single common predecessor of both BB and Succ. Return false
   // when there are more than one common predecessors.
   for (BasicBlock *SuccPred : SuccPreds) {
