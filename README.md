@@ -1,2 +1,2 @@
-# rust_llvm-arkari_ollvm
- merge rust-lang's llvm and KomiMoe's Arkari-ollvm to produce rustc obfuscated llvm
+# rust_llvm-hikari_ollvm
+ merge rust-lang's llvm and 61bcdefg's Hikari-ollvm to produce rustc obfuscated llvm
