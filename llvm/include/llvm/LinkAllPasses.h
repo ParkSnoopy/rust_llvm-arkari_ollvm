@@ -60,7 +60,7 @@ namespace {
       if (std::getenv("bar") != (char*) -1)
         return;
 
-      (void)llvm::createAtomicExpandLegacyPass();
+      (void) llvm::createAtomicExpandLegacyPass();
       (void) llvm::createBasicAAWrapperPass();
       (void) llvm::createSCEVAAWrapperPass();
       (void) llvm::createTypeBasedAAWrapperPass();
@@ -97,10 +97,10 @@ namespace {
       (void) llvm::createNaryReassociatePass();
       (void) llvm::createObjCARCContractPass();
       (void) llvm::createPromoteMemoryToRegisterPass();
-      (void)llvm::createPostDomOnlyPrinterWrapperPassPass();
-      (void)llvm::createPostDomPrinterWrapperPassPass();
-      (void)llvm::createPostDomOnlyViewerWrapperPassPass();
-      (void)llvm::createPostDomViewerWrapperPassPass();
+      (void) llvm::createPostDomOnlyPrinterWrapperPassPass();
+      (void) llvm::createPostDomPrinterWrapperPassPass();
+      (void) llvm::createPostDomOnlyViewerWrapperPassPass();
+      (void) llvm::createPostDomViewerWrapperPassPass();
       (void) llvm::createReassociatePass();
       (void) llvm::createRegionInfoPass();
       (void) llvm::createRegionOnlyPrinterPass();
@@ -111,16 +111,16 @@ namespace {
       (void) llvm::createSROAPass();
       (void) llvm::createSingleLoopExtractorPass();
       (void) llvm::createTailCallEliminationPass();
-      (void)llvm::createTLSVariableHoistPass();
+      (void) llvm::createTLSVariableHoistPass();
       (void) llvm::createConstantHoistingPass();
-      (void)llvm::createCodeGenPrepareLegacyPass();
+      (void) llvm::createCodeGenPrepareLegacyPass();
       (void) llvm::createPostInlineEntryExitInstrumenterPass();
       (void) llvm::createEarlyCSEPass();
       (void) llvm::createGVNPass();
       (void) llvm::createPostDomTree();
       (void) llvm::createMergeICmpsLegacyPass();
       (void) llvm::createExpandLargeDivRemPass();
-      (void)llvm::createExpandMemCmpLegacyPass();
+      (void) llvm::createExpandMemCmpLegacyPass();
       (void) llvm::createExpandVectorPredicationPass();
       std::string buf;
       llvm::raw_string_ostream os(buf);
@@ -134,12 +134,12 @@ namespace {
       (void) llvm::createSpeculativeExecutionPass();
       (void) llvm::createSpeculativeExecutionIfHasBranchDivergencePass();
       (void) llvm::createStraightLineStrengthReducePass();
-      (void)llvm::createScalarizeMaskedMemIntrinLegacyPass();
+      (void) llvm::createScalarizeMaskedMemIntrinLegacyPass();
       (void) llvm::createHardwareLoopsLegacyPass();
       (void) llvm::createUnifyLoopExitsPass();
       (void) llvm::createFixIrreduciblePass();
-      (void)llvm::createSelectOptimizePass();
-      (void)llvm::createObfuscationPassManager();
+      (void) llvm::createSelectOptimizePass();
+      (void) llvm::createObfuscationPassManager();
 
       (void)new llvm::ScalarEvolutionWrapperPass();
       llvm::Function::Create(nullptr, llvm::GlobalValue::ExternalLinkage)->viewCFGOnly();
