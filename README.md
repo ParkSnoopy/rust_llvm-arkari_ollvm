@@ -15,32 +15,29 @@ cmake --build . --target install
 
 ## Used Version
 `rust-lang` one used just before the commit [`Bump version to 19.1.4`](https://github.com/rust-lang/llvm-project/commit/a3f0f1d004a61ef94c115e7e28863ce0b476aa99) to match `Komimoe`'s latest `19.X` oLLVM
-- repo `rust-lang/llvm-project`, branch `rustc/20.1-2025-02-13`, commit [`ab51eccf88f5321e7c60591c5546b254b6afab99`](https://github.com/rust-lang/llvm-project/commit/ab51eccf88f5321e7c60591c5546b254b6afab99)
+- repo `rust-lang/llvm-project`, branch `rustc/19.1-2024-12-03`, commit [`ab51eccf88f5321e7c60591c5546b254b6afab99`](https://github.com/rust-lang/llvm-project/commit/ab51eccf88f5321e7c60591c5546b254b6afab99)
 - repo `KomiMoe/Arkari`, branch `llvm-19.x`, commit [`d3d013d088b23d901d3af7a84cc730d6c940b5d3`](https://github.com/KomiMoe/Arkari/commit/d3d013d088b23d901d3af7a84cc730d6c940b5d3)
 
 ## Used Config
 `config.toml` for building `rust-lang/rust`
 
 ```toml
+change-id = 999999
+
 [llvm]
 download-ci-llvm = false
 optimize = true
-# If using Visual Studio Installer, specifying the build tool as Ninja could cause a linking error.
-# Ninja is fast, but what we need here is a stable build environment, not a speedy build failure.
-ninja = false
+ninja = true
 targets = "X86"
-experimental-targets = ""
+use-linker = "C:/path/to/-DCMAKE_INSTALL_PREFIX/bin/lld.exe"
 
 [rust]
 debug = false
-channel = "dev"
-codegen-backends = ["llvm"]
+channel = "nightly"
 
 [build]
 target = ["x86_64-pc-windows-gnu"]
-tools = [
-    "cargo",
-]
+extended = false
 
 [target.x86_64-pc-windows-gnu]
 llvm-config = "C:/path/to/-DCMAKE_INSTALL_PREFIX/bin/llvm-config.exe"
@@ -49,7 +46,6 @@ llvm-filecheck = "C:/path/to/-DCMAKE_INSTALL_PREFIX/bin/FileCheck.exe"
 <br>
 
 ## How this was built
-> [This article was the most helpful one](https://vrls.ws/posts/2023/06/obfuscating-rust-binaries-using-llvm-obfuscator-ollvm/)
 <br>
 
 Clone all resources:
@@ -70,25 +66,24 @@ and I don't want to make trouble with LLVM version. <br>
 `cat` output should be like below:
 
 ```cmake
-   1   │ # The LLVM Version number information
-   2   │
-   3   │ if(NOT DEFINED LLVM_VERSION_MAJOR)
-   4   │   set(LLVM_VERSION_MAJOR 19)
-   5   │ endif()
-   6   │ if(NOT DEFINED LLVM_VERSION_MINOR)
-   7   │   set(LLVM_VERSION_MINOR 1)
-   8   │ endif()
-   9   │ if(NOT DEFINED LLVM_VERSION_PATCH)
-  10   │   set(LLVM_VERSION_PATCH 3)
-  11   │ endif()
-  12   │ if(NOT DEFINED LLVM_VERSION_SUFFIX)
-  13   │   set(LLVM_VERSION_SUFFIX)
-  14   │ endif()
-  15   │ 
+# The LLVM Version number information
+
+if(NOT DEFINED LLVM_VERSION_MAJOR)
+  set(LLVM_VERSION_MAJOR 19)
+endif()
+if(NOT DEFINED LLVM_VERSION_MINOR)
+  set(LLVM_VERSION_MINOR 1)
+endif()
+if(NOT DEFINED LLVM_VERSION_PATCH)
+  set(LLVM_VERSION_PATCH 3)
+endif()
+if(NOT DEFINED LLVM_VERSION_SUFFIX)
+  set(LLVM_VERSION_SUFFIX)
+endif()
 ```
 <br>
 
-After all this, simply copy-paste from `arkari-ollvm-19/llvm` to `rust-llvm-19` <br>
+After all this, simply copy-paste **without overwrite** from `arkari-ollvm-19/llvm` to `rust-llvm-19` <br>
 and check for leftover diff
 
 ```bash
@@ -97,12 +92,20 @@ git diff rust-llvm-19/llvm arkari-ollvm-19/llvm > diff.patch
 ```
 
 Now check for the `diff.patch` file and update all files one-by-one. <br>
-Actually, there is not that much to update. <br>
+Actually, there is not that much to update between this two LLVMs version. <br>
 <br>
 And there are some missing updates, so I've struggled with it for a long time...<br>
 <br>
-That's it! <br>
+What we should update is these: <br>
+```txt
+llvm/include/llvm/LinkAllPasses.h
+llvm/lib/Passes/CMakeLists.txt
+llvm/lib/Passes/PassBuilderPipelines.cpp
+llvm/lib/Transforms/CMakeLists.txt
+llvm/tools/bugpoint/CMakeLists.txt
+llvm/tools/opt/CMakeLists.txt
+```
+<br>
 Afterward job is identical with [This article](https://vrls.ws/posts/2023/06/obfuscating-rust-binaries-using-llvm-obfuscator-ollvm/)'s **Bootstrapping Rust Compiler** Section. <br>
 <br>
-Just a few hours to wait for facing LLVM build failure, <br>
-or another few hours to face `x.py` complete unsuccessfully while compiling `rustc_driver`! <br>
+Just a few hours to wait for facing LLVM build failure. <br>
