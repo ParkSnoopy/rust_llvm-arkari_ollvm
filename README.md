@@ -50,11 +50,13 @@ llvm-filecheck = "C:/path/to/-DCMAKE_INSTALL_PREFIX/bin/FileCheck.exe"
 ## How this was built
 
 Clone all resources: 
+> Do not use `--depth 1` when `rust-lang/llvm-project`'s LLVM version and `KomiMoe/Arkari`'s LLVM version not match
+> You may have to `git reset --hard <commit-hash>` to desired LLVM version
 
 ```sh
-git clone --single-branch --branch 1.88.0 --depth 1 https://github.com/rust-lang/rust rust-1.88.0
-git clone --single-branch --branch rustc/20.1-2025-02-13 --recursive https://github.com/rust-lang/llvm-project rust-llvm-20
-git clone --single-branch --branch llvm-20.x --recursive --depth 1 https://github.com/KomiMoe/Arkari arkari-ollvm-20
+git clone --depth 1 --single-branch --branch 1.88.0 https://github.com/rust-lang/rust rust-1.88.0
+git clone --depth 1 --single-branch --branch rustc/20.1-2025-02-13 --recursive https://github.com/rust-lang/llvm-project rust-llvm-20
+git clone --depth 1 --single-branch --branch llvm-20.x --recursive https://github.com/KomiMoe/Arkari arkari-ollvm-20
 ```
 
 Copy-Paste **WITHOUT OVERWRITE** from `arkari-ollvm-20/llvm` to `rust-llvm-20/llvm`
