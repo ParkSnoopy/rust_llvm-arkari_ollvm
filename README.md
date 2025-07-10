@@ -10,9 +10,6 @@ cmake --build .
 cmake --build . --target install
 ```
 
-## Status
-
-
 ## Used Version
 `rust-lang` one used just before the commit [`Bump version to 19.1.4`](https://github.com/rust-lang/llvm-project/commit/a3f0f1d004a61ef94c115e7e28863ce0b476aa99) to match `Komimoe`'s latest `19.X` oLLVM
 - repo `rust-lang/llvm-project`, branch `rustc/19.1-2024-12-03`, commit [`ab51eccf88f5321e7c60591c5546b254b6afab99`](https://github.com/rust-lang/llvm-project/commit/ab51eccf88f5321e7c60591c5546b254b6afab99)
@@ -43,7 +40,6 @@ extended = false
 llvm-config = "C:/path/to/-DCMAKE_INSTALL_PREFIX/bin/llvm-config.exe"
 llvm-filecheck = "C:/path/to/-DCMAKE_INSTALL_PREFIX/bin/FileCheck.exe"
 ```
-<br>
 
 ## How this was built
 <br>
@@ -83,7 +79,7 @@ endif()
 ```
 <br>
 
-After all this, simply copy-paste **without overwrite** from `arkari-ollvm-19/llvm` to `rust-llvm-19` <br>
+After all this, simply copy-paste **WITHOUT OVERWRITE** from `arkari-ollvm-19/llvm` to `rust-llvm-19/llvm` <br>
 and check for leftover diff
 
 ```bash
