@@ -105,7 +105,5 @@ llvm/lib/Transforms/CMakeLists.txt
 llvm/tools/bugpoint/CMakeLists.txt
 llvm/tools/opt/CMakeLists.txt
 ```
-<br>
-Afterward job is identical with [This article](https://vrls.ws/posts/2023/06/obfuscating-rust-binaries-using-llvm-obfuscator-ollvm/) 's **Bootstrapping Rust Compiler** Section. <br>
-<br>
-Just a few hours to wait for facing LLVM build failure. <br>
+
+Afterward job is identical with [This article](https://vrls.ws/posts/2023/06/obfuscating-rust-binaries-using-llvm-obfuscator-ollvm/)'s **Bootstrapping Rust Compiler** Section. 
