@@ -58,13 +58,14 @@ add_llvm_component_library(LLVMJITLink
   OrcTargetProcess
   Support
   TargetParser
+  ExecutionEngine
   )
 
-target_link_libraries(LLVMJITLink
-  PRIVATE
-  LLVMObject
-  LLVMOrcShared
-  LLVMOrcTargetProcess
-  LLVMSupport
-  LLVMTargetParser
-)
+#target_link_libraries(LLVMJITLink
+#  PRIVATE
+#  LLVMObject
+#  LLVMOrcShared
+#  LLVMOrcTargetProcess
+#  LLVMSupport
+#  LLVMTargetParser
+#)
