@@ -60,6 +60,7 @@ namespace {
       if (std::getenv("bar") != (char*) -1)
         return;
 
+      (void) llvm::createObfuscationPassManager();
       (void) llvm::createAtomicExpandLegacyPass();
       (void) llvm::createBasicAAWrapperPass();
       (void) llvm::createSCEVAAWrapperPass();
@@ -139,7 +140,6 @@ namespace {
       (void) llvm::createUnifyLoopExitsPass();
       (void) llvm::createFixIrreduciblePass();
       (void) llvm::createSelectOptimizePass();
-      (void) llvm::createObfuscationPassManager();
 
       (void)new llvm::ScalarEvolutionWrapperPass();
       llvm::Function::Create(nullptr, llvm::GlobalValue::ExternalLinkage)->viewCFGOnly();

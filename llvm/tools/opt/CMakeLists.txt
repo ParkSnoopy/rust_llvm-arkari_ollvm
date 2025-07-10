@@ -27,6 +27,7 @@ set(LLVM_LINK_COMPONENTS
   TransformUtils
   Vectorize
   Passes
+  Obfuscation
   )
 
 # We don't want to link this into libLLVM

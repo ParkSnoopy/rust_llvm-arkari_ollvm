@@ -1754,8 +1754,6 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
 
   invokeFullLinkTimeOptimizationEarlyEPCallbacks(MPM, Level);
 
-  MPM.addPass(ObfuscationPassManagerPass());
-
   // Create a function that performs CFI checks for cross-DSO calls with targets
   // in the current module.
   MPM.addPass(CrossDSOCFIPass());
