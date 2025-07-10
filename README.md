@@ -1,44 +1,89 @@
-# The LLVM Compiler Infrastructure
+# rust LLVM + Arkari obfuscation module
+merge rust-lang's [llvm-project](https://github.com/rust-lang/llvm-project) and KomiMoe's [Arkari](https://github.com/KomiMoe/Arkari) to produce obfuscated llvm, which can be used as rustc backend
 
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/llvm/llvm-project/badge)](https://securityscorecards.dev/viewer/?uri=github.com/llvm/llvm-project)
-[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/8273/badge)](https://www.bestpractices.dev/projects/8273)
-[![libc++](https://github.com/llvm/llvm-project/actions/workflows/libcxx-build-and-test.yaml/badge.svg?branch=main&event=schedule)](https://github.com/llvm/llvm-project/actions/workflows/libcxx-build-and-test.yaml?query=event%3Aschedule)
+## Issue
+Using the `-mllvm --irobf-cff` flag with the `windows-rs` crate compile failed. <br>
+Maybe some obfuscation flag can cause incompatibility with the crate used in the project. <br>
 
-Welcome to the LLVM project!
+## How to Build
+- I used `-DCMAKE_INSTALL_PREFIX="./Release"` because it seemed like `rust-lang/rust`'s [`x.py`](https://github.com/rust-lang/rust/blob/1.86.0/x.py) assumed it
+```
+cmake /path/to/llvm-project/llvm -DCMAKE_INSTALL_PREFIX="./Release" -DLLVM_ENABLE_PROJECTS="clang;lld;" -DLLVM_TARGETS_TO_BUILD="X86" -DLLVM_INSTALL_UTILS=ON -DLLVM_INCLUDE_TESTS=OFF -DLLVM_BUILD_TESTS=OFF -DLLVM_INCLUDE_BENCHMARKS=OFF -DLLVM_BUILD_BENCHMARKS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_ENABLE_BACKTRACES=OFF -DLLVM_BUILD_DOCS=OFF -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+cmake --build .
+cmake --build . --target install
+```
 
-This repository contains the source code for LLVM, a toolkit for the
-construction of highly optimized compilers, optimizers, and run-time
-environments.
+## Used Version
+- repo `rust-lang/llvm-project`, branch `rustc/20.1-2025-02-13`, commit [`99f0e05`](https://github.com/rust-lang/llvm-project/commit/99f0e0531688a822a753cc585b7408b069cb6822)
+- repo `KomiMoe/Arkari`, branch `llvm-20.x`, commit [`f0ae579`](https://github.com/KomiMoe/Arkari/commit/f0ae579eb730140b109a7a861002e1d7064edbd0)
 
-The LLVM project has multiple components. The core of the project is
-itself called "LLVM". This contains all of the tools, libraries, and header
-files needed to process intermediate representations and convert them into
-object files. Tools include an assembler, disassembler, bitcode analyzer, and
-bitcode optimizer.
+## Used Config
+`config.toml` for building `rust-lang/rust`
 
-C-like languages use the [Clang](https://clang.llvm.org/) frontend. This
-component compiles C, C++, Objective-C, and Objective-C++ code into LLVM bitcode
--- and from there into object files, using LLVM.
+```toml
+change-id = 999999
 
-Other components include:
-the [libc++ C++ standard library](https://libcxx.llvm.org),
-the [LLD linker](https://lld.llvm.org), and more.
+[llvm]
+download-ci-llvm = false
+optimize = true
+ninja = true
+targets = "X86"
+use-linker = "C:/path/to/-DCMAKE_INSTALL_PREFIX/bin/lld.exe"
 
-## Getting the Source Code and Building LLVM
+[rust]
+debug = false
+channel = "nightly"
 
-Consult the
-[Getting Started with LLVM](https://llvm.org/docs/GettingStarted.html#getting-the-source-code-and-building-llvm)
-page for information on building and running LLVM.
+[build]
+target = ["x86_64-pc-windows-msvc"]
+extended = false
 
-For information on how to contribute to the LLVM project, please take a look at
-the [Contributing to LLVM](https://llvm.org/docs/Contributing.html) guide.
+[target.x86_64-pc-windows-gnu]
+llvm-config = "C:/path/to/-DCMAKE_INSTALL_PREFIX/bin/llvm-config.exe"
+llvm-filecheck = "C:/path/to/-DCMAKE_INSTALL_PREFIX/bin/FileCheck.exe"
 
-## Getting in touch
+[target.x86_64-pc-windows-msvc]
+llvm-config = "C:/path/to/-DCMAKE_INSTALL_PREFIX/bin/llvm-config.exe"
+llvm-filecheck = "C:/path/to/-DCMAKE_INSTALL_PREFIX/bin/FileCheck.exe"
+```
 
-Join the [LLVM Discourse forums](https://discourse.llvm.org/), [Discord
-chat](https://discord.gg/xS7Z362),
-[LLVM Office Hours](https://llvm.org/docs/GettingInvolved.html#office-hours) or
-[Regular sync-ups](https://llvm.org/docs/GettingInvolved.html#online-sync-ups).
+## How this was built
 
-The LLVM project has adopted a [code of conduct](https://llvm.org/docs/CodeOfConduct.html) for
-participants to all modes of communication within the project.
+Clone all resources: 
+
+```sh
+git clone --single-branch --branch 1.88.0 --depth 1 https://github.com/rust-lang/rust rust-1.88.0
+git clone --single-branch --branch rustc/20.1-2025-02-13 --recursive https://github.com/rust-lang/llvm-project rust-llvm-20
+git clone --single-branch --branch llvm-20.x --recursive --depth 1 https://github.com/KomiMoe/Arkari arkari-ollvm-20
+```
+
+Copy-Paste **WITHOUT OVERWRITE** from `arkari-ollvm-20/llvm` to `rust-llvm-20/llvm`
+
+```sh
+cp -r --no-clobber arkari-ollvm-20/llvm rust-llvm-20/llvm
+```
+
+Check for diff and modify patch file
+
+```sh
+cd rust-llvm-19
+git diff --no-prefix ./llvm ../arkari-ollvm-19/llvm > ../diff-llvm.patch
+git diff --no-prefix ./clang ../arkari-ollvm-19/clang > ../diff-clang.patch
+```
+
+Remove all diffs except **all** **`CMakeLists.txt`** **and these:**
+
+```txt
+llvm/include/llvm/LinkAllPasses.h
+llvm/lib/Passes/PassBuilderPipelines.cpp
+```
+
+Apply
+
+```sh
+patch -p0 < ../diff-clang.patch
+patch -p0 < ../diff-llvm.patch
+cd ..
+```
+
+Afterward is identical with [This article](https://vrls.ws/posts/2023/06/obfuscating-rust-binaries-using-llvm-obfuscator-ollvm/)'s **Bootstrapping Rust Compiler** Section. 
