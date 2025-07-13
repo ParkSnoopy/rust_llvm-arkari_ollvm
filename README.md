@@ -29,7 +29,9 @@ download-ci-llvm = false
 optimize = true
 ninja = true
 targets = "X86"
-use-linker = "C:/path/to/-DCMAKE_INSTALL_PREFIX/bin/lld.exe"
+use-linker = "/path/to/-DCMAKE_INSTALL_PREFIX/bin/lld.exe"
+# maybe gcc doesn't accept absolute path lld
+clang = true
 
 [rust]
 debug = false
@@ -46,6 +48,10 @@ llvm-filecheck = "C:/path/to/-DCMAKE_INSTALL_PREFIX/bin/FileCheck.exe"
 [target.x86_64-pc-windows-msvc]
 llvm-config = "C:/path/to/-DCMAKE_INSTALL_PREFIX/bin/llvm-config.exe"
 llvm-filecheck = "C:/path/to/-DCMAKE_INSTALL_PREFIX/bin/FileCheck.exe"
+
+[target.x86_64-unknown-linux-gnu]
+llvm-config = "/path/to/-DCMAKE_INSTALL_PREFIX/bin/llvm-config"
+llvm-filecheck = "/path/to/-DCMAKE_INSTALL_PREFIX/bin/FileCheck.exe"
 ```
 
 ## How this was built
@@ -69,9 +75,9 @@ cp -r --no-clobber arkari-ollvm-20/llvm rust-llvm-20/llvm
 Check for diff and modify patch file
 
 ```sh
-cd rust-llvm-19
-git diff --no-prefix ./llvm ../arkari-ollvm-19/llvm > ../diff-llvm.patch
-git diff --no-prefix ./clang ../arkari-ollvm-19/clang > ../diff-clang.patch
+cd rust-llvm-20
+git diff --no-prefix ./llvm ../arkari-ollvm-20/llvm > ../diff-llvm.patch
+git diff --no-prefix ./clang ../arkari-ollvm-20/clang > ../diff-clang.patch
 ```
 
 Remove all diffs except **all** **`CMakeLists.txt`** **and these:**
