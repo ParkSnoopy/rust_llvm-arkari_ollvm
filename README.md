@@ -1,5 +1,5 @@
 # rust LLVM + Arkari obfuscation module
-merge rust-lang's [llvm-project](https://github.com/rust-lang/llvm-project) and KomiMoe's [Arkari](https://github.com/KomiMoe/Arkari) to produce obfuscated llvm, which can be used as rustc backend
+merge rust-lang's [llvm-project](https://github.com/rust-lang/llvm-project) and KomiMoe's [Arkari fork](https://github.com/ParkSnoopy/Arkari) to produce obfuscated llvm, which can be used as rustc backend
 
 ## Issue
 Maybe some obfuscation flag can cause incompatibility with the crate used in the project. <br>
