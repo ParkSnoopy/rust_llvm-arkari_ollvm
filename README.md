@@ -2,8 +2,9 @@
 merge rust-lang's [llvm-project](https://github.com/rust-lang/llvm-project) and KomiMoe's [Arkari](https://github.com/KomiMoe/Arkari) to produce obfuscated llvm, which can be used as rustc backend
 
 ## Issue
-Using the `-mllvm --irobf-cff` flag with the `windows-rs` crate compile failed. <br>
 Maybe some obfuscation flag can cause incompatibility with the crate used in the project. <br>
+- Using the `-mllvm --irobf-cff` flag with the `windows-rs` crate compile failed. 
+- Using the `-mllvm --irobf-cie` flag with the `nu-plugin-engine` crate compile failed. (out of memory)
 
 ## How to Build
 - I used `-DCMAKE_INSTALL_PREFIX="./Release"` because it seemed like `rust-lang/rust`'s [`x.py`](https://github.com/rust-lang/rust/blob/1.86.0/x.py) assumed it
