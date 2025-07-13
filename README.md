@@ -1,6 +1,41 @@
 # rust LLVM + Arkari obfuscation module
 merge rust-lang's [llvm-project](https://github.com/rust-lang/llvm-project) and KomiMoe's [Arkari fork](https://github.com/ParkSnoopy/Arkari) to produce obfuscated llvm, which can be used as rustc backend
 
+# HOW TO USE
+- Linux:
+```
+rustup toolchain link <toolchain name> </path/to/extracted/stage1>
+RUSTFLAGS="-Cllvm-args=-irobf -Cllvm-args=--irobf-indbr -Cllvm-args=--irobf-icall -Cllvm-args=--irobf-indgv ...[and more options you want]" cargo +<toolchain name> build --release
+```
+- Windows:
+At first, link toolchain
+```cmd
+rustup toolchain link <toolchain name> <C:\path\to\extracted\stage1>
+```
+
+And use like: 
+```cmd
+set RUSTFLAGS=-Cllvm-args=-irobf -Cllvm-args=--irobf-indbr -Cllvm-args=--irobf-icall -Cllvm-args=--irobf-indgv ...[and more options you want]
+cargo +<toolchain name> build --release
+```
+
+Better to save the script like below as `.bat` script and name like `obfs-cargo`  
+Obfuscation module v1.7.0 supports JSON config. Check the [original repo](https://github.com/komimoe/arkari?tab=readme-ov-file#%E9%80%9A%E8%BF%87%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%E7%AE%A1%E7%90%86%E6%B7%B7%E6%B7%86%E5%8F%82%E6%95%B0) for more info. 
+```bat
+@echo off
+shift
+set RUSTFLAGS_BAK=%RUSTFLAGS%
+set RUSTFLAGS=-Cllvm-args=-irobf -Cllvm-args=--irobf-indbr -Cllvm-args=--irobf-icall -Cllvm-args=--irobf-indgv ...[and more options you want]
+cargo %*
+set RUSTFLAGS=%RUSTFLAGS_BAK%
+set RUSTFLAGS_BAK=
+```
+and then use like: 
+```cmd
+obfs-cargo +<toolchain name> build --release
+```
+
+
 ## Issue
 Maybe some obfuscation flag can cause incompatibility with the crate used in the project. <br>
 - Using the `-mllvm --irobf-cff` flag with the `windows-rs` crate compile failed. 
