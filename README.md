@@ -29,7 +29,7 @@ download-ci-llvm = false
 optimize = true
 ninja = true
 targets = "X86"
-use-linker = "/path/to/-DCMAKE_INSTALL_PREFIX/bin/lld.exe"
+use-linker = "/path/to/-DCMAKE_INSTALL_PREFIX/bin/lld"
 # maybe gcc doesn't accept absolute path lld
 clang = true
 
@@ -51,7 +51,7 @@ llvm-filecheck = "C:/path/to/-DCMAKE_INSTALL_PREFIX/bin/FileCheck.exe"
 
 [target.x86_64-unknown-linux-gnu]
 llvm-config = "/path/to/-DCMAKE_INSTALL_PREFIX/bin/llvm-config"
-llvm-filecheck = "/path/to/-DCMAKE_INSTALL_PREFIX/bin/FileCheck.exe"
+llvm-filecheck = "/path/to/-DCMAKE_INSTALL_PREFIX/bin/FileCheck"
 ```
 
 ## How this was built
