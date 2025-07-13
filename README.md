@@ -2,12 +2,12 @@
 merge rust-lang's [llvm-project](https://github.com/rust-lang/llvm-project) and KomiMoe's [Arkari fork](https://github.com/ParkSnoopy/Arkari) to produce obfuscated llvm, which can be used as rustc backend
 
 # HOW TO USE
-- Linux:
+### Linux:
 ```
 rustup toolchain link <toolchain name> </path/to/extracted/stage1>
 RUSTFLAGS="-Cllvm-args=-irobf -Cllvm-args=--irobf-indbr -Cllvm-args=--irobf-icall -Cllvm-args=--irobf-indgv ...[and more options you want]" cargo +<toolchain name> build --release
 ```
-- Windows:
+### Windows:
 At first, link toolchain
 ```cmd
 rustup toolchain link <toolchain name> <C:\path\to\extracted\stage1>
