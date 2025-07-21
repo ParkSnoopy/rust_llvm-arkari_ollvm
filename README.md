@@ -40,6 +40,8 @@ obfs-cargo +<toolchain name> build --release
 Maybe some obfuscation flag can cause incompatibility with the crate used in the project. <br>
 - Using the `-mllvm --irobf-cff` flag with the `windows-rs` crate compile failed. 
 - Using the `-mllvm --irobf-cie` flag with the `nu-plugin-engine` crate compile failed. (out of memory)
+- Using the `-mllvm --irobf-cff` flag with the `rand` crate compile failed. (exit code: 0xc0000005, STATUS_ACCESS_VIOLATION)
+- Using the `-mllvm --irobf-cff` flag with the `clap` crate compile failed. (exit code: 0xc0000005, STATUS_ACCESS_VIOLATION) (seems like `windows-rs` in deps)
 
 ## How to Build
 - I used `-DCMAKE_INSTALL_PREFIX="./Release"` because it seemed like `rust-lang/rust`'s [`x.py`](https://github.com/rust-lang/rust/blob/1.86.0/x.py) assumed it
