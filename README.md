@@ -1,7 +1,7 @@
 # rust LLVM + Arkari obfuscation module
 merge rust-lang's [llvm-project](https://github.com/rust-lang/llvm-project) and KomiMoe's [Arkari fork](https://github.com/ParkSnoopy/Arkari) to produce obfuscated llvm, which can be used as rustc backend
 
-# HOW TO USE
+# 🕹️ HOW TO USE
 ### Linux:
 ```
 rustup toolchain link <toolchain name> </path/to/extracted/stage1>
@@ -13,7 +13,7 @@ At first, link toolchain
 rustup toolchain link <toolchain name> <C:\path\to\extracted\stage1>
 ```
 
-And use like: 
+And use by set `RUSTFLAGS` and run `cargo` with linked toolchain: 
 ```cmd
 set RUSTFLAGS=-Cllvm-args=-irobf -Cllvm-args=--irobf-indbr -Cllvm-args=--irobf-icall -Cllvm-args=--irobf-indgv ...[and more options you want]
 cargo +<toolchain name> build --release
@@ -24,11 +24,9 @@ Obfuscation module v1.7.0 supports JSON config. Check the [original repo](https:
 ```bat
 @echo off
 shift
-set RUSTFLAGS_BAK=%RUSTFLAGS%
 set RUSTFLAGS=-Cllvm-args=-irobf -Cllvm-args=--irobf-indbr -Cllvm-args=--irobf-icall -Cllvm-args=--irobf-indgv ...[and more options you want]
 cargo %*
-set RUSTFLAGS=%RUSTFLAGS_BAK%
-set RUSTFLAGS_BAK=
+set RUSTFLAGS=
 ```
 and then use like: 
 ```cmd
@@ -36,14 +34,34 @@ obfs-cargo +<toolchain name> build --release
 ```
 
 
-## Issue
+## 🚧 Issue
+### 🥀 32-bit binary
+- On Windows
+  Although LLVM `PE32 executable` is successfully produced,  
+  but whatever I configure, it produces `PE32+ executable` rustc binary  
+- On Linux  
+  While trying to compile on `i386/debian:12` docker container, got error.  
+  and I'm not familiar with c++ and LLVM. No idea and not daring to fix it.  
+```cpp
+In file included from /root/rust_llvm-arkari_ollvm/llvm/lib/Transforms/Obfuscation/ObfuscationPassManager.cpp:6:
+/root/rust_llvm-arkari_ollvm/llvm/include/llvm/Transforms/Obfuscation/ObfuscationOptions.h: In member function 'llvm::SmallVector<std::shared_ptr<llvm::ObfOpt> > llvm::ObfuscationOptions::getAllOpt() const':
+/root/rust_llvm-arkari_ollvm/llvm/include/llvm/Transforms/Obfuscation/ObfuscationOptions.h:97:12: error: could not convert 'allOpt' from 'SmallVector<[...],7>' to 'SmallVector<[...],6>'
+ninja: build stopped: subcommand failed.
+```
+  
+  
+### 💥 Incompatibility
 Maybe some obfuscation flag can cause incompatibility with the crate used in the project. <br>
 - Using the `-mllvm --irobf-cff` flag with the `windows-rs` crate compile failed. 
 - Using the `-mllvm --irobf-cie` flag with the `nu-plugin-engine` crate compile failed. (out of memory)
 - Using the `-mllvm --irobf-cff` flag with the `rand` crate compile failed. (exit code: 0xc0000005, STATUS_ACCESS_VIOLATION)
 - Using the `-mllvm --irobf-cff` flag with the `clap` crate compile failed. (exit code: 0xc0000005, STATUS_ACCESS_VIOLATION) (seems like `anstream` `clap_lex` `proc-macro2` `windows-sys` ...and more is not compatible)
 
-## How to Build
+<br>  
+<br>  
+
+---
+# 🛠️ How to Build
 - I used `-DCMAKE_INSTALL_PREFIX="./Release"` because it seemed like `rust-lang/rust`'s [`x.py`](https://github.com/rust-lang/rust/blob/1.86.0/x.py) assumed it
 ```
 cmake /path/to/llvm-project/llvm -DCMAKE_INSTALL_PREFIX="./Release" -DLLVM_ENABLE_PROJECTS="clang;lld;" -DLLVM_TARGETS_TO_BUILD="X86" -DLLVM_INSTALL_UTILS=ON -DLLVM_INCLUDE_TESTS=OFF -DLLVM_BUILD_TESTS=OFF -DLLVM_INCLUDE_BENCHMARKS=OFF -DLLVM_BUILD_BENCHMARKS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_ENABLE_BACKTRACES=OFF -DLLVM_BUILD_DOCS=OFF -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
@@ -91,7 +109,7 @@ llvm-config = "/path/to/-DCMAKE_INSTALL_PREFIX/bin/llvm-config"
 llvm-filecheck = "/path/to/-DCMAKE_INSTALL_PREFIX/bin/FileCheck"
 ```
 
-## How this was built
+## 💀💀💀 How this project was built...
 
 Clone all resources: 
 > Do not use `--depth 1` when `rust-lang/llvm-project`'s LLVM version and `KomiMoe/Arkari`'s LLVM version not match
@@ -133,3 +151,5 @@ cd ..
 ```
 
 Afterward is identical with [This article](https://vrls.ws/posts/2023/06/obfuscating-rust-binaries-using-llvm-obfuscator-ollvm/#bootstrapping-rust-compiler)'s **Bootstrapping Rust Compiler** Section. 
+
+# ⚰️
