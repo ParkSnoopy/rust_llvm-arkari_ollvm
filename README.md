@@ -20,7 +20,7 @@ cargo +<toolchain name> build --release
 ```
 
 Better to save the script like below as `.bat` script and name like `obfs-cargo`  
-Obfuscation module v1.7.0 supports JSON config. Check the [original repo](https://github.com/komimoe/arkari?tab=readme-ov-file#%E9%80%9A%E8%BF%87%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%E7%AE%A1%E7%90%86%E6%B7%B7%E6%B7%86%E5%8F%82%E6%95%B0) for more info. 
+Obfuscation module v1.7.0 supports JSON config. Check the [original repo](https://github.com/komimoe/arkari?tab=readme-ov-file#%E4%BB%8B%E7%BB%8D) for more info. 
 ```bat
 @echo off
 shift
@@ -36,7 +36,7 @@ obfs-cargo +<toolchain name> build --release
 
 ## 🚧 Issue
 ### 🥀 32-bit binary
-- On Windows
+- On Windows  
   Although LLVM `PE32 executable` is successfully produced,  
   but whatever I configure, it produces `PE32+ executable` rustc binary  
 - On Linux  
