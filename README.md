@@ -39,17 +39,8 @@ obfs-cargo +<toolchain name> build --release
 - On Windows  
   Although LLVM `PE32 executable` is successfully produced,  
   but whatever I configure, it produces `PE32+ executable` rustc binary  
-- On Linux  
-  While trying to compile on `i386/debian:12` docker container, got error.  
-  and I'm not familiar with c++ and LLVM. No idea and not daring to fix it.  
-```cpp
-In file included from /root/rust_llvm-arkari_ollvm/llvm/lib/Transforms/Obfuscation/ObfuscationPassManager.cpp:6:
-/root/rust_llvm-arkari_ollvm/llvm/include/llvm/Transforms/Obfuscation/ObfuscationOptions.h: In member function 'llvm::SmallVector<std::shared_ptr<llvm::ObfOpt> > llvm::ObfuscationOptions::getAllOpt() const':
-/root/rust_llvm-arkari_ollvm/llvm/include/llvm/Transforms/Obfuscation/ObfuscationOptions.h:97:12: error: could not convert 'allOpt' from 'SmallVector<[...],7>' to 'SmallVector<[...],6>'
-ninja: build stopped: subcommand failed.
-```
   
-  
+
 ### 💥 Incompatibility
 Maybe some obfuscation flag can cause incompatibility with the crate used in the project. <br>
 - Using the `-mllvm --irobf-cff` flag with the `windows-rs` crate compile failed. 
