@@ -60,7 +60,7 @@ jobs:
       # a local checkout beforehand.
       - name: Fetch LLVM sources (Push)
         if: ${{ github.event_name == 'push' }}
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v5.0.0
         with:
           fetch-depth: 1
       - name: Get subprojects that have doc changes
@@ -98,7 +98,7 @@ jobs:
               - '.github/workflows/docs.yml'
       - name: Fetch LLVM sources (PR)
         if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v5.0.0
         with:
           fetch-depth: 1
       - name: Setup Python env
