@@ -16,7 +16,6 @@ set( LLVM_LINK_COMPONENTS
   TargetParser
   TransformUtils
   Vectorize
-  Obfuscation
   )
 
 # Support plugins.
