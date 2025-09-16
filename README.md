@@ -137,6 +137,6 @@ patch -p0 < ../diff-llvm.patch
 cd ..
 ```
 
-Afterward is identical with [this article](https://vrls.ws/posts/2023/06/obfuscating-rust-binaries-using-llvm-obfuscator-ollvm/#bootstrapping-rust-compiler)'s **Bootstrapping Rust Compiler** Section. 
+Afterward is identical with [this article (archived)](https://web.archive.org/web/20250302083137/https://vrls.ws/posts/2023/06/obfuscating-rust-binaries-using-llvm-obfuscator-ollvm/)'s **Bootstrapping Rust Compiler** Section. 
 
 # ⚰️
