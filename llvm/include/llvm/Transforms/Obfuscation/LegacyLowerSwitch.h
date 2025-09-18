@@ -7,4 +7,3 @@ FunctionPass *createLegacyLowerSwitchPass();
 }
 
 #endif
-
