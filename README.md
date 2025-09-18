@@ -1,5 +1,17 @@
 # Rust LLVM + Arkari obfuscation module
-merge rust-lang's [llvm-project](https://github.com/rust-lang/llvm-project) and KomiMoe's [Arkari fork](https://github.com/ParkSnoopy/Arkari) to produce obfuscated llvm, which can be used as a rustc backend
+Merge rust-lang's [llvm-project](https://github.com/rust-lang/llvm-project) and KomiMoe's [Arkari fork](https://github.com/ParkSnoopy/Arkari)  
+to produce obfuscated LLVM, which can be used as a rustc backend.  
+  
+### Release Targets  
+- Windows 64-bit  
+- Linux 64-bit  
+- Linux 32-bit (i386)  
+
+> Windows 32-bit is not built because 32-bit system  
+> does not provide `Visual Studio Installer` to install build tools  
+
+<br>  
+<br>  
 
 # 🕹️ HOW TO USE
 
