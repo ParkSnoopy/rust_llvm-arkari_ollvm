@@ -66,12 +66,12 @@ jobs:
     steps:
     # It's good practice to use setup-python, but this is also required on macos-14
     # due to https://github.com/actions/runner-images/issues/10385
-    - uses: actions/setup-python@39cd14951b08e74b54015e9e001cdefcf80e669f
+    - uses: actions/setup-python@4267e283df95c05d9f16ece6624106f44613b489
       with:
         python-version: '3.12'
 
     - name: Checkout LLVM
-      uses: actions/checkout@09d2acae674a48949e3602304ab46fd20ae0c42f # v4.1.1
+      uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493 # v4.1.1
 
     - name: Install Dependencies
       shell: bash
@@ -193,7 +193,7 @@ jobs:
     steps:
 
     - name: Checkout Actions
-      uses: actions/checkout@09d2acae674a48949e3602304ab46fd20ae0c42f # v4.1.1
+      uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493 # v4.1.1
       with:
         ref: ${{ (github.event_name == 'pull_request' && github.sha) || 'main' }}
         sparse-checkout: |
@@ -214,7 +214,7 @@ jobs:
       run: mv workflows  ../workflows-main
 
     - name: Checkout LLVM
-      uses: actions/checkout@09d2acae674a48949e3602304ab46fd20ae0c42f # v4.1.1
+      uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493 # v4.1.1
       with:
         ref: ${{ needs.prepare.outputs.ref }}
 
@@ -284,7 +284,7 @@ jobs:
 
     steps:
     - name: Checkout Release Scripts
-      uses: actions/checkout@09d2acae674a48949e3602304ab46fd20ae0c42f # v4.1.1
+      uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493 # v4.1.1
       with:
         sparse-checkout: |
           llvm/utils/release/github-upload-release.py
@@ -292,14 +292,14 @@ jobs:
         sparse-checkout-cone-mode: false
 
     - name: 'Download artifact'
-      uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
+      uses: actions/download-artifact@abefc31eafcfbdf6c5336127c1346fdae79ff41c # v4.1.1
       with:
         pattern: '*-release-binary'
         merge-multiple: true
 
     - name: Attest Build Provenance
       id: provenance
-      uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
+      uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
       with:
         subject-path: ${{ needs.prepare.outputs.release-binary-filename }}
 
@@ -336,7 +336,7 @@ jobs:
     runs-on: ${{ needs.prepare.outputs.test-runs-on }}
     steps:
     - name: Checkout Actions
-      uses: actions/checkout@v4.2.2
+      uses: actions/checkout@v5.0.0
       with:
         ref: ${{ (github.event_name == 'pull_request' && github.sha) || 'main' }}
         sparse-checkout: |
