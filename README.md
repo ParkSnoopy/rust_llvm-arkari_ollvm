@@ -16,14 +16,14 @@ to produce obfuscated LLVM, which can be used as a rustc backend.
 # 🕹️ HOW TO USE
 
 ## About `RUSTFLAGS`  
-- `-irobf` : Turn obfuscation module on  
-- `-irobf-indbr` : Indirect jumps with encrypted jump targets  
-- `-irobf-icall` : Indirect function calls with encrypted target function addresses  
-- `-irobf-indgv` : Indirect global variable references with encrypted variable addresses  
-- `-irobf-cse` : C-string encryption  
-- `-irobf-cff` : Control-flow flattening (procedure-related)  
-- `-irobf-cie` : Integer constant encryption  
-- `-irobf-cfe` : Floating-point constant encryption  
+- `--irobf` : Turn obfuscation module on  
+- `--irobf-indbr` : Indirect jumps with encrypted jump targets  
+- `--irobf-icall` : Indirect function calls with encrypted target function addresses  
+- `--irobf-indgv` : Indirect global variable references with encrypted variable addresses  
+- `--irobf-cse` : C-string encryption  
+- `--irobf-cff` : Control-flow flattening (procedure-related)  
+- `--irobf-cie` : Integer constant encryption  
+- `--irobf-cfe` : Floating-point constant encryption  
 
 ### Linux:  
 1. Link the toolchain  
@@ -32,7 +32,7 @@ rustup toolchain link <toolchain name> </path/to/extracted/folder_name>
 ```
 2. Run with obfuscation `RUSTFLAGS`  
 ```bash
-RUSTFLAGS="-Cllvm-args=-irobf -Cllvm-args=--irobf-indbr -Cllvm-args=--irobf-icall -Cllvm-args=--irobf-indgv ...[and more options you want]" \
+RUSTFLAGS="-Cllvm-args=--irobf -Cllvm-args=--irobf-indbr -Cllvm-args=--irobf-icall -Cllvm-args=--irobf-indgv ...[and more options you want]" \
 cargo +<toolchain name> build --release
 ```
 
@@ -44,7 +44,7 @@ rustup toolchain link <toolchain name> <C:\path\to\extracted\folder_name>
 
 2. Run with obfuscation `RUSTFLAGS`  
 ```cmd
-set RUSTFLAGS=-Cllvm-args=-irobf -Cllvm-args=--irobf-indbr -Cllvm-args=--irobf-icall -Cllvm-args=--irobf-indgv ...[and more options you want]
+set RUSTFLAGS=-Cllvm-args=--irobf -Cllvm-args=--irobf-indbr -Cllvm-args=--irobf-icall -Cllvm-args=--irobf-indgv ...[and more options you want]
 cargo +<toolchain name> build --release
 set RUSTFLAGS=
 ```
@@ -53,10 +53,10 @@ set RUSTFLAGS=
 
 ### 💥 Incompatibility  
 Maybe some obfuscation flag can cause incompatibility with the crate used in the project. <br>
-- Using the `-mllvm --irobf-cie` flag with the `nu-plugin-engine` crate compile failed. (out of memory)  
-- Using the `-mllvm --irobf-cff` flag with the `windows-rs` crate compile failed.  
-- Using the `-mllvm --irobf-cff` flag with the `rand` crate compile failed. (exit code: 0xc0000005, STATUS_ACCESS_VIOLATION)  
-- Using the `-mllvm --irobf-cff` flag with the `clap` crate compile failed. (exit code: 0xc0000005, STATUS_ACCESS_VIOLATION) (seems like `anstream` `clap_lex` `proc-macro2` `windows-sys` ...and more is not compatible)  
+- Using the `--irobf-cie` flag with the `nu-plugin-engine` crate compile failed. (out of memory)  
+- Using the `--irobf-cff` flag with the `windows-rs` crate compile failed.  
+- Using the `--irobf-cff` flag with the `rand` crate compile failed. (exit code: 0xc0000005, STATUS_ACCESS_VIOLATION)  
+- Using the `--irobf-cff` flag with the `clap` crate compile failed. (exit code: 0xc0000005, STATUS_ACCESS_VIOLATION) (seems like `anstream` `clap_lex` `proc-macro2` `windows-sys` ...and more is not compatible)  
 
 <br>  
 <br>  
