@@ -5,7 +5,7 @@ to produce obfuscated LLVM, which can be used as a rustc backend.
 ### Release Targets  
 - Windows 64-bit  
 - Linux 64-bit  
-- Linux 32-bit (i386)  
+- Linux 32-bit (i686)  
 
 > Windows 32-bit is not built because 32-bit system  
 > does not provide `Visual Studio Installer` to install build tools  
@@ -97,8 +97,8 @@ ninja            = true
 build  =  "target-triple"
 host   = ["target-triple"]
 target = ["target-triple"]
-extended = true
-submodules = true
+extended = false
+submodules = false
 
 [target."target-triple"]
 llvm-config   = "/path/to/-DCMAKE_INSTALL_PREFIX/bin/llvm-config"
