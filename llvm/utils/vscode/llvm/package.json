@@ -108,13 +108,15 @@
         ]
     },
     "devDependencies": {
-        "@types/node": "^8.10.59",
-        "@types/vscode": "^1.39.0",
-        "js-yaml": "^3.13.1",
-        "tslint": "^5.16.0",
-        "typescript": "^3.8.3"
+        "@types/node": "^8.10.66",
+        "@types/vscode": "^1.104.0",
+        "js-yaml": "^3.14.1",
+        "tslint": "^5.20.1",
+        "typescript": "^3.9.10"
     },
-    "extensionDependencies": ["ms-vscode.cmake-tools"],
+    "extensionDependencies": [
+        "ms-vscode.cmake-tools"
+    ],
     "scripts": {
         "vscode:prepublish": "npx js-yaml syntaxes/ll.tmLanguage.yaml > syntaxes/ll.tmLanguage.json && tsc -b",
         "watch": "tsc -b -w"
