@@ -1,0 +1,26 @@
+add_clang_unittest(ClangAnalysisTests
+  CFGDominatorTree.cpp
+  CFGTest.cpp
+  CloneDetectionTest.cpp
+  ExprMutationAnalyzerTest.cpp
+  IntervalPartitionTest.cpp
+  MacroExpansionContextTest.cpp
+  UnsafeBufferUsageTest.cpp
+  CLANG_LIBS
+  clangAST
+  clangASTMatchers
+  clangAnalysis
+  clangBasic
+  clangFrontend
+  clangLex
+  clangSerialization
+  clangTooling
+  LINK_LIBS
+  clangTesting
+  LLVMTestingSupport
+  LLVM_COMPONENTS
+  FrontendOpenMP
+  Support
+  )
+
+add_subdirectory(FlowSensitive)
