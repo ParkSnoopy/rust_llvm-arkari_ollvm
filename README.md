@@ -76,7 +76,7 @@ cmake ../llvm -DCMAKE_INSTALL_PREFIX="./Release" -DLLVM_ENABLE_PROJECTS="clang;l
 
 ## Used Version
 - [repo `rust-lang/llvm-project`](https://github.com/rust-lang/llvm-project/commit/19f0a49c5c3f4ba88b5e7ac620b9a0d8574c09cb)
-- [repo `ParkSnoopy/Hikari`](https://github.com/KomiMoe/Hikari/commit/7b3621ec3536548f499a889399a8727fb0845c09)
+- [repo `KomiMoe/Hikari`](https://github.com/KomiMoe/Hikari/commit/7b3621ec3536548f499a889399a8727fb0845c09)
 
 ## Used Config
 `config.toml` for building `rust-lang/rust`
