@@ -21,7 +21,7 @@ to produce obfuscated LLVM, which can be used as a rustc backend.
 - `--irobf-icall` : Indirect function calls with encrypted target function addresses  
 - `--irobf-indgv` : Indirect global variable references with encrypted variable addresses  
 - `--irobf-cse` : C-string encryption  
-- `--irobf-fla` : Control-flow flattening (procedure-related)  
+- `--irobf-cff` : Control-flow flattening (procedure-related)  
 - `--irobf-cie` : Integer constant encryption  
 - `--irobf-cfe` : Floating-point constant encryption  
 
@@ -54,9 +54,9 @@ set RUSTFLAGS=
 ### 💥 Incompatibility  
 Maybe some obfuscation flag can cause incompatibility with the crate used in the project. <br>
 - Using the `--irobf-cie` flag with the `nu-plugin-engine` crate compile failed. (out of memory)  
-- Using the `--irobf-fla` flag with the `windows-rs` crate compile failed.  
-- Using the `--irobf-fla` flag with the `rand` crate compile failed. (exit code: 0xc0000005, STATUS_ACCESS_VIOLATION)  
-- Using the `--irobf-fla` flag with the `clap` crate compile failed. (exit code: 0xc0000005, STATUS_ACCESS_VIOLATION) (seems like `anstream` `clap_lex` `proc-macro2` `windows-sys` ...and more is not compatible)  
+- Using the `--irobf-cff` flag with the `windows-rs` crate compile failed.  
+- Using the `--irobf-cff` flag with the `rand` crate compile failed. (exit code: 0xc0000005, STATUS_ACCESS_VIOLATION)  
+- Using the `--irobf-cff` flag with the `clap` crate compile failed. (exit code: 0xc0000005, STATUS_ACCESS_VIOLATION) (seems like `anstream` `clap_lex` `proc-macro2` `windows-sys` ...and more is not compatible)  
 
 <br>  
 <br>  
