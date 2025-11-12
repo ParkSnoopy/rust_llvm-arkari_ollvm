@@ -145,7 +145,6 @@
 #include "llvm/Transforms/Vectorize/LoopVectorize.h"
 #include "llvm/Transforms/Vectorize/SLPVectorizer.h"
 #include "llvm/Transforms/Vectorize/VectorCombine.h"
-#include "llvm/Transforms/Obfuscation/ObfuscationPassManager.h"
 
 using namespace llvm;
 
@@ -374,7 +373,6 @@ void PassBuilder::invokeOptimizerLastEPCallbacks(ModulePassManager &MPM,
                                                  ThinOrFullLTOPhase Phase) {
   for (auto &C : OptimizerLastEPCallbacks)
     C(MPM, Level, Phase);
-  MPM.addPass(ObfuscationPassManagerPass());
 }
 void PassBuilder::invokeFullLinkTimeOptimizationEarlyEPCallbacks(
     ModulePassManager &MPM, OptimizationLevel Level) {

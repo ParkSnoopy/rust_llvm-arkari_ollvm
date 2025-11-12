@@ -94,6 +94,7 @@ Clang Frontend Potentially Breaking Changes
 
 Clang Python Bindings Potentially Breaking Changes
 --------------------------------------------------
+- Return ``None`` instead of null cursors from ``Token.cursor``
 - ``Cursor.from_location`` now returns ``None`` instead of a null cursor.
   This eliminates the last known source of null cursors.
 - Almost all ``Cursor`` methods now assert that they are called on non-null cursors.
@@ -677,8 +678,8 @@ Improvements to Clang's diagnostics
   trigger a ``'Blue' is deprecated`` warning, which can be turned off with
   ``-Wno-deprecated-declarations-switch-case``.
 
-- Split diagnosis of implicit integer comparison on negation to a new
-  diagnostic group ``-Wimplicit-int-comparison-on-negation``, grouped under
+- Split diagnosis of implicit integer conversion on negation to a new
+  diagnostic group ``-Wimplicit-int-conversion-on-negation``, grouped under
   ``-Wimplicit-int-conversion``, so user can turn it off independently.
 
 - Improved the FixIts for unused lambda captures.
@@ -1260,6 +1261,11 @@ New features
 
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^
+
+- Fixed a regression introduced by clang-20 in #GH115918 that lead to false
+  positive reports when ``[[no_unique_address]]`` or empty base class
+  optimization techniques were used. Most notably, some ``std::unique_ptr``
+  implementations. (#GH157467)
 
 - Fixed a crash when C++20 parenthesized initializer lists are used.
   This affected a crash of the well-known lambda overloaded pattern.

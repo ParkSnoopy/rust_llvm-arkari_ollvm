@@ -26236,10 +26236,9 @@ static SDValue getScalarMaskingNode(SDValue Op, SDValue Mask,
                                     SDValue PreservedSrc,
                                     const X86Subtarget &Subtarget,
                                     SelectionDAG &DAG) {
-
-  if (auto *MaskConst = dyn_cast<ConstantSDNode>(Mask))
-    if (MaskConst->getZExtValue() & 0x1)
-      return Op;
+  auto *MaskConst = dyn_cast<ConstantSDNode>(Mask);
+  if (MaskConst && (MaskConst->getZExtValue() & 0x1))
+    return Op;
 
   MVT VT = Op.getSimpleValueType();
   SDLoc dl(Op);
@@ -26255,6 +26254,17 @@ static SDValue getScalarMaskingNode(SDValue Op, SDValue Mask,
 
   if (PreservedSrc.isUndef())
     PreservedSrc = getZeroVector(VT, Subtarget, DAG, dl);
+
+  if (MaskConst) {
+    assert((MaskConst->getZExtValue() & 0x1) == 0 && "Expected false mask");
+    // Discard op and blend passthrough with scalar op src/dst.
+    SmallVector<int, 16> ShuffleMask(VT.getVectorNumElements());
+    std::iota(ShuffleMask.begin(), ShuffleMask.end(), 0);
+    ShuffleMask[0] = VT.getVectorNumElements();
+    return DAG.getVectorShuffle(VT, dl, Op.getOperand(0), PreservedSrc,
+                                ShuffleMask);
+  }
+
   return DAG.getNode(X86ISD::SELECTS, dl, VT, IMask, Op, PreservedSrc);
 }
 
@@ -51765,6 +51775,8 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
     SDValue X, Y;
     EVT CondVT = VT.changeVectorElementType(MVT::i1);
     if (TLI.isTypeLegal(VT) && TLI.isTypeLegal(CondVT) &&
+        (VT.is512BitVector() || Subtarget.hasVLX()) &&
+        (VT.getScalarSizeInBits() >= 32 || Subtarget.hasBWI()) &&
         sd_match(N, m_And(m_Value(X),
                           m_OneUse(m_SExt(m_AllOf(
                               m_Value(Y), m_SpecificVT(CondVT),
@@ -55319,6 +55331,8 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
     SDValue Src = N0.getOperand(0);
     EVT SrcVT = Src.getValueType();
     if (Src.getOpcode() == ISD::SETCC && SrcVT.getScalarType() == MVT::i1 &&
+        (VT.is512BitVector() || Subtarget.hasVLX()) &&
+        (VT.getScalarSizeInBits() >= 32 || Subtarget.hasBWI()) &&
         TLI.isTypeLegal(SrcVT) && N0.hasOneUse() && Src.hasOneUse())
       return DAG.getSelect(DL, VT, DAG.getNOT(DL, Src, SrcVT), N1,
                            getZeroVector(VT, Subtarget, DAG, DL));
@@ -56198,7 +56212,13 @@ static SDValue combineAVX512SetCCToKMOV(EVT VT, SDValue Op0, ISD::CondCode CC,
 
   SDValue Masked = BroadcastOp;
   if (N != 0) {
-    APInt Mask = APInt::getLowBitsSet(BroadcastOpVT.getSizeInBits(), Len);
+    unsigned BroadcastOpBitWidth = BroadcastOpVT.getSizeInBits();
+    unsigned NumDefinedElts = UndefElts.countTrailingZeros();
+
+    if (NumDefinedElts > BroadcastOpBitWidth)
+      return SDValue();
+
+    APInt Mask = APInt::getLowBitsSet(BroadcastOpBitWidth, NumDefinedElts);
     SDValue ShiftedValue = DAG.getNode(ISD::SRL, DL, BroadcastOpVT, BroadcastOp,
                                        DAG.getConstant(N, DL, BroadcastOpVT));
     Masked = DAG.getNode(ISD::AND, DL, BroadcastOpVT, ShiftedValue,
