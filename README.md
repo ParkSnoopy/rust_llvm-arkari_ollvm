@@ -1,6 +1,7 @@
 # Rust LLVM + Arkari obfuscation module
-Merge rust-lang's [llvm-project](https://github.com/rust-lang/llvm-project) and [My Fork](https://github.com/ParkSnoopy/Arkari) of [KomiMoe/Hikari](https://github.com/KomiMoe/Hikari)  
-to produce obfuscated LLVM, which can be used as a rustc backend.  
+Merge [rust-lang/llvm-project](https://github.com/rust-lang/llvm-project) and [ParkSnoopy/Arkari](https://github.com/ParkSnoopy/Arkari) (which is a fork of [KomiMoe/Hikari](https://github.com/KomiMoe/Hikari))
+
+<br>  
 
 ```mermaid
 gitGraph
