@@ -10,16 +10,16 @@ gitGraph
     branch llvm/llvm-project
     commit id: "llvmorg-21.1.3"
     checkout KomiMoe/Hikari
-    merge llvm/llvm-project
+    merge llvm/llvm-project id: "Downgrade LLVM"
     checkout main
     branch rust-lang/llvm-project
     commit id: "rustc/21.1-2025-08-01"
     commit id: "reset --hard 480a904"
     checkout KomiMoe/Hikari
-    merge rust-lang/llvm-project
+    merge rust-lang/llvm-project id: "Apply Rust-specific patch"
     checkout main
     commit id: "init"
-    merge KomiMoe/Hikari
+    merge KomiMoe/Hikari id: "Commit on Orphan branch"
     commit id: "fix minor"
 ```
 
