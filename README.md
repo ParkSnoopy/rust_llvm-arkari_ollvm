@@ -4,22 +4,22 @@ to produce obfuscated LLVM, which can be used as a rustc backend.
 
 ```mermaid
 gitGraph
-    branch KomiMoe/Hikari
-    commit id: "5524408"
-    checkout main
     branch llvm/llvm-project
     commit id: "llvmorg-21.1.3"
-    checkout KomiMoe/Hikari
-    merge llvm/llvm-project id: "Downgrade LLVM"
+    checkout main
+    branch KomiMoe/Hikari
+    commit id: "commit:5524408"
+    checkout llvm/llvm-project
+    merge KomiMoe/Hikari id: "Apply obfuscation"
     checkout main
     branch rust-lang/llvm-project
     commit id: "rustc/21.1-2025-08-01"
     commit id: "reset --hard 480a904"
-    checkout KomiMoe/Hikari
+    checkout llvm/llvm-project
     merge rust-lang/llvm-project id: "Apply Rust-specific patch"
     checkout main
-    commit id: "init"
-    merge KomiMoe/Hikari id: "Commit on Orphan branch"
+    commit id: "checkout --orphan"
+    merge llvm/llvm-project
     commit id: "fix minor"
 ```
 
