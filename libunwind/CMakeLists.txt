@@ -273,7 +273,7 @@ if (LIBUNWIND_ENABLE_ASSERTIONS)
 
   # On Release builds cmake automatically defines NDEBUG, so we
   # explicitly undefine it:
-  if (NOT uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
+  if ((NOT uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG") AND (NOT RUST_SGX))
     add_compile_flags(-UNDEBUG)
   endif()
 else()

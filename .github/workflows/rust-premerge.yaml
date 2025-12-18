@@ -1,0 +1,74 @@
+name: CI Checks (Rust fork)
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      # When a PR is closed, we still start this workflow, but then skip
+      # all the jobs, which makes it effectively a no-op.  The reason to
+      # do this is that it allows us to take advantage of concurrency groups
+      # to cancel in progress CI jobs whenever the PR is closed.
+      - closed
+  push:
+    branches:
+      - 'rustc/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  premerge-checks-linux:
+    name: Build and Test Linux
+    if: >-
+      github.repository_owner == 'rust-lang' &&
+      (github.event_name != 'pull_request' || github.event.action != 'closed')
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 1
+      - name: Free up disk space
+        run: |
+          curl -sSL https://raw.githubusercontent.com/rust-lang/rust/474466dc16f890083af1cdebad0aebf4d4ba88d7/src/ci/scripts/free-disk-space.sh | bash
+      - name: Install clang-18
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-18 cmake ninja-build
+      - name: Build and Test
+        run: |
+          cmake -S llvm -B build -G Ninja \
+            -DLLVM_ENABLE_PROJECTS=lld \
+            -DLLVM_ENABLE_ASSERTIONS=ON \
+            -DLLVM_ENABLE_LLD=ON \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER=/usr/bin/clang-18 \
+            -DCMAKE_CXX_COMPILER=/usr/bin/clang++-18
+          ninja -C build check-llvm check-lld
+
+  premerge-check-macos:
+    name: Build and Test macOS
+    runs-on: macos-14
+    if: >-
+      github.repository_owner == 'rust-lang' &&
+      (github.event_name != 'pull_request' || github.event.action != 'closed')
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 1
+      - name: Build and Test
+        run: |
+          cmake -S llvm -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLLDB_INCLUDE_TESTS=OFF \
+            -DLLVM_ENABLE_ASSERTIONS=ON \
+            -DCMAKE_C_COMPILER=/usr/bin/clang \
+            -DCMAKE_CXX_COMPILER=/usr/bin/clang++
+          ninja -C build check-llvm
