@@ -11,12 +11,16 @@ gitGraph
     branch rust-lang/llvm-project
     commit id: "rustc/21.1-2025-08-01"
     checkout llvm/llvm-project
-    merge rust-lang/llvm-project id: "diff llvmorg-21.1.8 rustc/21.1-2025-08-01"
+    merge rust-lang/llvm-project id: "diff: llvmorg-21.1.8 rustc/21.1-2025-08-01"
     checkout main
     branch ParkSnoopy/Arkari
     commit id: "tag:ollvm-21.1.8"
     checkout llvm/llvm-project
-    merge ParkSnoopy/Arkari id: "cherry-pick obfuscation"
+    merge ParkSnoopy/Arkari id: "diff: llvmorg-21.1.8 ollvm-21.1.8"
+    checkout main
+    commit id: "llvmorg-21.1.8"
+    merge llvm/llvm-project
+    commit id: "fix minor"
 ```
 
 ### Release Targets  
