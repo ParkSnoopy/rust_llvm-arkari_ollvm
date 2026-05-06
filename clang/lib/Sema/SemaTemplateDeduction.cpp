@@ -3981,12 +3981,11 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
     if (CheckFunctionTemplateConstraints(
             Info.getLocation(),
             FunctionTemplate->getCanonicalDecl()->getTemplatedDecl(),
-            CTAI.SugaredConverted, Info.AssociatedConstraintsSatisfaction))
+            CTAI.CanonicalConverted, Info.AssociatedConstraintsSatisfaction))
       return TemplateDeductionResult::MiscellaneousDeductionFailure;
     if (!Info.AssociatedConstraintsSatisfaction.IsSatisfied) {
-      Info.reset(
-          TemplateArgumentList::CreateCopy(Context, CTAI.SugaredConverted),
-          Info.takeCanonical());
+      Info.reset(Info.takeSugared(), TemplateArgumentList::CreateCopy(
+                                         Context, CTAI.CanonicalConverted));
       return TemplateDeductionResult::ConstraintsNotSatisfied;
     }
   }
@@ -6500,6 +6499,8 @@ bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
       SourceRange(P->getTemplateLoc(), P->getRAngleLoc()));
   if (Inst.isInvalid())
     return false;
+
+  LocalInstantiationScope Scope(*this);
 
   //   Given an invented class template X with the template parameter list of
   //   A (including default arguments):

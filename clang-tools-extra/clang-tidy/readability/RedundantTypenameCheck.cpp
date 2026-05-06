@@ -19,7 +19,7 @@ namespace clang::tidy::readability {
 
 void RedundantTypenameCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      typeLoc(unless(hasAncestor(decl(isInstantiated())))).bind("typeLoc"),
+      traverse(TK_IgnoreUnlessSpelledInSource, typeLoc().bind("typeLoc")),
       this);
 
   if (!getLangOpts().CPlusPlus20)
@@ -49,7 +49,7 @@ void RedundantTypenameCheck::registerMatchers(MatchFinder *Finder) {
 void RedundantTypenameCheck::check(const MatchFinder::MatchResult &Result) {
   const TypeLoc TL = [&] {
     if (const auto *TL = Result.Nodes.getNodeAs<TypeLoc>("typeLoc"))
-      return TL->getType()->isDependentType() ? TypeLoc() : *TL;
+      return TL->getType()->isInstantiationDependentType() ? TypeLoc() : *TL;
 
     auto TL = *Result.Nodes.getNodeAs<TypeLoc>("dependentTypeLoc");
     while (const TypeLoc Next = TL.getNextTypeLoc())

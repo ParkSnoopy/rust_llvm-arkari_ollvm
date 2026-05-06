@@ -1106,11 +1106,8 @@ HexagonTargetLowering::createHvxPrefixPred(SDValue PredV, const SDLoc &dl,
   SDValue W0 = isUndef(PredV)
                   ? DAG.getUNDEF(MVT::i64)
                   : DAG.getNode(HexagonISD::P2D, dl, MVT::i64, PredV);
-  if (Bytes < BitBytes) {
-    Words[IdxW].push_back(HiHalf(W0, DAG));
-    Words[IdxW].push_back(LoHalf(W0, DAG));
-  } else
-    Words[IdxW].push_back(W0);
+  Words[IdxW].push_back(HiHalf(W0, DAG));
+  Words[IdxW].push_back(LoHalf(W0, DAG));
 
   while (Bytes < BitBytes) {
     IdxW ^= 1;
@@ -1131,27 +1128,7 @@ HexagonTargetLowering::createHvxPrefixPred(SDValue PredV, const SDLoc &dl,
     Bytes *= 2;
   }
 
-  while (Bytes > BitBytes) {
-    IdxW ^= 1;
-    Words[IdxW].clear();
-
-    if (Bytes <= 4) {
-      for (const SDValue &W : Words[IdxW ^ 1]) {
-        SDValue T = contractPredicate(W, dl, DAG);
-        Words[IdxW].push_back(T);
-      }
-    } else {
-      for (const SDValue &W : Words[IdxW ^ 1]) {
-        Words[IdxW].push_back(W);
-      }
-    }
-    Bytes /= 2;
-  }
-
   assert(Bytes == BitBytes);
-  if (BitBytes == 1 && PredTy == MVT::v2i1)
-    ByteTy = MVT::getVectorVT(MVT::i16, HwLen);
-
   SDValue Vec = ZeroFill ? getZero(dl, ByteTy, DAG) : DAG.getUNDEF(ByteTy);
   SDValue S4 = DAG.getConstant(HwLen-4, dl, MVT::i32);
   for (const SDValue &W : Words[IdxW]) {
@@ -1428,7 +1405,7 @@ HexagonTargetLowering::extractHvxSubvectorPred(SDValue VecV, SDValue IdxV,
   unsigned Rep = 8 / ResLen;
   // Make sure the output fill the entire vector register, so repeat the
   // 8-byte groups as many times as necessary.
-  for (unsigned r = 0; r != HwLen/ResLen; ++r) {
+  for (unsigned r = 0; r != HwLen / 8; ++r) {
     // This will generate the indexes of the 8 interesting bytes.
     for (unsigned i = 0; i != ResLen; ++i) {
       for (unsigned j = 0; j != Rep; ++j)
@@ -1835,13 +1812,17 @@ HexagonTargetLowering::LowerHvxConcatVectors(SDValue Op, SelectionDAG &DAG)
   // corresponds to.
   unsigned BitBytes = HwLen / VecTy.getVectorNumElements();
 
+  // Make sure that createHvxPrefixPred will only ever need to expand
+  // the predicate, i.e. bytes-per-bit in the input is not greater than
+  // the target bytes-per-bit in the result.
+  SDValue Combined = combineConcatOfScalarPreds(Op, BitBytes, DAG);
   SmallVector<SDValue,8> Prefixes;
-  for (SDValue V : Op.getNode()->op_values()) {
+  for (SDValue V : Combined.getNode()->op_values()) {
     SDValue P = createHvxPrefixPred(V, dl, BitBytes, true, DAG);
     Prefixes.push_back(P);
   }
 
-  unsigned InpLen = ty(Op.getOperand(0)).getVectorNumElements();
+  unsigned InpLen = ty(Combined.getOperand(0)).getVectorNumElements();
   MVT ByteTy = MVT::getVectorVT(MVT::i8, HwLen);
   SDValue S = DAG.getConstant(HwLen - InpLen*BitBytes, dl, MVT::i32);
   SDValue Res = getZero(dl, ByteTy, DAG);
@@ -3443,6 +3424,43 @@ HexagonTargetLowering::WidenHvxSetCC(SDValue Op, SelectionDAG &DAG) const {
                      {SetCC, getZero(dl, MVT::i32, DAG)});
 }
 
+SDValue HexagonTargetLowering::WidenHvxTruncateToBool(SDValue Op,
+                                                      SelectionDAG &DAG) const {
+  // Handle truncation to boolean vector where the result boolean type
+  // needs widening (e.g., v16i32 -> v16i1 where v16i1 is not a standard
+  // HVX predicate type, or v16i8 -> v16i1 in 128-byte mode).
+  // Widen the input to HVX width, perform the truncate to the widened
+  // boolean type, then extract the result.
+  const SDLoc &dl(Op);
+  SDValue Inp = Op.getOperand(0);
+  MVT InpTy = ty(Inp);
+  MVT ResTy = ty(Op);
+
+  assert(ResTy.getVectorElementType() == MVT::i1 &&
+         "Expected boolean result type");
+
+  MVT ElemTy = InpTy.getVectorElementType();
+  unsigned HwLen = Subtarget.getVectorLength();
+
+  // Calculate the widened input type that fills the HVX register.
+  unsigned WideLen = (8 * HwLen) / ElemTy.getSizeInBits();
+  MVT WideInpTy = MVT::getVectorVT(ElemTy, WideLen);
+  if (!Subtarget.isHVXVectorType(WideInpTy, false))
+    return SDValue();
+
+  // Widen the input to HVX width.
+  SDValue WideInp = appendUndef(Inp, WideInpTy, DAG);
+
+  // Perform the truncate to widened boolean type.
+  MVT WideBoolTy = MVT::getVectorVT(MVT::i1, WideLen);
+  SDValue WideTrunc = DAG.getNode(ISD::TRUNCATE, dl, WideBoolTy, WideInp);
+
+  // Extract the result.
+  EVT RetTy = typeLegalize(ResTy, DAG);
+  return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, RetTy,
+                     {WideTrunc, getZero(dl, MVT::i32, DAG)});
+}
+
 SDValue
 HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
   unsigned Opc = Op.getOpcode();
@@ -3685,9 +3703,25 @@ HexagonTargetLowering::LowerHvxOperationWrapper(SDNode *N,
     case ISD::ANY_EXTEND:
     case ISD::SIGN_EXTEND:
     case ISD::ZERO_EXTEND:
-    case ISD::TRUNCATE:
       if (Subtarget.isHVXElementType(ty(Op)) &&
           Subtarget.isHVXElementType(ty(Inp0))) {
+        Results.push_back(CreateTLWrapper(Op, DAG));
+      }
+      break;
+    case ISD::TRUNCATE:
+      // Handle truncate to boolean vector when the input is not a
+      // standard HVX vector type (single or pair). This covers cases
+      // where the input needs widening (e.g., v64i8 -> v64i1 in
+      // 128-byte mode) and cases where the result boolean type itself
+      // needs widening (e.g., v16i32 -> v16i1). When the input is
+      // already an HVX type, tablegen patterns handle the truncation
+      // directly (e.g., v64i16 -> v64i1 via V6_vandvrt).
+      if (ty(Op).getVectorElementType() == MVT::i1 &&
+          !Subtarget.isHVXVectorType(ty(Inp0), false)) {
+        if (SDValue T = WidenHvxTruncateToBool(Op, DAG))
+          Results.push_back(T);
+      } else if (Subtarget.isHVXElementType(ty(Op)) &&
+                 Subtarget.isHVXElementType(ty(Inp0))) {
         Results.push_back(CreateTLWrapper(Op, DAG));
       }
       break;
@@ -3751,9 +3785,20 @@ HexagonTargetLowering::ReplaceHvxNodeResults(SDNode *N,
     case ISD::ANY_EXTEND:
     case ISD::SIGN_EXTEND:
     case ISD::ZERO_EXTEND:
-    case ISD::TRUNCATE:
       if (Subtarget.isHVXElementType(ty(Op)) &&
           Subtarget.isHVXElementType(ty(Inp0))) {
+        Results.push_back(CreateTLWrapper(Op, DAG));
+      }
+      break;
+    case ISD::TRUNCATE:
+      // Handle truncate to boolean vector when the input is not a
+      // standard HVX vector type. See comment in LowerHvxOperationWrapper.
+      if (ty(Op).getVectorElementType() == MVT::i1 &&
+          !Subtarget.isHVXVectorType(ty(Inp0), false)) {
+        if (SDValue T = WidenHvxTruncateToBool(Op, DAG))
+          Results.push_back(T);
+      } else if (Subtarget.isHVXElementType(ty(Op)) &&
+                 Subtarget.isHVXElementType(ty(Inp0))) {
         Results.push_back(CreateTLWrapper(Op, DAG));
       }
       break;
@@ -3834,8 +3879,8 @@ HexagonTargetLowering::combineTruncateBeforeLegal(SDValue Op,
 }
 
 SDValue
-HexagonTargetLowering::combineConcatVectorsBeforeLegal(
-    SDValue Op, DAGCombinerInfo &DCI) const {
+HexagonTargetLowering::combineConcatOfShuffles(SDValue Op,
+                                               SelectionDAG &DAG) const {
   // Fold
   //   concat (shuffle x, y, m1), (shuffle x, y, m2)
   // into
@@ -3843,7 +3888,6 @@ HexagonTargetLowering::combineConcatVectorsBeforeLegal(
   if (Op.getNumOperands() != 2)
     return SDValue();
 
-  SelectionDAG &DAG = DCI.DAG;
   const SDLoc &dl(Op);
   SDValue V0 = Op.getOperand(0);
   SDValue V1 = Op.getOperand(1);
@@ -3899,6 +3943,54 @@ HexagonTargetLowering::combineConcatVectorsBeforeLegal(
   return DAG.getVectorShuffle(LongTy, dl, Cat, DAG.getUNDEF(LongTy), LongMask);
 }
 
+// Reassociate concat(p1, p2, ...) into
+//   concat(concat(p1, ...), concat(pi, ...), ...)
+// where each inner concat produces a predicate where each bit corresponds
+// to at most BitBytes bytes.
+// Concatenating predicates decreases the number of bytes per each predicate
+// bit.
+SDValue
+HexagonTargetLowering::combineConcatOfScalarPreds(SDValue Op, unsigned BitBytes,
+                                                  SelectionDAG &DAG) const {
+  const SDLoc &dl(Op);
+  SmallVector<SDValue> Ops(Op->ops());
+  MVT ResTy = ty(Op);
+  MVT InpTy = ty(Ops[0]);
+  unsigned InpLen = InpTy.getVectorNumElements(); // Scalar predicate
+  unsigned ResLen = ResTy.getVectorNumElements(); // HVX vector predicate
+  assert(InpLen <= 8 && "Too long for scalar predicate");
+  assert(ResLen > 8 && "Too short for HVX vector predicate");
+
+  unsigned Bytes = 8 / InpLen; // Bytes-per-bit in input
+
+  // Already in the right form?
+  if (Bytes <= BitBytes)
+    return Op;
+
+  ArrayRef<SDValue> Inputs(Ops);
+  unsigned SliceLen = Bytes / BitBytes;
+
+  SmallVector<SDValue> Cats;
+  // (8 / BitBytes) is the desired length of the result of the inner concat.
+  for (unsigned i = 0; i != ResLen / (8 / BitBytes); ++i) {
+    SDValue Cat = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v8i1,
+                              Inputs.slice(SliceLen * i, SliceLen));
+    Cats.push_back(Cat);
+  }
+
+  return DAG.getNode(ISD::CONCAT_VECTORS, dl, ResTy, Cats);
+}
+
+SDValue HexagonTargetLowering::combineConcatVectorsBeforeLegal(
+    SDValue Op, DAGCombinerInfo &DCI) const {
+  MVT ResTy = ty(Op);
+  MVT ElemTy = ResTy.getVectorElementType();
+
+  if (ElemTy != MVT::i1) {
+    return combineConcatOfShuffles(Op, DCI.DAG);
+  }
+  return SDValue();
+}
 SDValue
 HexagonTargetLowering::PerformHvxDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
       const {
