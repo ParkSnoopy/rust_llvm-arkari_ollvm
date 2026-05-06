@@ -1,5 +1,9 @@
 # Get sources
 
+enable_language(C CXX ASM)
+
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 set(LIBUNWIND_CXX_SOURCES
     libunwind.cpp
     Unwind-EHABI.cpp
@@ -18,14 +22,6 @@ set(LIBUNWIND_C_SOURCES
     Unwind-sjlj.c
     Unwind-wasm.c
     )
-set_source_files_properties(${LIBUNWIND_C_SOURCES}
-                            PROPERTIES
-                              # We need to set `-fexceptions` here so that key
-                              # unwinding functions, like
-                              # _UNWIND_RaiseException, are not marked as
-                              # `nounwind`, which breaks LTO builds of
-                              # libunwind.  See #56825 and #120657 for context.
-                              COMPILE_FLAGS "-std=c99 -fexceptions")
 
 set(LIBUNWIND_ASM_SOURCES
     UnwindRegistersRestore.S
@@ -65,6 +61,49 @@ if (MSVC_IDE)
   source_group("Header Files" FILES ${LIBUNWIND_HEADERS})
 endif()
 
+if (RUST_SGX)
+    # Compile Flags
+    add_definitions(-DRUST_SGX)
+    add_definitions(-D__NO_STRING_INLINES)
+    add_definitions(-D__NO_MATH_INLINES)
+    add_definitions(-D_LIBUNWIND_IS_BAREMETAL)
+    # Can't use add_definitions because CMake will reorder these arguments
+    list(APPEND LIBUNWIND_COMPILE_FLAGS -U_FORTIFY_SOURCE)
+    list(APPEND LIBUNWIND_COMPILE_FLAGS -D_FORTIFY_SOURCE=0)
+
+    list(APPEND LIBUNWIND_COMPILE_FLAGS -fno-stack-protector)
+    list(APPEND LIBUNWIND_COMPILE_FLAGS -ffreestanding)
+    list(APPEND LIBUNWIND_COMPILE_FLAGS -fexceptions)
+    # Avoid too new relocation types being emitted, which might prevent linking
+    # on older platforms.
+    #
+    # See https://github.com/rust-lang/rust/issues/34978
+    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+        list(APPEND LIBUNWIND_COMPILE_FLAGS -Wa,-mrelax-relocations=no)
+    else()
+        list(APPEND LIBUNWIND_COMPILE_FLAGS)
+    endif()
+
+    # Sources
+    list(APPEND LIBUNWIND_HEADERS   UnwindRustSgx.h)
+    list(APPEND LIBUNWIND_C_SOURCES UnwindRustSgx.c)
+endif()
+
+
+set_source_files_properties(${LIBUNWIND_C_SOURCES}
+                            PROPERTIES
+                              # We need to set `-fexceptions` here so that key
+                              # unwinding functions, like
+                              # _UNWIND_RaiseException, are not marked as
+                              # `nounwind`, which breaks LTO builds of
+                              # libunwind.  See #56825 and #120657 for context.
+                              COMPILE_FLAGS "-std=c99 -fexceptions")
+
+# See add_asm_sources() in compiler-rt for explanation of this workaround.
+if((APPLE AND CMAKE_VERSION VERSION_LESS 3.19) OR (MINGW AND CMAKE_VERSION VERSION_LESS 3.17))
+  set_source_files_properties(${LIBUNWIND_ASM_SOURCES} PROPERTIES LANGUAGE C)
+endif()
+
 set(LIBUNWIND_SOURCES
     ${LIBUNWIND_CXX_SOURCES}
     ${LIBUNWIND_C_SOURCES}
@@ -75,11 +114,11 @@ if (NOT APPLE)
   add_library_flags_if(LIBUNWIND_HAS_DL_LIB dl)
 endif()
 
-if (LIBUNWIND_ENABLE_THREADS AND NOT APPLE)
+if (LIBUNWIND_ENABLE_THREADS AND NOT APPLE AND (NOT RUST_SGX))
     add_library_flags_if(LIBUNWIND_HAS_PTHREAD_LIB pthread)
 endif()
 
-if (LIBUNWIND_ENABLE_THREADS)
+if (LIBUNWIND_ENABLE_THREADS AND (NOT RUST_SGX))
   add_compile_flags_if(LIBUNWIND_WEAK_PTHREAD_LIB -DLIBUNWIND_USE_WEAK_PTHREAD=1)
 endif()
 
