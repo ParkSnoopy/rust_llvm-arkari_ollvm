@@ -163,6 +163,35 @@ bool StringEncryption::runOnModule(Module &M) {
         ConstantStringPool.push_back(Entry);
         CSPEntryMap[&GV] = Entry;
         collectConstantStringUser(&GV, ConstantStringUsers);
+      } else if (CDS->getElementType()->isIntegerTy(8)) {
+        // Rust (and other non-C-ABI) byte-string constants are not
+        // NUL-terminated (length is carried separately in a fat pointer),
+        // so isCString() is always false for them even though they're
+        // exactly the kind of literal this pass exists to protect. The
+        // encrypt/decrypt logic below is purely length-based (it never
+        // relies on a trailing NUL), so it's safe to treat any i8 constant
+        // array the same way as a C string.
+        CSPEntry *Entry = new CSPEntry();
+        Entry->IsUTF16 = false;
+        StringRef Data = CDS->getRawDataValues();
+        Entry->Data.reserve(Data.size());
+        for (unsigned i = 0; i < Data.size(); ++i) {
+          Entry->Data.push_back(static_cast<uint8_t>(Data[i]));
+        }
+        Entry->ID = static_cast<unsigned>(ConstantStringPool.size());
+        Constant *      ZeroInit = Constant::getNullValue(CDS->getType());
+        GlobalVariable *DecGV = new GlobalVariable(
+            M, CDS->getType(), false, GlobalValue::PrivateLinkage,
+            ZeroInit, "dec" + Twine::utohexstr(Entry->ID) + GV.getName());
+        GlobalVariable *DecStatus = new GlobalVariable(
+            M, Type::getInt32Ty(Ctx), false, GlobalValue::PrivateLinkage,
+            Zero, "dec_status_" + Twine::utohexstr(Entry->ID) + GV.getName());
+        DecGV->setAlignment(GV.getAlign());
+        Entry->DecGV = DecGV;
+        Entry->DecStatus = DecStatus;
+        ConstantStringPool.push_back(Entry);
+        CSPEntryMap[&GV] = Entry;
+        collectConstantStringUser(&GV, ConstantStringUsers);
       } else {
         // treat arrays of i16 as UTF-16 constant strings
         Type *EltTy = CDS->getElementType();

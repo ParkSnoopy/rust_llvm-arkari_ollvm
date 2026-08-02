@@ -197,7 +197,13 @@ struct IndirectBranch : public FunctionPass {
         buildDecrypt.FuncKey = FuncKeys[AddrTBB];
         buildDecrypt.PtrEncKey = PtrEncKey;
         Triple T(M.getTargetTriple());
-        buildDecrypt.PtrAuthKey = T.isAArch64() ? 0 : -1;
+        // PAC pointer signing is an Apple arm64e ABI feature, not a generic
+        // AArch64 one - AArch64-but-not-Darwin targets (e.g. Android) don't
+        // enable the `+pauth` subtarget feature by default, so emitting
+        // llvm.ptrauth.sign unconditionally for every AArch64 triple hits
+        // "Cannot select: intrinsic %llvm.ptrauth.sign" in the instruction
+        // selector on those targets.
+        buildDecrypt.PtrAuthKey = (T.isAArch64() && T.isOSDarwin()) ? 0 : -1;
         buildDecrypt.PtrAuthDisc = 0;
 
         auto            TargetPtr = buildPageTableDecryptIR(buildDecrypt);
