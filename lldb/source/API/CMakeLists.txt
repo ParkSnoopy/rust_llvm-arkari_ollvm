@@ -265,7 +265,7 @@ elseif (LLDB_EXPORT_ALL_SYMBOLS)
   add_llvm_symbol_exports(liblldb ${exported_symbol_file})
 endif()
 
-if(NOT WIN32 OR MINGW)
+if (NOT MSVC)
   set_target_properties(liblldb
     PROPERTIES
     OUTPUT_NAME lldb

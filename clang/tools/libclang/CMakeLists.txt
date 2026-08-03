@@ -120,7 +120,7 @@ if (MSVC AND ENABLE_SHARED AND ENABLE_STATIC)
   unset(ENABLE_STATIC)
 endif()
 
-if(WIN32 AND NOT MINGW)
+if(MSVC)
   set(output_name "libclang")
 else()
   set(output_name "clang")

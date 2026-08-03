@@ -18004,12 +18004,9 @@ static SDValue lowerV64I8Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
   // Try to create an in-lane repeating shuffle mask and then shuffle the
   // results into the target lanes.
-  // FIXME: Avoid on VBMI targets as the post lane permute often interferes
-  // with shuffle combining (should be fixed by topological DAG sorting).
-  if (!Subtarget.hasVBMI())
-    if (SDValue V = lowerShuffleAsRepeatedMaskAndLanePermute(
-            DL, MVT::v64i8, V1, V2, Mask, Subtarget, DAG))
-      return V;
+  if (SDValue V = lowerShuffleAsRepeatedMaskAndLanePermute(
+          DL, MVT::v64i8, V1, V2, Mask, Subtarget, DAG))
+    return V;
 
   if (SDValue Result = lowerShuffleAsLanePermuteAndPermute(
           DL, MVT::v64i8, V1, V2, Mask, DAG, Subtarget))
@@ -18025,12 +18022,6 @@ static SDValue lowerV64I8Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
     if (SDValue V = lowerShuffleAsByteRotateAndPermute(DL, MVT::v64i8, V1, V2,
                                                        Mask, Subtarget, DAG))
       return V;
-
-    // VBMI can use VPERMV/VPERMV3 byte shuffles more efficiently than
-    // OR(PSHUFB,PSHUFB).
-    if (Subtarget.hasVBMI())
-      return lowerShuffleWithPERMV(DL, MVT::v64i8, Mask, V1, V2, Subtarget,
-                                   DAG);
 
     // If we can't directly blend but can use PSHUFB, that will be better as it
     // can both shuffle and set up the inefficient blend.
@@ -18050,8 +18041,7 @@ static SDValue lowerV64I8Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
   if (Subtarget.hasVBMI())
     return lowerShuffleWithPERMV(DL, MVT::v64i8, Mask, V1, V2, Subtarget, DAG);
 
-  return splitAndLowerShuffle(DL, MVT::v64i8, V1, V2, Mask, DAG,
-                              /*SimpleOnly*/ false);
+  return splitAndLowerShuffle(DL, MVT::v64i8, V1, V2, Mask, DAG, /*SimpleOnly*/ false);
 }
 
 /// High-level routine to lower various 512-bit x86 vector shuffles.

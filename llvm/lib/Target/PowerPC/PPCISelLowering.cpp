@@ -8822,10 +8822,8 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
 
     MachineFunction &MF = DAG.getMachineFunction();
     if (canReuseLoadAddress(SINT, MVT::i64, RLI, DAG)) {
-      // Drop range metadata, as this metadata becomes invalid for f64 bit
-      // reinterpretation of i64 values.
       Bits = DAG.getLoad(MVT::f64, dl, RLI.Chain, RLI.Ptr, RLI.MPI,
-                         RLI.Alignment, RLI.MMOFlags(), RLI.AAInfo, nullptr);
+                         RLI.Alignment, RLI.MMOFlags(), RLI.AAInfo, RLI.Ranges);
       if (RLI.ResChain)
         DAG.makeEquivalentMemoryOrdering(RLI.ResChain, Bits.getValue(1));
     } else if (Subtarget.hasLFIWAX() &&
@@ -15588,27 +15586,17 @@ SDValue PPCTargetLowering::DAGCombineExtBoolTrunc(SDNode *N,
 }
 
 // The function check a i128 load can convert to 16i8 load for Vcmpequb.
-static bool canConvertToVcmpequb(SDValue &LHS, SDValue &RHS, bool IsPPC64) {
+static bool canConvertToVcmpequb(SDValue &LHS, SDValue &RHS) {
 
-  auto isValidForConvert = [IsPPC64](SDValue &Operand) {
+  auto isValidForConvert = [](SDValue &Operand) {
     if (!Operand.hasOneUse())
       return false;
 
     if (Operand.getValueType() != MVT::i128)
       return false;
 
-    if (Operand.getOpcode() == ISD::Constant) {
-      auto *C = cast<ConstantSDNode>(Operand);
-      const APInt &Val = C->getAPIntValue();
-      // On PPC64, comparing an i128 value loaded from memory against a
-      // constant smaller than 2^16 is usually better left to scalar lowering.
-      // In that case, the compare can be lowered using xori (since xori has a
-      // 16-bit immediate field), which is cheaper than materializing a vector
-      // constant and using vcmpequb.
-      if (IsPPC64 && Val.ult(1ULL << 16))
-        return false;
+    if (Operand.getOpcode() == ISD::Constant)
       return true;
-    }
 
     auto *LoadNode = dyn_cast<LoadSDNode>(Operand);
     if (!LoadNode)
@@ -15659,19 +15647,10 @@ SDValue convertTwoLoadsAndCmpToVCMPEQUB(SelectionDAG &DAG, SDNode *N,
     assert(Operand.getOpcode() == ISD::LOAD && "Must be LoadSDNode here.");
 
     auto *LoadNode = cast<LoadSDNode>(Operand);
-    // Create a new MachineMemOperand without range metadata.
-    // Range metadata is only valid for integer scalar types, not vectors.
-    // The original i128 load may have range metadata, but when we convert
-    // to v16i8, that metadata is no longer semantically valid.
-    MachineMemOperand *MMO = LoadNode->getMemOperand();
-    MachineFunction &MF = DAG.getMachineFunction();
-    MachineMemOperand *NewMMO = MF.getMachineMemOperand(
-        MMO->getPointerInfo(), MMO->getFlags(), MMO->getSize(), MMO->getAlign(),
-        MMO->getAAInfo(), nullptr, MMO->getSyncScopeID(),
-        MMO->getSuccessOrdering(), MMO->getFailureOrdering());
-    SDValue NewLoad = DAG.getLoad(MVT::v16i8, DL, LoadNode->getChain(),
-                                  LoadNode->getBasePtr(), NewMMO);
-    DAG.ReplaceAllUsesOfValueWith(SDValue(LoadNode, 1), NewLoad.getValue(1));
+    SDValue NewLoad =
+        DAG.getLoad(MVT::v16i8, DL, LoadNode->getChain(),
+                    LoadNode->getBasePtr(), LoadNode->getMemOperand());
+    DAG.ReplaceAllUsesOfValueWith(Operand.getValue(1), NewLoad.getValue(1));
     return NewLoad;
   };
 
@@ -15836,8 +15815,7 @@ SDValue PPCTargetLowering::combineSetCC(SDNode *N,
     //   This transformation replaces memcmp(a, b, 16) with two vector loads
     //   and one vector compare instruction.
 
-    if (Subtarget.hasAltivec() &&
-        canConvertToVcmpequb(LHS, RHS, Subtarget.isPPC64()))
+    if (Subtarget.hasAltivec() && canConvertToVcmpequb(LHS, RHS))
       return convertTwoLoadsAndCmpToVCMPEQUB(DCI.DAG, N, SDLoc(N));
   }
 

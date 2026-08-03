@@ -300,16 +300,13 @@ static void applySecRelHigh12A(const SectionChunk *sec, uint8_t *off,
                                OutputSection *os, uint64_t s) {
   if (!checkSecRel(sec, os))
     return;
-  uint32_t orig = read32le(off);
-  uint64_t imm = (orig >> 10) & 0xFFF;
-  orig &= ~(0xFFF << 10);
-  imm = (s + imm - os->getRVA()) >> 12;
-  if (0xfff < imm) {
+  uint64_t secRel = (s - os->getRVA()) >> 12;
+  if (0xfff < secRel) {
     error("overflow in SECREL_HIGH12A relocation in section: " +
           sec->getSectionName());
     return;
   }
-  write32le(off, orig | (imm << 10));
+  applyArm64Imm(off, secRel & 0xfff, 0);
 }
 
 static void applySecRelLdr(const SectionChunk *sec, uint8_t *off,

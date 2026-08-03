@@ -2369,26 +2369,7 @@ void StmtProfiler::VisitMaterializeTemporaryExpr(
 }
 
 void StmtProfiler::VisitCXXFoldExpr(const CXXFoldExpr *S) {
-  VisitStmtNoChildren(S);
-  // The callee sub-expression is not part of how the expression is written,
-  // so it's not added to the profile.
-  //
-  // Example:
-  // template <typename... T> requires ((sizeof(T) > 0) && ...) void f() {}
-  // class A;
-  // void operator&&(A, A);
-  // template <typename... T> requires ((sizeof(T) > 0) && ...) void f() {}
-  //
-  // Both definitions have identically written fold expressions, but semantic
-  // analysis adds the overloaded operator to the second one.
-  if (S->getLHS())
-    Visit(S->getLHS());
-  else
-    ID.AddInteger(0);
-  if (S->getRHS())
-    Visit(S->getRHS());
-  else
-    ID.AddInteger(0);
+  VisitExpr(S);
   ID.AddInteger(S->getOperator());
 }
 
