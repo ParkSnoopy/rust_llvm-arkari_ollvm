@@ -1,0 +1,4822 @@
+From 2d94d09e1a9828b38c419b2dbc411be53c9fd3e5 Mon Sep 17 00:00:00 2001
+From: ParkSnoopy <ParkSnoopy@users.noreply.github.com>
+Date: Mon, 3 Aug 2026 22:09:58 +0900
+Subject: [PATCH] arkari 18cee9cad49a6629570cfd02522378ede46a8017
+
+---
+ clang/lib/Frontend/InitPreprocessor.cpp       |   1 +
+ .../Obfuscation/ConstantFPEncryption.h        |  14 +
+ .../Obfuscation/ConstantIntEncryption.h       |  14 +
+ .../llvm/Transforms/Obfuscation/Flattening.h  |  24 +
+ .../Transforms/Obfuscation/IndirectBranch.h   |  15 +
+ .../Transforms/Obfuscation/IndirectCall.h     |  15 +
+ .../Obfuscation/IndirectGlobalVariable.h      |  15 +
+ .../Obfuscation/LegacyLowerSwitch.h           |   9 +
+ .../Obfuscation/MicrosoftRTTIEraser.h         |  14 +
+ .../Obfuscation/ObfuscationOptions.h          | 174 ++++
+ .../Obfuscation/ObfuscationPassManager.h      |  44 +
+ .../Transforms/Obfuscation/StringEncryption.h |  14 +
+ .../llvm/Transforms/Obfuscation/Utils.h       |  57 ++
+ llvm/lib/Passes/CMakeLists.txt                |   1 +
+ llvm/lib/Passes/PassBuilderPipelines.cpp      |  12 +-
+ llvm/lib/Transforms/CMakeLists.txt            |   1 +
+ .../lib/Transforms/Obfuscation/CMakeLists.txt |  30 +
+ .../Obfuscation/ConstantFPEncryption.cpp      | 207 +++++
+ .../Obfuscation/ConstantIntEncryption.cpp     | 213 +++++
+ .../lib/Transforms/Obfuscation/Flattening.cpp | 278 ++++++
+ .../Transforms/Obfuscation/IndirectBranch.cpp | 236 +++++
+ .../Transforms/Obfuscation/IndirectCall.cpp   | 290 ++++++
+ .../Obfuscation/IndirectGlobalVariable.cpp    | 296 +++++++
+ .../Obfuscation/LegacyLowerSwitch.cpp         | 562 ++++++++++++
+ .../Obfuscation/MicrosoftRTTIEraser.cpp       | 128 +++
+ .../Obfuscation/ObfuscationOptions.cpp        | 245 ++++++
+ .../Obfuscation/ObfuscationPassManager.cpp    | 206 +++++
+ .../Obfuscation/StringEncryption.cpp          | 832 ++++++++++++++++++
+ llvm/lib/Transforms/Obfuscation/Utils.cpp     | 585 ++++++++++++
+ 29 files changed, 4531 insertions(+), 1 deletion(-)
+ create mode 100644 llvm/include/llvm/Transforms/Obfuscation/ConstantFPEncryption.h
+ create mode 100644 llvm/include/llvm/Transforms/Obfuscation/ConstantIntEncryption.h
+ create mode 100644 llvm/include/llvm/Transforms/Obfuscation/Flattening.h
+ create mode 100644 llvm/include/llvm/Transforms/Obfuscation/IndirectBranch.h
+ create mode 100644 llvm/include/llvm/Transforms/Obfuscation/IndirectCall.h
+ create mode 100644 llvm/include/llvm/Transforms/Obfuscation/IndirectGlobalVariable.h
+ create mode 100644 llvm/include/llvm/Transforms/Obfuscation/LegacyLowerSwitch.h
+ create mode 100644 llvm/include/llvm/Transforms/Obfuscation/MicrosoftRTTIEraser.h
+ create mode 100644 llvm/include/llvm/Transforms/Obfuscation/ObfuscationOptions.h
+ create mode 100644 llvm/include/llvm/Transforms/Obfuscation/ObfuscationPassManager.h
+ create mode 100644 llvm/include/llvm/Transforms/Obfuscation/StringEncryption.h
+ create mode 100644 llvm/include/llvm/Transforms/Obfuscation/Utils.h
+ create mode 100644 llvm/lib/Transforms/Obfuscation/CMakeLists.txt
+ create mode 100644 llvm/lib/Transforms/Obfuscation/ConstantFPEncryption.cpp
+ create mode 100644 llvm/lib/Transforms/Obfuscation/ConstantIntEncryption.cpp
+ create mode 100644 llvm/lib/Transforms/Obfuscation/Flattening.cpp
+ create mode 100644 llvm/lib/Transforms/Obfuscation/IndirectBranch.cpp
+ create mode 100644 llvm/lib/Transforms/Obfuscation/IndirectCall.cpp
+ create mode 100644 llvm/lib/Transforms/Obfuscation/IndirectGlobalVariable.cpp
+ create mode 100644 llvm/lib/Transforms/Obfuscation/LegacyLowerSwitch.cpp
+ create mode 100644 llvm/lib/Transforms/Obfuscation/MicrosoftRTTIEraser.cpp
+ create mode 100644 llvm/lib/Transforms/Obfuscation/ObfuscationOptions.cpp
+ create mode 100644 llvm/lib/Transforms/Obfuscation/ObfuscationPassManager.cpp
+ create mode 100644 llvm/lib/Transforms/Obfuscation/StringEncryption.cpp
+ create mode 100644 llvm/lib/Transforms/Obfuscation/Utils.cpp
+
+diff --git a/clang/lib/Frontend/InitPreprocessor.cpp b/clang/lib/Frontend/InitPreprocessor.cpp
+index 8253fad9e..692f6dc7e 100644
+--- a/clang/lib/Frontend/InitPreprocessor.cpp
++++ b/clang/lib/Frontend/InitPreprocessor.cpp
+@@ -837,6 +837,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
+   // Compiler version introspection macros.
+   Builder.defineMacro("__llvm__");  // LLVM Backend
+   Builder.defineMacro("__clang__"); // Clang Frontend
++  Builder.defineMacro("__ARKARI__");// Arkari
+ #define TOSTR2(X) #X
+ #define TOSTR(X) TOSTR2(X)
+   Builder.defineMacro("__clang_major__", TOSTR(CLANG_VERSION_MAJOR));
+diff --git a/llvm/include/llvm/Transforms/Obfuscation/ConstantFPEncryption.h b/llvm/include/llvm/Transforms/Obfuscation/ConstantFPEncryption.h
+new file mode 100644
+index 000000000..1851b57d3
+--- /dev/null
++++ b/llvm/include/llvm/Transforms/Obfuscation/ConstantFPEncryption.h
+@@ -0,0 +1,14 @@
++#ifndef OBFUSCATION_CONSTANT_FP_ENCRYPTION_H
++#define OBFUSCATION_CONSTANT_FP_ENCRYPTION_H
++
++namespace llvm {
++class FunctionPass;
++class PassRegistry;
++class ObfuscationOptions;
++
++FunctionPass *createConstantFPEncryptionPass(ObfuscationOptions *argsOptions);
++void          initializeConstantFPEncryptionPass(PassRegistry &Registry);
++
++}
++
++#endif
+\ No newline at end of file
+diff --git a/llvm/include/llvm/Transforms/Obfuscation/ConstantIntEncryption.h b/llvm/include/llvm/Transforms/Obfuscation/ConstantIntEncryption.h
+new file mode 100644
+index 000000000..3f67e1387
+--- /dev/null
++++ b/llvm/include/llvm/Transforms/Obfuscation/ConstantIntEncryption.h
+@@ -0,0 +1,14 @@
++#ifndef OBFUSCATION_CONSTANT_INT_ENCRYPTION_H
++#define OBFUSCATION_CONSTANT_INT_ENCRYPTION_H
++
++namespace llvm {
++class FunctionPass;
++class PassRegistry;
++class ObfuscationOptions;
++
++FunctionPass *createConstantIntEncryptionPass(ObfuscationOptions *argsOptions);
++void          initializeConstantIntEncryptionPass(PassRegistry &Registry);
++
++}
++
++#endif
+\ No newline at end of file
+diff --git a/llvm/include/llvm/Transforms/Obfuscation/Flattening.h b/llvm/include/llvm/Transforms/Obfuscation/Flattening.h
+new file mode 100644
+index 000000000..a5fadc343
+--- /dev/null
++++ b/llvm/include/llvm/Transforms/Obfuscation/Flattening.h
+@@ -0,0 +1,24 @@
++//===- FlatteningIncludes.h - Flattening Obfuscation pass------------------===//
++//
++//                     The LLVM Compiler Infrastructure
++//
++// This file is distributed under the University of Illinois Open Source
++// License. See LICENSE.TXT for details.
++//
++//===----------------------------------------------------------------------===//
++//
++// This file contains includes and defines for the flattening pass
++//
++//===----------------------------------------------------------------------===//
++
++#ifndef _FLATTENING_INCLUDES_
++#define _FLATTENING_INCLUDES_
++
++namespace llvm {
++class FunctionPass;
++class ObfuscationOptions;
++FunctionPass *createFlatteningPass(unsigned            pointerSize,
++                                   ObfuscationOptions *argsOptions);
++}
++
++#endif
+\ No newline at end of file
+diff --git a/llvm/include/llvm/Transforms/Obfuscation/IndirectBranch.h b/llvm/include/llvm/Transforms/Obfuscation/IndirectBranch.h
+new file mode 100644
+index 000000000..e0ef9eb69
+--- /dev/null
++++ b/llvm/include/llvm/Transforms/Obfuscation/IndirectBranch.h
+@@ -0,0 +1,15 @@
++#ifndef OBFUSCATION_INDIRECTBR_H
++#define OBFUSCATION_INDIRECTBR_H
++
++// Namespace
++namespace llvm {
++class FunctionPass;
++class PassRegistry;
++class ObfuscationOptions;
++
++FunctionPass *createIndirectBranchPass(ObfuscationOptions *argsOptions);
++void          initializeIndirectBranchPass(PassRegistry &Registry);
++
++}
++
++#endif
+\ No newline at end of file
+diff --git a/llvm/include/llvm/Transforms/Obfuscation/IndirectCall.h b/llvm/include/llvm/Transforms/Obfuscation/IndirectCall.h
+new file mode 100644
+index 000000000..ccbb9f998
+--- /dev/null
++++ b/llvm/include/llvm/Transforms/Obfuscation/IndirectCall.h
+@@ -0,0 +1,15 @@
++#ifndef OBFUSCATION_INDIRECT_CALL_H
++#define OBFUSCATION_INDIRECT_CALL_H
++
++// Namespace
++namespace llvm {
++class FunctionPass;
++class PassRegistry;
++class ObfuscationOptions;
++
++FunctionPass *createIndirectCallPass(ObfuscationOptions *argsOptions);
++void          initializeIndirectCallPass(PassRegistry &Registry);
++
++}
++
++#endif
+\ No newline at end of file
+diff --git a/llvm/include/llvm/Transforms/Obfuscation/IndirectGlobalVariable.h b/llvm/include/llvm/Transforms/Obfuscation/IndirectGlobalVariable.h
+new file mode 100644
+index 000000000..50d1e187f
+--- /dev/null
++++ b/llvm/include/llvm/Transforms/Obfuscation/IndirectGlobalVariable.h
+@@ -0,0 +1,15 @@
++#ifndef OBFUSCATION_INDIRECT_GLOBAL_VARIABLE_H
++#define OBFUSCATION_INDIRECT_GLOBAL_VARIABLE_H
++
++// Namespace
++namespace llvm {
++class FunctionPass;
++class PassRegistry;
++class ObfuscationOptions;
++
++FunctionPass *createIndirectGlobalVariablePass(ObfuscationOptions *argsOptions);
++void          initializeIndirectGlobalVariablePass(PassRegistry &Registry);
++
++}
++
++#endif
+\ No newline at end of file
+diff --git a/llvm/include/llvm/Transforms/Obfuscation/LegacyLowerSwitch.h b/llvm/include/llvm/Transforms/Obfuscation/LegacyLowerSwitch.h
+new file mode 100644
+index 000000000..116192b51
+--- /dev/null
++++ b/llvm/include/llvm/Transforms/Obfuscation/LegacyLowerSwitch.h
+@@ -0,0 +1,9 @@
++#ifndef _LEGACY_LOWERSWITCH_INCLUDES_
++#define _LEGACY_LOWERSWITCH_INCLUDES_
++
++namespace llvm {
++class FunctionPass;
++FunctionPass *createLegacyLowerSwitchPass();
++}
++
++#endif
+\ No newline at end of file
+diff --git a/llvm/include/llvm/Transforms/Obfuscation/MicrosoftRTTIEraser.h b/llvm/include/llvm/Transforms/Obfuscation/MicrosoftRTTIEraser.h
+new file mode 100644
+index 000000000..c41ebc055
+--- /dev/null
++++ b/llvm/include/llvm/Transforms/Obfuscation/MicrosoftRTTIEraser.h
+@@ -0,0 +1,14 @@
++#ifndef _MICROSOFT_RTTI_ERASER_INCLUDES_
++#define _MICROSOFT_RTTI_ERASER_INCLUDES_
++
++namespace llvm {
++class ModulePass;
++class PassRegistry;
++class ObfuscationOptions;
++
++ModulePass *createMsRttiEraserPass(ObfuscationOptions *argsOptions);
++void        initializeMsRttiEraserPass(PassRegistry &Registry);
++
++}
++
++#endif
+\ No newline at end of file
+diff --git a/llvm/include/llvm/Transforms/Obfuscation/ObfuscationOptions.h b/llvm/include/llvm/Transforms/Obfuscation/ObfuscationOptions.h
+new file mode 100644
+index 000000000..a5e73835c
+--- /dev/null
++++ b/llvm/include/llvm/Transforms/Obfuscation/ObfuscationOptions.h
+@@ -0,0 +1,174 @@
++#ifndef OBFUSCATION_OBFUSCATIONOPTIONS_H
++#define OBFUSCATION_OBFUSCATIONOPTIONS_H
++
++#include "llvm/Support/YAMLParser.h"
++#include "llvm/IR/Function.h"
++#include "llvm/Support/CommandLine.h"
++#include "llvm/ADT/SmallString.h"
++
++
++namespace llvm {
++
++SmallVector<std::string> readAnnotate(Function *f);
++
++class ObfOpt {
++protected:
++  uint32_t    Enabled : 1;
++  uint32_t    Level   : 2;
++  std::string AttributeName;
++
++public:
++  ObfOpt(bool enable, uint32_t level, const std::string &attributeName) {
++    this->Enabled = enable;
++    this->Level = std::min<uint32_t>(level, 3);
++    this->AttributeName = attributeName;
++  }
++
++  ObfOpt(const std::string &attributeName) {
++    this->Enabled = false;
++    this->Level = 0;
++    this->AttributeName = attributeName;
++  }
++
++  void readOpt(const cl::opt<bool> &enableOpt) {
++    if (enableOpt.getNumOccurrences()) {
++      Enabled = enableOpt.getValue();
++    }
++  }
++
++  void readOpt(const cl::opt<bool> &    enableOpt,
++               const cl::opt<uint32_t> &levelOpt) {
++    readOpt(enableOpt);
++    if (levelOpt.getNumOccurrences()) {
++      Level = levelOpt.getValue();
++    }
++  }
++
++  void setEnable(bool enabled) {
++    this->Enabled = enabled;
++  }
++
++  void setLevel(uint32_t level) {
++    this->Level = std::min<uint32_t>(level, 3);
++  }
++
++  bool isEnabled() const {
++    return this->Enabled;
++  }
++
++  uint32_t level() const {
++    return this->Level;
++  }
++
++  const std::string &attributeName() const {
++    return this->AttributeName;
++  }
++
++  ObfOpt none() const {
++    return ObfOpt{false, 0, this->attributeName()};
++  }
++
++};
++
++class ObfuscationOptions {
++protected:
++  std::shared_ptr<ObfOpt> IndBrOpt = nullptr;
++  std::shared_ptr<ObfOpt> ICallOpt = nullptr;
++  std::shared_ptr<ObfOpt> IndGvOpt = nullptr;
++  std::shared_ptr<ObfOpt> FlaOpt = nullptr;
++  std::shared_ptr<ObfOpt> CseOpt = nullptr;
++  std::shared_ptr<ObfOpt> CieOpt = nullptr;
++  std::shared_ptr<ObfOpt> CfeOpt = nullptr;
++  std::shared_ptr<ObfOpt> RttiOpt = nullptr;
++
++  SmallString<32> RandomSeed;
++
++public:
++  SmallVector<std::shared_ptr<ObfOpt>> getAllOpt() const {
++    SmallVector<std::shared_ptr<ObfOpt>, 7> allOpt;
++    allOpt.push_back(IndBrOpt);
++    allOpt.push_back(ICallOpt);
++    allOpt.push_back(IndGvOpt);
++    allOpt.push_back(FlaOpt);
++    allOpt.push_back(CseOpt);
++    allOpt.push_back(CieOpt);
++    allOpt.push_back(CfeOpt);
++    allOpt.push_back(RttiOpt);
++    return allOpt;
++  }
++
++  ObfuscationOptions(const std::shared_ptr<ObfOpt> &indBrOpt,
++                     const std::shared_ptr<ObfOpt> &iCallOpt,
++                     const std::shared_ptr<ObfOpt> &indGvOpt,
++                     const std::shared_ptr<ObfOpt> &flaOpt,
++                     const std::shared_ptr<ObfOpt> &cseOpt,
++                     const std::shared_ptr<ObfOpt> &cieOpt,
++                     const std::shared_ptr<ObfOpt> &cfeOpt,
++                     const std::shared_ptr<ObfOpt> &rttiOpt) {
++    this->IndBrOpt = indBrOpt;
++    this->ICallOpt = iCallOpt;
++    this->IndGvOpt = indGvOpt;
++    this->FlaOpt = flaOpt;
++    this->CseOpt = cseOpt;
++    this->CieOpt = cieOpt;
++    this->CfeOpt = cfeOpt;
++    this->RttiOpt = rttiOpt;
++  }
++
++  ObfuscationOptions() : ObfuscationOptions{
++                           std::make_shared<ObfOpt>("indbr"),
++                           std::make_shared<ObfOpt>("icall"),
++                           std::make_shared<ObfOpt>("indgv"),
++                           std::make_shared<ObfOpt>("fla"),
++                           std::make_shared<ObfOpt>("cse"),
++                           std::make_shared<ObfOpt>("cie"),
++                           std::make_shared<ObfOpt>("cfe"),
++                           std::make_shared<ObfOpt>("rtti")
++                       } {}
++
++  auto indBrOpt() const {
++    return IndBrOpt;
++  }
++
++  auto iCallOpt() const {
++    return ICallOpt;
++  }
++
++  auto indGvOpt() const {
++    return IndGvOpt;
++  }
++
++  auto flaOpt() const {
++    return FlaOpt;
++  }
++
++  auto cseOpt() const {
++    return CseOpt;
++  }
++
++  auto cieOpt() const {
++    return CieOpt;
++  }
++
++  auto cfeOpt() const {
++    return CfeOpt;
++  }
++
++  auto rttiOpt() const {
++    return RttiOpt;
++  }
++
++  auto &randomSeed() {
++    return RandomSeed;
++  }
++
++  static std::shared_ptr<ObfuscationOptions> readConfigFile(
++      const Twine &FileName);
++
++  static ObfOpt toObfuscate(const std::shared_ptr<ObfOpt> &option, Function *f);
++
++};
++
++}
++
++#endif
+\ No newline at end of file
+diff --git a/llvm/include/llvm/Transforms/Obfuscation/ObfuscationPassManager.h b/llvm/include/llvm/Transforms/Obfuscation/ObfuscationPassManager.h
+new file mode 100644
+index 000000000..73191a0ca
+--- /dev/null
++++ b/llvm/include/llvm/Transforms/Obfuscation/ObfuscationPassManager.h
+@@ -0,0 +1,44 @@
++#ifndef OBFUSCATION_OBFUSCATIONPASSMANAGER_H
++#define OBFUSCATION_OBFUSCATIONPASSMANAGER_H
++
++#include "llvm/Transforms/Obfuscation/Flattening.h"
++#include "llvm/Transforms/Obfuscation/IndirectBranch.h"
++#include "llvm/Transforms/Obfuscation/IndirectCall.h"
++#include "llvm/Transforms/Obfuscation/IndirectGlobalVariable.h"
++#include "llvm/Transforms/Obfuscation/StringEncryption.h"
++#include "llvm/Transforms/Obfuscation/ConstantIntEncryption.h"
++#include "llvm/Transforms/Obfuscation/ConstantFPEncryption.h"
++#include "llvm/Transforms/Obfuscation/MicrosoftRTTIEraser.h"
++#include "llvm/Passes/PassBuilder.h"
++
++// Namespace
++namespace llvm {
++class ModulePass;
++class PassRegistry;
++
++ModulePass *createObfuscationPassManager();
++void        initializeObfuscationPassManagerPass(PassRegistry &Registry);
++
++class ObfuscationPassManagerPass
++    : public PassInfoMixin<ObfuscationPassManagerPass> {
++public:
++  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM) {
++    outs() << M.getName() << "\n";
++    ModulePass *OPM = createObfuscationPassManager();
++    bool        Changed = OPM->runOnModule(M);
++    OPM->doFinalization(M);
++    delete OPM;
++    if (Changed) {
++      return PreservedAnalyses::none();
++    }
++    return PreservedAnalyses::all();
++  }
++
++  static llvm::StringRef name() {
++    return "ObfuscationPassManagerPass";
++  }
++};
++
++} // namespace llvm
++
++#endif
+\ No newline at end of file
+diff --git a/llvm/include/llvm/Transforms/Obfuscation/StringEncryption.h b/llvm/include/llvm/Transforms/Obfuscation/StringEncryption.h
+new file mode 100644
+index 000000000..e6e6d49ed
+--- /dev/null
++++ b/llvm/include/llvm/Transforms/Obfuscation/StringEncryption.h
+@@ -0,0 +1,14 @@
++#ifndef OBFUSCATION_STRING_ENCRYPTION_H
++#define OBFUSCATION_STRING_ENCRYPTION_H
++
++namespace llvm {
++class ModulePass;
++class PassRegistry;
++class ObfuscationOptions;
++
++ModulePass *createStringEncryptionPass(ObfuscationOptions *argsOptions);
++void        initializeStringEncryptionPass(PassRegistry &Registry);
++
++}
++
++#endif
+\ No newline at end of file
+diff --git a/llvm/include/llvm/Transforms/Obfuscation/Utils.h b/llvm/include/llvm/Transforms/Obfuscation/Utils.h
+new file mode 100644
+index 000000000..744b574b6
+--- /dev/null
++++ b/llvm/include/llvm/Transforms/Obfuscation/Utils.h
+@@ -0,0 +1,57 @@
++#ifndef __UTILS_OBF__
++#define __UTILS_OBF__
++
++#include "llvm/IR/Function.h"
++#include "llvm/IR/Instructions.h"
++#include "llvm/IR/DataLayout.h"
++#include "llvm/Transforms/Utils/Local.h"
++#include "llvm/ADT/DenseMap.h"
++#include "llvm/ADT/SmallVector.h"
++
++#include <random>
++#include <vector>
++
++using namespace llvm;
++
++struct CreatePageTableArgs {
++  unsigned                           CountLoop;
++  std::string                        GVNamePrefix;
++  std::mt19937_64 *                  RNG;
++  Module *                           M;
++  std::vector<Constant *> *          Objects;
++  DenseMap<Constant *, unsigned> *   IndexMap;
++  DenseMap<Constant *, uint64_t> *   ObjectKeys;
++  SmallVectorImpl<GlobalVariable *> *OutPageTable;
++  uint64_t                           PtrEncKey;
++};
++
++
++struct BuildDecryptArgs {
++  unsigned FuncLoopCount;
++  unsigned NextIndex;
++  Value *NextIndexValue;
++  Function *Fn;
++  Instruction *InsertBefore;
++  Type *LoadTy;
++  SmallVectorImpl<GlobalVariable *> *ModulePageTable;
++  SmallVectorImpl<GlobalVariable *> *FuncPageTable;
++  uint64_t ModuleKey;
++  uint64_t FuncKey;
++  uint64_t PtrEncKey;
++  int PtrAuthKey; // -1 = no PAC, 0 = IA (code), 2 = DA (data)
++  uint64_t PtrAuthDisc; // ptrauth discriminator
++};
++
++IntegerType *getPageTableIntTy(Module &M);
++bool valueEscapes(Instruction *Inst);
++void fixStack(Function *f);
++CallBase *fixEH(CallBase *CB);
++void LowerConstantExpr(Function &F);
++bool expandConstantExpr(Function &F);
++void createPageTable(const CreatePageTableArgs &args);
++void enhancedPageTable(const CreatePageTableArgs &args,
++                       DenseMap<Constant *, unsigned> *FuncIndexMap);
++Value *buildPageTableDecryptIR(const BuildDecryptArgs &args);
++Value *encryptConstant(Constant *plainConstant, Instruction *insertBefore,
++                       std::mt19937_64 &rng, unsigned level);
++#endif
+\ No newline at end of file
+diff --git a/llvm/lib/Passes/CMakeLists.txt b/llvm/lib/Passes/CMakeLists.txt
+index 5d7cd3689..dbc8ade5c 100644
+--- a/llvm/lib/Passes/CMakeLists.txt
++++ b/llvm/lib/Passes/CMakeLists.txt
+@@ -32,4 +32,5 @@ add_llvm_component_library(LLVMPasses
+   TransformUtils
+   Vectorize
+   Instrumentation
++  Obfuscation
+   )
+diff --git a/llvm/lib/Passes/PassBuilderPipelines.cpp b/llvm/lib/Passes/PassBuilderPipelines.cpp
+index 1584d3087..3d1205c82 100644
+--- a/llvm/lib/Passes/PassBuilderPipelines.cpp
++++ b/llvm/lib/Passes/PassBuilderPipelines.cpp
+@@ -1,4 +1,4 @@
+-//===- Construction of pass pipelines -------------------------------------===//
++﻿//===- Construction of pass pipelines -------------------------------------===//
+ //
+ // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+ // See https://llvm.org/LICENSE.txt for license information.
+@@ -150,6 +150,7 @@
+ #include "llvm/Transforms/Vectorize/LoopVectorize.h"
+ #include "llvm/Transforms/Vectorize/SLPVectorizer.h"
+ #include "llvm/Transforms/Vectorize/VectorCombine.h"
++#include "llvm/Transforms/Obfuscation/ObfuscationPassManager.h"
+ 
+ using namespace llvm;
+ 
+@@ -388,6 +389,15 @@ void PassBuilder::invokeOptimizerLastEPCallbacks(ModulePassManager &MPM,
+                                                  ThinOrFullLTOPhase Phase) {
+   for (auto &C : OptimizerLastEPCallbacks)
+     C(MPM, Level, Phase);
++  MPM.addPass(ObfuscationPassManagerPass());
++  FunctionPassManager CleanupFPM;
++  CleanupFPM.addPass(SimplifyCFGPass());
++  CleanupFPM.addPass(InstCombinePass());
++  CleanupFPM.addPass(ADCEPass());
++
++  MPM.addPass(createModuleToFunctionPassAdaptor(std::move(CleanupFPM)));
++
++  MPM.addPass(GlobalDCEPass());
+ }
+ void PassBuilder::invokeFullLinkTimeOptimizationEarlyEPCallbacks(
+     ModulePassManager &MPM, OptimizationLevel Level) {
+diff --git a/llvm/lib/Transforms/CMakeLists.txt b/llvm/lib/Transforms/CMakeLists.txt
+index 7046f2f4b..1eb5771e3 100644
+--- a/llvm/lib/Transforms/CMakeLists.txt
++++ b/llvm/lib/Transforms/CMakeLists.txt
+@@ -9,3 +9,4 @@ add_subdirectory(ObjCARC)
+ add_subdirectory(Coroutines)
+ add_subdirectory(CFGuard)
+ add_subdirectory(HipStdPar)
++add_subdirectory(Obfuscation)
+\ No newline at end of file
+diff --git a/llvm/lib/Transforms/Obfuscation/CMakeLists.txt b/llvm/lib/Transforms/Obfuscation/CMakeLists.txt
+new file mode 100644
+index 000000000..852c8931a
+--- /dev/null
++++ b/llvm/lib/Transforms/Obfuscation/CMakeLists.txt
+@@ -0,0 +1,30 @@
++add_llvm_component_library(LLVMObfuscation
++  Utils.cpp
++  ObfuscationPassManager.cpp
++  ObfuscationOptions.cpp
++  IndirectBranch.cpp
++  IndirectCall.cpp
++  IndirectGlobalVariable.cpp
++  Flattening.cpp
++  StringEncryption.cpp
++  LegacyLowerSwitch.cpp
++  ConstantIntEncryption.cpp
++  ConstantFPEncryption.cpp
++  MicrosoftRTTIEraser.cpp
++  
++  COMPONENT_NAME
++  Obfuscation
++  
++  ADDITIONAL_HEADER_DIRS
++  ${LLVM_MAIN_INCLUDE_DIR}/llvm/Transforms/Obfuscation
++  
++  DEPENDS
++  intrinsics_gen
++
++  LINK_COMPONENTS
++  Core
++  Support
++  TargetParser
++  TransformUtils
++  Linker
++  )
+diff --git a/llvm/lib/Transforms/Obfuscation/ConstantFPEncryption.cpp b/llvm/lib/Transforms/Obfuscation/ConstantFPEncryption.cpp
+new file mode 100644
+index 000000000..54bd1923c
+--- /dev/null
++++ b/llvm/lib/Transforms/Obfuscation/ConstantFPEncryption.cpp
+@@ -0,0 +1,207 @@
++#include "llvm/Transforms/Obfuscation/ObfuscationOptions.h"
++#include "llvm/Transforms/Obfuscation/ConstantFPEncryption.h"
++#include "llvm/Transforms/Obfuscation/Utils.h"
++#include "llvm/Transforms/Utils/GlobalStatus.h"
++#include "llvm/Transforms/IPO/Attributor.h"
++#include "llvm/IR/LLVMContext.h"
++#include "llvm/IR/Constants.h"
++#include "llvm/IR/GlobalValue.h"
++#include "llvm/IR/IRBuilder.h"
++#include "llvm/IR/InstIterator.h"
++#include "llvm/Support/raw_ostream.h"
++#include "llvm/IR/NoFolder.h"
++#include "llvm/Transforms/Utils/ModuleUtils.h"
++#include "llvm/Support/RandomNumberGenerator.h"
++#include "llvm/ADT/DenseMap.h"
++#include "llvm/ADT/SmallPtrSet.h"
++#include <algorithm>
++
++#define DEBUG_TYPE "constant-fp-encryption"
++
++using namespace llvm;
++
++namespace {
++
++struct ConstantFPEncryption : public FunctionPass {
++  static char         ID;
++  ObfuscationOptions *ArgsOptions;
++
++  DenseMap<Function *, SmallPtrSet<Instruction *, 16>> FunctionModifyIRs;
++  std::mt19937_64                                      RNG;
++
++  ConstantFPEncryption(ObfuscationOptions *argsOptions) : FunctionPass(ID) {
++    this->ArgsOptions = argsOptions;
++    uint64_t seed = 0;
++    if (auto errorCode = llvm::getRandomBytes(&seed, sizeof(seed))) {
++      llvm::report_fatal_error(
++          StringRef("Failed to get random bytes for page table generation") +
++          errorCode.message());
++    }
++
++    RNG = std::mt19937_64(seed);
++  }
++
++  StringRef getPassName() const override {
++    return {"ConstantFPEncryption"};
++  }
++
++  bool doInitialization(Module &M) override {
++    bool Changed = false;
++    for (auto &F : M) {
++      const auto opt = ArgsOptions->toObfuscate(ArgsOptions->cfeOpt(), &F);
++      if (!opt.isEnabled()) {
++        continue;
++      }
++      Changed |= expandConstantExpr(F);
++      for (auto &BB : F) {
++        for (auto &I : BB) {
++          if (I.isEHPad() || isa<AllocaInst>(&I) ||
++              isa<IntrinsicInst>(&I) || isa<SwitchInst>(I) ||
++              I.isAtomic()) {
++            continue;
++          }
++          auto CI = dyn_cast<CallInst>(&I);
++          auto GEP = dyn_cast<GetElementPtrInst>(&I);
++          auto PHI = dyn_cast<PHINode>(&I);
++
++          for (unsigned i = 0; i < (PHI
++                                      ? PHI->getNumIncomingValues()
++                                      : I.getNumOperands()); ++i) {
++            if (CI && CI->isBundleOperand(i)) {
++              continue;
++            }
++            if (GEP && (i < 2 || GEP->getSourceElementType()->isStructTy())) {
++              continue;
++            }
++            if (PHI && isa<SwitchInst>(
++                    PHI->getIncomingBlock(i)->getTerminator())) {
++              continue;
++            }
++            Value *Opr = PHI ? PHI->getIncomingValue(i) : I.getOperand(i);
++            if (isa<ConstantFP>(Opr)) {
++              FunctionModifyIRs[&F].insert(&I);
++              break;
++            }
++          }
++        }
++      }
++    }
++    return Changed;
++  }
++
++  bool runOnFunction(Function &F) override {
++    const auto opt = ArgsOptions->toObfuscate(ArgsOptions->cfeOpt(), &F);
++    if (!opt.isEnabled()) {
++      return false;
++    }
++    auto &FuncModifyIRs = FunctionModifyIRs[&F];
++    if (FuncModifyIRs.empty()) {
++      return false;
++    }
++
++    // Count constant occurrences for deduplication
++    DenseMap<ConstantFP *, unsigned> ConstUseCount;
++    for (auto I : FuncModifyIRs) {
++      auto CI = dyn_cast<CallInst>(I);
++      auto GEP = dyn_cast<GetElementPtrInst>(I);
++      auto PHI = dyn_cast<PHINode>(I);
++      for (unsigned i = 0; i < I->getNumOperands(); ++i) {
++        if (CI && CI->isBundleOperand(i))
++          continue;
++        if (GEP && i < 2)
++          continue;
++        if (auto CFP = dyn_cast<ConstantFP>(I->getOperand(i))) {
++          if (PHI &&
++              isa<SwitchInst>(PHI->getIncomingBlock(i)->getTerminator()))
++            continue;
++          ConstUseCount[CFP]++;
++        }
++      }
++    }
++
++    // Pre-encrypt duplicate constants at function entry to avoid
++    // creating redundant GlobalVariables and decrypt sequences
++    DenseMap<ConstantFP *, AllocaInst *> DedupCache;
++    auto &EntryBB = F.getEntryBlock();
++    Instruction *AllocaInsertPt = &*EntryBB.begin();
++    for (auto &KV : ConstUseCount) {
++      if (KV.second <= 1)
++        continue;
++      auto *CFP = KV.first;
++      auto *Ty = CFP->getType();
++      auto BitWidth = Ty->getPrimitiveSizeInBits().getFixedValue();
++      if (BitWidth < 8)
++        continue;
++      IRBuilder<NoFolder> AIB(AllocaInsertPt);
++      DedupCache[CFP] = AIB.CreateAlloca(Ty, nullptr);
++    }
++
++    if (!DedupCache.empty()) {
++      Instruction *DecryptPt = nullptr;
++      for (auto &I : EntryBB) {
++        if (!isa<AllocaInst>(&I)) {
++          DecryptPt = &I;
++          break;
++        }
++      }
++      if (!DecryptPt)
++        DecryptPt = EntryBB.getTerminator();
++      for (auto &KV : DedupCache) {
++        Value *Dec = encryptConstant(KV.first, DecryptPt, RNG, opt.level());
++        IRBuilder<NoFolder> SIB(DecryptPt);
++        SIB.CreateAlignedStore(Dec, KV.second, Align{1}, true);
++      }
++    }
++
++    for (auto I : FuncModifyIRs) {
++      auto CI = dyn_cast<CallInst>(I);
++      auto GEP = dyn_cast<GetElementPtrInst>(I);
++      auto PHI = dyn_cast<PHINode>(I);
++
++      for (unsigned i = 0; i < I->getNumOperands(); ++i) {
++        if (CI && CI->isBundleOperand(i)) {
++          continue;
++        }
++        if (GEP && i < 2) {
++          continue;
++        }
++        Value *Opr = I->getOperand(i);
++        if (auto CFP = dyn_cast<ConstantFP>(Opr)) {
++          if (PHI && isa<
++                SwitchInst>(PHI->getIncomingBlock(i)->getTerminator())) {
++            continue;
++          }
++
++          auto InsertPoint =
++              PHI ? PHI->getIncomingBlock(i)->getTerminator() : I;
++          Value *CipherConstant;
++          auto CacheIt = DedupCache.find(CFP);
++          if (CacheIt != DedupCache.end()) {
++            IRBuilder<NoFolder> IRB(InsertPoint);
++            CipherConstant = IRB.CreateAlignedLoad(
++                CFP->getType(), CacheIt->second, Align{1}, true);
++          } else {
++            CipherConstant = encryptConstant(CFP, InsertPoint, RNG,
++                                             opt.level());
++          }
++          if (PHI)
++            PHI->setIncomingValue(i, CipherConstant);
++          else
++            I->setOperand(i, CipherConstant);
++        }
++      }
++    }
++    return true;
++  }
++};
++} // anonymous namespace
++
++char ConstantFPEncryption::ID = 0;
++
++FunctionPass *llvm::createConstantFPEncryptionPass(
++    ObfuscationOptions *argsOptions) {
++  return new ConstantFPEncryption(argsOptions);
++}
++
++INITIALIZE_PASS(ConstantFPEncryption, "cfe",
++                "Enable IR Constant FP Encryption", false, false)
+\ No newline at end of file
+diff --git a/llvm/lib/Transforms/Obfuscation/ConstantIntEncryption.cpp b/llvm/lib/Transforms/Obfuscation/ConstantIntEncryption.cpp
+new file mode 100644
+index 000000000..3326bf5c7
+--- /dev/null
++++ b/llvm/lib/Transforms/Obfuscation/ConstantIntEncryption.cpp
+@@ -0,0 +1,213 @@
++#include "llvm/Transforms/Obfuscation/ObfuscationOptions.h"
++#include "llvm/Transforms/Obfuscation/ConstantIntEncryption.h"
++#include "llvm/Transforms/Obfuscation/Utils.h"
++#include "llvm/Transforms/Utils/GlobalStatus.h"
++#include "llvm/Transforms/IPO/Attributor.h"
++#include "llvm/IR/LLVMContext.h"
++#include "llvm/IR/Constants.h"
++#include "llvm/IR/GlobalValue.h"
++#include "llvm/IR/IRBuilder.h"
++#include "llvm/IR/InstIterator.h"
++#include "llvm/Support/raw_ostream.h"
++#include "llvm/IR/NoFolder.h"
++#include "llvm/Transforms/Utils/ModuleUtils.h"
++#include "llvm/Support/RandomNumberGenerator.h"
++#include "llvm/ADT/DenseMap.h"
++#include "llvm/ADT/SmallPtrSet.h"
++#include <algorithm>
++
++#define DEBUG_TYPE "constant-int-encryption"
++
++using namespace llvm;
++
++namespace {
++
++struct ConstantIntEncryption : public FunctionPass {
++  static char         ID;
++  ObfuscationOptions *ArgsOptions;
++
++  DenseMap<Function *, SmallPtrSet<Instruction *, 16>> FunctionModifyIRs;
++  std::mt19937_64                                      RNG;
++
++  ConstantIntEncryption(ObfuscationOptions *argsOptions) : FunctionPass(ID) {
++    this->ArgsOptions = argsOptions;
++    uint64_t seed = 0;
++    if (auto errorCode = llvm::getRandomBytes(&seed, sizeof(seed))) {
++      llvm::report_fatal_error(
++          StringRef("Failed to get random bytes for page table generation") +
++          errorCode.message());
++    }
++
++    RNG = std::mt19937_64(seed);
++  }
++
++  StringRef getPassName() const override {
++    return "ConstantIntEncryption";
++  }
++
++  bool doInitialization(Module &M) override {
++    bool Changed = false;
++    for (auto &F : M) {
++      const auto opt = ArgsOptions->toObfuscate(ArgsOptions->cieOpt(), &F);
++      if (!opt.isEnabled()) {
++        continue;
++      }
++      Changed |= expandConstantExpr(F);
++      for (auto &BB : F) {
++        for (auto &I : BB) {
++          if (I.isEHPad() || isa<AllocaInst>(&I) ||
++              isa<IntrinsicInst>(&I) || isa<SwitchInst>(I) ||
++              I.isAtomic()) {
++            continue;
++          }
++          auto CI = dyn_cast<CallInst>(&I);
++          auto GEP = dyn_cast<GetElementPtrInst>(&I);
++          auto PHI = dyn_cast<PHINode>(&I);
++
++          for (unsigned i = 0; i < (PHI
++                                      ? PHI->getNumIncomingValues()
++                                      : I.getNumOperands()); ++i) {
++            if (CI && CI->isBundleOperand(i)) {
++              continue;
++            }
++            if (GEP && (i < 2 || GEP->getSourceElementType()->isStructTy())) {
++              continue;
++            }
++            if (PHI && isa<SwitchInst>(
++                    PHI->getIncomingBlock(i)->getTerminator())) {
++              continue;
++            }
++            Value *Opr = PHI ? PHI->getIncomingValue(i) : I.getOperand(i);
++            auto   CTI = dyn_cast<ConstantInt>(Opr);
++            if (CTI && CTI->getBitWidth() > 7) {
++              FunctionModifyIRs[&F].insert(&I);
++              break;
++            }
++          }
++        }
++      }
++    }
++    return Changed;
++  }
++
++  bool runOnFunction(Function &F) override {
++    const auto opt = ArgsOptions->toObfuscate(ArgsOptions->cieOpt(), &F);
++    if (!opt.isEnabled()) {
++      return false;
++    }
++    auto &FuncModifyIRs = FunctionModifyIRs[&F];
++    if (FuncModifyIRs.empty()) {
++      return false;
++    }
++
++    // Count constant occurrences for deduplication
++    DenseMap<ConstantInt *, unsigned> ConstUseCount;
++    for (auto I : FuncModifyIRs) {
++      auto CI = dyn_cast<CallInst>(I);
++      auto GEP = dyn_cast<GetElementPtrInst>(I);
++      auto PHI = dyn_cast<PHINode>(I);
++      for (unsigned i = 0; i < I->getNumOperands(); ++i) {
++        if (CI && CI->isBundleOperand(i))
++          continue;
++        if (GEP && i < 2)
++          continue;
++        if (auto CTI = dyn_cast<ConstantInt>(I->getOperand(i))) {
++          if (CTI->getBitWidth() < 4)
++            continue;
++          if (PHI &&
++              isa<SwitchInst>(PHI->getIncomingBlock(i)->getTerminator()))
++            continue;
++          ConstUseCount[CTI]++;
++        }
++      }
++    }
++
++    // Pre-encrypt duplicate constants at function entry to avoid
++    // creating redundant GlobalVariables and decrypt sequences
++    DenseMap<ConstantInt *, AllocaInst *> DedupCache;
++    auto &EntryBB = F.getEntryBlock();
++    Instruction *AllocaInsertPt = &*EntryBB.begin();
++    for (auto &KV : ConstUseCount) {
++      if (KV.second <= 1)
++        continue;
++      auto *CTI = KV.first;
++      auto *Ty = CTI->getType();
++      auto BitWidth = Ty->getPrimitiveSizeInBits().getFixedValue();
++      if (BitWidth < 8)
++        continue;
++      IRBuilder<NoFolder> AIB(AllocaInsertPt);
++      DedupCache[CTI] = AIB.CreateAlloca(Ty, nullptr);
++    }
++
++    if (!DedupCache.empty()) {
++      Instruction *DecryptPt = nullptr;
++      for (auto &I : EntryBB) {
++        if (!isa<AllocaInst>(&I)) {
++          DecryptPt = &I;
++          break;
++        }
++      }
++      if (!DecryptPt)
++        DecryptPt = EntryBB.getTerminator();
++      for (auto &KV : DedupCache) {
++        Value *Dec = encryptConstant(KV.first, DecryptPt, RNG, opt.level());
++        IRBuilder<NoFolder> SIB(DecryptPt);
++        SIB.CreateAlignedStore(Dec, KV.second, Align{1}, true);
++      }
++    }
++
++    for (auto I : FuncModifyIRs) {
++      auto CI = dyn_cast<CallInst>(I);
++      auto GEP = dyn_cast<GetElementPtrInst>(I);
++      auto PHI = dyn_cast<PHINode>(I);
++
++      for (unsigned i = 0; i < I->getNumOperands(); ++i) {
++        if (CI && CI->isBundleOperand(i)) {
++          continue;
++        }
++        if (GEP && i < 2) {
++          continue;
++        }
++        Value *Opr = I->getOperand(i);
++        if (auto CTI = dyn_cast<ConstantInt>(Opr)) {
++          if (CTI->getBitWidth() < 4) {
++            continue;
++          }
++          if (PHI && isa<
++                SwitchInst>(PHI->getIncomingBlock(i)->getTerminator())) {
++            continue;
++          }
++
++          auto InsertPoint =
++              PHI ? PHI->getIncomingBlock(i)->getTerminator() : I;
++          Value *CipherConstant;
++          auto CacheIt = DedupCache.find(CTI);
++          if (CacheIt != DedupCache.end()) {
++            IRBuilder<NoFolder> IRB(InsertPoint);
++            CipherConstant = IRB.CreateAlignedLoad(
++                CTI->getType(), CacheIt->second, Align{1}, true);
++          } else {
++            CipherConstant = encryptConstant(CTI, InsertPoint, RNG,
++                                             opt.level());
++          }
++          if (PHI)
++            PHI->setIncomingValue(i, CipherConstant);
++          else
++            I->setOperand(i, CipherConstant);
++        }
++      }
++    }
++    return true;
++  }
++};
++} // anonymous namespace
++
++char ConstantIntEncryption::ID = 0;
++
++FunctionPass *llvm::createConstantIntEncryptionPass(
++    ObfuscationOptions *argsOptions) {
++  return new ConstantIntEncryption(argsOptions);
++}
++
++INITIALIZE_PASS(ConstantIntEncryption, "cie",
++                "Enable IR Constant Integer Encryption", false, false)
+\ No newline at end of file
+diff --git a/llvm/lib/Transforms/Obfuscation/Flattening.cpp b/llvm/lib/Transforms/Obfuscation/Flattening.cpp
+new file mode 100644
+index 000000000..382bc7212
+--- /dev/null
++++ b/llvm/lib/Transforms/Obfuscation/Flattening.cpp
+@@ -0,0 +1,278 @@
++//===- Flattening.cpp - Flattening Obfuscation pass------------------------===//
++//
++//                     The LLVM Compiler Infrastructure
++//
++// This file is distributed under the University of Illinois Open Source
++// License. See LICENSE.TXT for details.
++//
++//===----------------------------------------------------------------------===//
++//
++// This file implements the flattening pass
++//
++//===----------------------------------------------------------------------===//
++
++#include "llvm/IR/Constants.h"
++#include "llvm/Transforms/Obfuscation/Flattening.h"
++#include "llvm/Transforms/Obfuscation/LegacyLowerSwitch.h"
++#include "llvm/Transforms/Obfuscation/Utils.h"
++#include "llvm/ADT/Statistic.h"
++#include "llvm/Transforms/Obfuscation/ObfuscationOptions.h"
++#include "llvm/IR/IRBuilder.h"
++#include "llvm/Transforms/Utils/BasicBlockUtils.h"
++#include "llvm/Support/RandomNumberGenerator.h"
++
++#include <memory>
++#include <random>
++#include "llvm/ADT/DenseSet.h"
++
++#define DEBUG_TYPE "flattening"
++
++using namespace std;
++using namespace llvm;
++
++// Stats
++STATISTIC(Flattened, "Functions flattened");
++
++namespace {
++struct Flattening : public FunctionPass {
++  unsigned    pointerSize;
++  static char ID; // Pass identification, replacement for typeid
++
++  ObfuscationOptions *ArgsOptions;
++  std::mt19937_64     RNG;
++
++  Flattening(unsigned            pointerSize,
++             ObfuscationOptions *argsOptions) : FunctionPass(ID) {
++    this->pointerSize = pointerSize;
++    this->ArgsOptions = argsOptions;
++    uint64_t seed = 0;
++    if (auto errorCode = llvm::getRandomBytes(&seed, sizeof(seed))) {
++      llvm::report_fatal_error(
++          StringRef("Failed to get random bytes for page table generation") +
++          errorCode.message());
++    }
++
++    RNG = std::mt19937_64(seed);
++  }
++
++  bool runOnFunction(Function &F) override;
++  bool flatten(Function *f);
++};
++}
++
++bool Flattening::runOnFunction(Function &F) {
++  if (F.isIntrinsic()) {
++    return false;
++  }
++  Function *tmp = &F;
++  bool      result = false;
++  // Do we obfuscate
++  const auto opt = ArgsOptions->toObfuscate(ArgsOptions->flaOpt(), &F);
++  if (!opt.isEnabled()) {
++    return result;
++  }
++  if (flatten(tmp)) {
++    ++Flattened;
++    result = true;
++  }
++
++  return result;
++}
++
++bool Flattening::flatten(Function *f) {
++  SmallVector<BasicBlock *, 32> origBB;
++
++  auto &Ctx = f->getContext();
++  Type *intType = Type::getInt32Ty(Ctx);
++  if (pointerSize == 8) {
++    intType = Type::getInt64Ty(Ctx);
++  }
++  auto *IntTy = cast<IntegerType>(intType);
++
++  auto randWord = [&]() ->uint64_t {
++    uint64_t v = RNG();
++    if (pointerSize != 8)
++      v &= 0xffffffffull;
++    return v;
++  };
++
++  auto randConst = [&]() ->ConstantInt * {
++    return ConstantInt::get(IntTy, randWord());
++  };
++
++  // Lower switch
++  auto lower = std::unique_ptr<FunctionPass>(createLegacyLowerSwitchPass());
++  lower->runOnFunction(*f);
++
++  // Save all original BB
++  for (auto i = f->begin(); i != f->end(); ++i) {
++    auto bb = &*i;
++    origBB.push_back(bb);
++
++    if (isa<InvokeInst>(bb->getTerminator()) || bb->isEHPad()) {
++      return false;
++    }
++  }
++
++  // Nothing to flatten
++  if (origBB.size() <= 1) {
++    return false;
++  }
++
++  // Remove first BB
++  origBB.erase(origBB.begin());
++
++  // Get a pointer on the first BB
++  auto insertBlock = &*(f->begin());
++  auto splitPos = insertBlock->getFirstNonPHIOrDbgOrAlloca();
++
++  std::shuffle(origBB.begin(), origBB.end(), RNG);
++
++  auto bbEndOfEntry = insertBlock->splitBasicBlock(splitPos, "first");
++  origBB.insert(origBB.begin(), bbEndOfEntry);
++
++  DenseSet<uint64_t>                    UsedCases;
++  DenseMap<BasicBlock *, ConstantInt *> CaseVal;
++
++  for (BasicBlock *BB : origBB) {
++    uint64_t v;
++    do {
++      v = randWord();
++    } while (v == 0 || UsedCases.count(v));
++    UsedCases.insert(v);
++    CaseVal[BB] = ConstantInt::get(IntTy, v);
++  }
++
++  ConstantInt *EntryCase = CaseVal[bbEndOfEntry];
++
++  // Create switch variable and set as it
++  IRBuilder<> IRB{insertBlock};
++  const auto  switchVar = IRB.CreateAlloca(IntTy, nullptr, "switchVar");
++  const auto  switchXorVar = IRB.CreateAlloca(IntTy, nullptr, "switchXor");
++
++  // init：Encoded = EntryCase ^ XorKey
++  ConstantInt *entryXor = randConst();
++  Value *      entryEnc = IRB.CreateXor(EntryCase, entryXor);
++  IRB.CreateStore(entryEnc, switchVar, true);
++  IRB.CreateStore(entryXor, switchXorVar, true);
++
++  // Create main loop
++  auto bbLoopEntry =
++      BasicBlock::Create(f->getContext(), "loopEntry", f, insertBlock);
++  auto bbLoopEnd =
++      BasicBlock::Create(f->getContext(), "loopEnd", f, insertBlock);
++
++  // loopEntry
++  IRB.SetInsertPoint(bbLoopEntry);
++  Value *enc0 = IRB.CreateLoad(IntTy, switchVar, "switchVar.enc0");
++  Value *xor0 = IRB.CreateLoad(IntTy, switchXorVar, "switchXor.xor0");
++
++  // rolling delta
++  ConstantInt *delta = randConst();
++  Value *      enc1 = IRB.CreateXor(enc0, delta, "switchVar.enc1");
++  Value *      xor1 = IRB.CreateXor(xor0, delta, "switchXor.xor1");
++  IRB.CreateStore(enc1, switchVar, true);
++  IRB.CreateStore(xor1, switchXorVar, true);
++
++  Value *switchCondition = IRB.CreateXor(enc1, xor1, "switchCond");
++
++  // Move first BB on top
++  insertBlock->moveBefore(bbLoopEntry);
++  BranchInst::Create(bbLoopEntry, insertBlock);
++
++  // loopEnd jump to loopEntry
++  BranchInst::Create(bbLoopEntry, bbLoopEnd);
++
++  auto swDefault =
++      BasicBlock::Create(f->getContext(), "switchDefault", f, bbLoopEnd);
++  BranchInst::Create(bbLoopEnd, swDefault);
++
++  // Create switch instruction itself and set condition
++  auto switchI = SwitchInst::Create(switchCondition, swDefault, 0, bbLoopEntry);
++
++  // Remove branch jump from 1st BB and make a jump to the while
++  ReplaceInstWithInst(f->begin()->getTerminator(),
++                      BranchInst::Create(bbLoopEntry));
++
++  // Put all BB in the switch (case 值使用纯随机表)
++  for (auto bi = origBB.begin(); bi != origBB.end(); ++bi) {
++    auto bb = *bi;
++
++    // Move the BB inside the switch (only visual, no code logic)
++    bb->moveBefore(bbLoopEnd);
++
++    switchI->addCase(CaseVal[bb], bb);
++  }
++
++  // Recalculate switchVar
++  for (auto bi = origBB.begin(); bi != origBB.end(); ++bi) {
++    const auto bb = *bi;
++
++    // Ret BB
++    if (bb->getTerminator()->getNumSuccessors() == 0) {
++      continue;
++    }
++
++    IRB.SetInsertPoint(bb->getTerminator());
++
++    auto writeNextEncoded = [&](Value *NextCaseVal) {
++      // NextEnc = NextCase ^ NewXor
++      ConstantInt *newXor = randConst();
++      Value *      nextEnc = IRB.CreateXor(NextCaseVal, newXor);
++
++      IRB.CreateStore(nextEnc, switchVar, true);
++      IRB.CreateStore(newXor, switchXorVar, true);
++
++      IRB.CreateBr(bbLoopEnd);
++      bb->getTerminator()->eraseFromParent();
++    };
++
++    // If it's a non-conditional jump
++    if (bb->getTerminator()->getNumSuccessors() == 1) {
++      auto tbb = bb->getTerminator()->getSuccessor(0);
++
++      Value *nextCase = nullptr;
++      if (CaseVal.count(tbb)) {
++        nextCase = CaseVal[tbb];
++      } else {
++        nextCase = EntryCase;
++      }
++
++      writeNextEncoded(nextCase);
++      continue;
++    }
++
++    // If it's a conditional jump
++    if (bb->getTerminator()->getNumSuccessors() == 2 &&
++        isa<BranchInst>(bb->getTerminator())) {
++      auto *br = cast<BranchInst>(bb->getTerminator());
++
++      auto *succT = br->getSuccessor(0);
++      auto *succF = br->getSuccessor(1);
++
++      Value *caseT =
++          CaseVal.count(succT) ? CaseVal[succT] : EntryCase;
++      Value *caseF =
++          CaseVal.count(succF) ? CaseVal[succF] : EntryCase;
++
++      Value *selectedCase =
++          IRB.CreateSelect(br->getCondition(), caseT, caseF, "nextCase");
++
++      writeNextEncoded(selectedCase);
++      continue;
++    }
++  }
++
++  fixStack(f);
++
++  return true;
++}
++
++
++char                            Flattening::ID = 0;
++static RegisterPass<Flattening> X("flattening", "Call graph flattening");
++
++FunctionPass *llvm::createFlatteningPass(unsigned            pointerSize,
++                                         ObfuscationOptions *argsOptions) {
++  return new Flattening(pointerSize, argsOptions);
++}
+\ No newline at end of file
+diff --git a/llvm/lib/Transforms/Obfuscation/IndirectBranch.cpp b/llvm/lib/Transforms/Obfuscation/IndirectBranch.cpp
+new file mode 100644
+index 000000000..3aa6f6bae
+--- /dev/null
++++ b/llvm/lib/Transforms/Obfuscation/IndirectBranch.cpp
+@@ -0,0 +1,236 @@
++#include "llvm/IR/Constants.h"
++#include "llvm/IR/IRBuilder.h"
++#include "llvm/Support/raw_ostream.h"
++#include "llvm/Transforms/Obfuscation/IndirectBranch.h"
++#include "llvm/Transforms/Obfuscation/ObfuscationOptions.h"
++#include "llvm/Transforms/Obfuscation/Utils.h"
++#include "llvm/Transforms/Utils/BasicBlockUtils.h"
++#include "llvm/Transforms/Utils/ModuleUtils.h"
++#include "llvm/IR/Module.h"
++#include "llvm/ADT/SmallPtrSet.h"
++#include "llvm/Support/RandomNumberGenerator.h"
++#include "llvm/TargetParser/Triple.h"
++
++#include <random>
++
++#define DEBUG_TYPE "indbr"
++
++using namespace llvm;
++
++namespace {
++struct IndirectBranch : public FunctionPass {
++  static char         ID;
++  ObfuscationOptions *ArgsOptions;
++
++  DenseMap<Function *, SmallPtrSet<Constant *, 8>>   FunctionBBs;
++  DenseMap<Function *, SmallPtrSet<BranchInst *, 8>> FunctionBrs;
++
++  std::vector<Constant *>          BBAddrTargets;
++  DenseMap<Constant *, unsigned>   BBIndex;
++  DenseMap<Constant *, uint64_t>   BBKeys;
++  SmallVector<GlobalVariable *, 8> BBPageTable;
++  std::mt19937_64                  RNG;
++  uint64_t                         PtrEncKey = 0;
++
++  bool RunOnFuncChanged = false;
++
++  IndirectBranch(ObfuscationOptions *argsOptions) : FunctionPass(ID) {
++    this->ArgsOptions = argsOptions;
++    uint64_t seed = 0;
++    if (auto errorCode = llvm::getRandomBytes(&seed, sizeof(seed))) {
++      llvm::report_fatal_error(
++          StringRef("Failed to get random bytes for page table generation") +
++          errorCode.message());
++    }
++
++    RNG = std::mt19937_64(seed);
++  }
++
++  StringRef getPassName() const override {
++    return {"IndirectBranch"};
++  }
++
++  void NumberBasicBlock(Module &M) {
++    for (auto &F : M) {
++      if (F.empty() || F.isWeakForLinker() ||
++          F.getSection() == ".text.startup" ||
++          F.isIntrinsic()) {
++        continue;
++      }
++      const auto opt = ArgsOptions->toObfuscate(ArgsOptions->indBrOpt(), &F);
++      if (!opt.isEnabled()) {
++        continue;
++      }
++      SplitAllCriticalEdges(F, CriticalEdgeSplittingOptions(nullptr, nullptr));
++
++      const uint64_t BBKey = RNG();
++
++      for (auto &BB : F) {
++        if (auto *BI = dyn_cast<BranchInst>(BB.getTerminator())) {
++          if (BI->isConditional()) {
++            FunctionBrs[&F].insert(BI);
++            unsigned N = BI->getNumSuccessors();
++            for (unsigned I = 0; I < N; I++) {
++              BasicBlock *Successor = BI->getSuccessor(I);
++              auto        BBAddr = BlockAddress::get(Successor);
++              FunctionBBs[&F].insert(BBAddr);
++              if (BBKeys.count(BBAddr) == 0) {
++                BBAddrTargets.push_back(BBAddr);
++                BBKeys[BBAddr] = BBKey;
++              }
++            }
++          }
++        }
++      }
++    }
++  }
++
++  bool doInitialization(Module &M) override {
++    BBIndex.clear();
++    BBPageTable.clear();
++    FunctionBBs.clear();
++    FunctionBrs.clear();
++    BBAddrTargets.clear();
++    BBKeys.clear();
++
++    NumberBasicBlock(M);
++    if (BBAddrTargets.empty()) {
++      return false;
++    }
++
++    PtrEncKey = RNG();
++
++    CreatePageTableArgs createPageTableArgs;
++    createPageTableArgs.CountLoop = 1;
++    createPageTableArgs.GVNamePrefix = M.getName().str() + "_IndirectBr";
++    createPageTableArgs.RNG = &RNG;
++    createPageTableArgs.M = &M;
++    createPageTableArgs.Objects = &BBAddrTargets;
++    createPageTableArgs.IndexMap = &BBIndex;
++    createPageTableArgs.ObjectKeys = &BBKeys;
++    createPageTableArgs.OutPageTable = &BBPageTable;
++    createPageTableArgs.PtrEncKey = PtrEncKey;
++
++    createPageTable(createPageTableArgs);
++    return false;
++  }
++
++
++  bool runOnFunction(Function &Fn) override {
++    const auto opt = ArgsOptions->toObfuscate(ArgsOptions->indBrOpt(), &Fn);
++    if (!opt.isEnabled()) {
++      return false;
++    }
++
++    LLVMContext &Ctx = Fn.getContext();
++    auto &       M = *Fn.getParent();
++
++    if (BBAddrTargets.empty()) {
++      return false;
++    }
++
++    auto &FuncBBsSet = FunctionBBs[&Fn];
++    auto &FuncBrs = FunctionBrs[&Fn];
++    if (FuncBBsSet.empty() || FuncBrs.empty()) {
++      return false;
++    }
++
++    std::vector<Constant *>        FuncBBs;
++    DenseMap<Constant *, uint64_t> FuncKeys;
++    auto                           FuncKey = RNG();
++
++    for (auto bb : FuncBBsSet) {
++      FuncBBs.push_back(bb);
++      FuncKeys[bb] = FuncKey;
++    }
++
++    SmallVector<GlobalVariable *, 8> FuncBBPageTable;
++    DenseMap<Constant *, unsigned>   FuncBBIndex;
++
++    if (opt.level()) {
++      CreatePageTableArgs createPageTableArgs;
++      createPageTableArgs.CountLoop = opt.level();
++      createPageTableArgs.GVNamePrefix =
++          M.getName().str() + Fn.getName().str() + "_IndirectBr";
++      createPageTableArgs.M = &M;
++      createPageTableArgs.RNG = &RNG;
++      createPageTableArgs.Objects = &FuncBBs;
++      createPageTableArgs.IndexMap = &BBIndex;
++      createPageTableArgs.ObjectKeys = &FuncKeys;
++      createPageTableArgs.OutPageTable = &FuncBBPageTable;
++
++      enhancedPageTable(createPageTableArgs, &FuncBBIndex);
++    }
++
++    auto *IntTy = getPageTableIntTy(M);
++    for (auto BI : FuncBrs) {
++      if (BI && BI->isConditional()) {
++        IRBuilder<> IRB(BI);
++
++        auto Cond = BI->getCondition();
++
++        auto TBB = BI->getSuccessor(0);
++        auto FBB = BI->getSuccessor(1);
++        auto AddrTBB = BlockAddress::get(TBB);
++        auto AddrFBB = BlockAddress::get(FBB);
++
++        auto TIndex = opt.level()
++                        ? ConstantInt::get(IntTy, FuncBBIndex[AddrTBB])
++                        : ConstantInt::get(IntTy, BBIndex[AddrTBB]);
++
++        auto FIndex = opt.level()
++                        ? ConstantInt::get(IntTy, FuncBBIndex[AddrFBB])
++                        : ConstantInt::get(IntTy, BBIndex[AddrFBB]);
++
++        auto NextIndex = IRB.CreateSelect(Cond, TIndex, FIndex);
++
++        BuildDecryptArgs buildDecrypt;
++        buildDecrypt.FuncLoopCount = opt.level();
++        buildDecrypt.NextIndex = 0;
++        buildDecrypt.NextIndexValue = NextIndex;
++        buildDecrypt.Fn = &Fn;
++        buildDecrypt.InsertBefore = BI;
++        buildDecrypt.LoadTy = PointerType::getUnqual(Ctx);
++        buildDecrypt.ModulePageTable = &BBPageTable;
++        buildDecrypt.FuncPageTable = &FuncBBPageTable;
++        buildDecrypt.ModuleKey = BBKeys[AddrTBB];
++        buildDecrypt.FuncKey = FuncKeys[AddrTBB];
++        buildDecrypt.PtrEncKey = PtrEncKey;
++        Triple T(M.getTargetTriple());
++        buildDecrypt.PtrAuthKey = T.isAArch64() ? 0 : -1;
++        buildDecrypt.PtrAuthDisc = 0;
++
++        auto            TargetPtr = buildPageTableDecryptIR(buildDecrypt);
++        IndirectBrInst *IBI = IndirectBrInst::Create(TargetPtr, 2);
++        ReplaceInstWithInst(BI, IBI);
++        IBI->addDestination(TBB);
++        IBI->addDestination(FBB);
++
++        RunOnFuncChanged = true;
++      }
++    }
++
++    return true;
++  }
++
++  bool doFinalization(Module &M) override {
++    if (!RunOnFuncChanged || BBPageTable.empty()) {
++      return false;
++    }
++    for (auto bbPage : BBPageTable) {
++      appendToCompilerUsed(M, {bbPage});
++    }
++    return true;
++  }
++
++};
++} // anonymous namespace
++
++char IndirectBranch::ID = 0;
++
++FunctionPass *llvm::createIndirectBranchPass(ObfuscationOptions *argsOptions) {
++  return new IndirectBranch(argsOptions);
++}
++
++INITIALIZE_PASS(IndirectBranch, "indbr",
++                "Enable IR Indirect Branch Obfuscation", false, false)
+\ No newline at end of file
+diff --git a/llvm/lib/Transforms/Obfuscation/IndirectCall.cpp b/llvm/lib/Transforms/Obfuscation/IndirectCall.cpp
+new file mode 100644
+index 000000000..6befd5199
+--- /dev/null
++++ b/llvm/lib/Transforms/Obfuscation/IndirectCall.cpp
+@@ -0,0 +1,290 @@
++#include "llvm/IR/Constants.h"
++#include "llvm/IR/IRBuilder.h"
++#include "llvm/Transforms/Obfuscation/IndirectCall.h"
++#include "llvm/Transforms/Obfuscation/ObfuscationOptions.h"
++#include "llvm/Transforms/Obfuscation/Utils.h"
++#include "llvm/Transforms/Utils/BasicBlockUtils.h"
++#include "llvm/Transforms/Utils/ModuleUtils.h"
++#include "llvm/IR/Module.h"
++#include "llvm/ADT/SmallPtrSet.h"
++#include "llvm/ADT/APInt.h"
++#include "llvm/Support/RandomNumberGenerator.h"
++#include "llvm/TargetParser/Triple.h"
++
++#include <random>
++
++#define DEBUG_TYPE "icall"
++
++using namespace llvm;
++
++namespace {
++struct IndirectCall : public FunctionPass {
++  static char         ID;
++  ObfuscationOptions *ArgsOptions;
++
++  DenseMap<Function *, SmallPtrSet<CallInst *, 8>> FunctionCallSites;
++  DenseMap<Function *, SmallPtrSet<Function *, 8>> FunctionCallees;
++
++  std::vector<Constant *>        Callees;
++  DenseMap<Constant *, unsigned> CalleeIndex;
++  // 63 - 32====31 - 0
++  //  Mask=======Key
++  DenseMap<Constant *, uint64_t>   CalleeKeys;
++  SmallVector<GlobalVariable *, 8> CalleePageTable;
++  std::mt19937_64                  RNG;
++  uint64_t                         PtrEncKey = 0;
++
++  bool RunOnFuncChanged = false;
++
++  IndirectCall(ObfuscationOptions *argsOptions) : FunctionPass(ID) {
++    this->ArgsOptions = argsOptions;
++    uint64_t seed = 0;
++    if (auto errorCode = llvm::getRandomBytes(&seed, sizeof(seed))) {
++      llvm::report_fatal_error(
++          StringRef("Failed to get random bytes for page table generation") +
++          errorCode.message());
++    }
++
++    RNG = std::mt19937_64(seed);
++  }
++
++  StringRef getPassName() const override {
++    return {"IndirectCall"};
++  }
++
++  void NumberCallees(Module &M) {
++    for (auto &F : M) {
++      if (F.isIntrinsic()) {
++        continue;
++      }
++
++      for (auto &BB : F) {
++        for (auto &I : BB) {
++          if (auto CI = dyn_cast<CallInst>(&I)) {
++            auto CB = dyn_cast<CallBase>(&I);
++            auto Callee = CB->getCalledFunction();
++            if (Callee == nullptr) {
++              Callee = dyn_cast<Function>(
++                  CB->getCalledOperand()->stripPointerCasts());
++              if (!Callee) {
++                continue;
++              }
++            }
++            if (Callee->isIntrinsic()) {
++              continue;
++            }
++
++            FunctionCallSites[&F].insert(CI);
++            FunctionCallees[&F].insert(Callee);
++
++            if (CalleeKeys.count(Callee) == 0) {
++              Callees.push_back(Callee);
++              CalleeKeys[Callee] = RNG();
++            }
++          }
++        }
++      }
++    }
++  }
++
++  bool doInitialization(Module &M) override {
++    CalleeIndex.clear();
++    FunctionCallSites.clear();
++    FunctionCallees.clear();
++    Callees.clear();
++    CalleePageTable.clear();
++    CalleeKeys.clear();
++
++    NumberCallees(M);
++    if (!Callees.size()) {
++      return false;
++    }
++
++    PtrEncKey = RNG();
++
++    CreatePageTableArgs createPageTableArgs;
++    createPageTableArgs.CountLoop = 1;
++    createPageTableArgs.GVNamePrefix = M.getName().str() + "_IndirectCallee";
++    createPageTableArgs.RNG = &RNG;
++    createPageTableArgs.M = &M;
++    createPageTableArgs.Objects = &Callees;
++    createPageTableArgs.IndexMap = &CalleeIndex;
++    createPageTableArgs.ObjectKeys = &CalleeKeys;
++    createPageTableArgs.OutPageTable = &CalleePageTable;
++    createPageTableArgs.PtrEncKey = PtrEncKey;
++
++    createPageTable(createPageTableArgs);
++    return false;
++  }
++
++  bool runOnFunction(Function &Fn) override {
++    const auto opt = ArgsOptions->toObfuscate(ArgsOptions->iCallOpt(), &Fn);
++    if (!opt.isEnabled()) {
++      return false;
++    }
++
++    auto &M = *Fn.getParent();
++
++    if (Callees.empty()) {
++      return false;
++    }
++    const auto &CallSites = FunctionCallSites[&Fn];
++    auto &      FuncCalleesSet = FunctionCallees[&Fn];
++
++    if (CallSites.empty() || FuncCalleesSet.empty()) {
++      return false;
++    }
++
++    std::vector<Constant *>        FuncCallees;
++    DenseMap<Constant *, uint64_t> FuncKeys;
++    for (auto callee : FuncCalleesSet) {
++      FuncCallees.push_back(callee);
++      FuncKeys[callee] = RNG();
++    }
++
++    SmallVector<GlobalVariable *, 8> FuncCalleePageTable;
++    DenseMap<Constant *, unsigned>   FuncCalleeIndex;
++
++    if (opt.level()) {
++      CreatePageTableArgs createPageTableArgs;
++      createPageTableArgs.CountLoop = opt.level();
++      createPageTableArgs.GVNamePrefix =
++          M.getName().str() + Fn.getName().str() + "_IndirectCallee";
++      createPageTableArgs.RNG = &RNG;
++      createPageTableArgs.M = &M;
++      createPageTableArgs.Objects = &FuncCallees;
++      createPageTableArgs.IndexMap = &CalleeIndex;
++      createPageTableArgs.ObjectKeys = &FuncKeys;
++      createPageTableArgs.OutPageTable = &FuncCalleePageTable;
++
++      enhancedPageTable(createPageTableArgs, &FuncCalleeIndex);
++    }
++
++    // Count callee references for deduplication
++    DenseMap<Function *, unsigned> CalleeUseCount;
++    for (auto CI : CallSites) {
++      CallBase *CB = CI;
++      Function *Callee = CB->getCalledFunction();
++      if (!Callee)
++        Callee = dyn_cast<Function>(
++            CB->getCalledOperand()->stripPointerCasts());
++      if (Callee)
++        CalleeUseCount[Callee]++;
++    }
++
++    // Pre-decrypt duplicate callees at function entry
++    DenseMap<Function *, AllocaInst *> CalleeDedupCache;
++    auto &EntryBB = Fn.getEntryBlock();
++    Instruction *AllocaInsertPt = &*EntryBB.begin();
++    auto *PtrTy = PointerType::getUnqual(Fn.getContext());
++    for (auto &KV : CalleeUseCount) {
++      if (KV.second <= 1)
++        continue;
++      IRBuilder<> AIB(AllocaInsertPt);
++      CalleeDedupCache[KV.first] = AIB.CreateAlloca(PtrTy, nullptr);
++    }
++
++    if (!CalleeDedupCache.empty()) {
++      Instruction *DecryptPt = nullptr;
++      for (auto &I : EntryBB) {
++        if (!isa<AllocaInst>(&I)) {
++          DecryptPt = &I;
++          break;
++        }
++      }
++      if (!DecryptPt)
++        DecryptPt = EntryBB.getTerminator();
++      Triple T(M.getTargetTriple());
++      for (auto &KV : CalleeDedupCache) {
++        Function *       Callee = KV.first;
++        BuildDecryptArgs buildDecrypt;
++        buildDecrypt.FuncLoopCount = opt.level();
++        buildDecrypt.NextIndex = opt.level()
++                                   ? FuncCalleeIndex[Callee]
++                                   : CalleeIndex[Callee];
++        buildDecrypt.NextIndexValue = nullptr;
++        buildDecrypt.Fn = &Fn;
++        buildDecrypt.InsertBefore = DecryptPt;
++        buildDecrypt.LoadTy = Callee->getType();
++        buildDecrypt.ModulePageTable = &CalleePageTable;
++        buildDecrypt.FuncPageTable = &FuncCalleePageTable;
++        buildDecrypt.ModuleKey = CalleeKeys[Callee];
++        buildDecrypt.FuncKey = FuncKeys[Callee];
++        buildDecrypt.PtrEncKey = PtrEncKey;
++        buildDecrypt.PtrAuthKey = T.isAArch64() ? 0 : -1;
++        buildDecrypt.PtrAuthDisc = 0;
++        auto        DecPtr = buildPageTableDecryptIR(buildDecrypt);
++        IRBuilder<> SIB(DecryptPt);
++        SIB.CreateAlignedStore(DecPtr, KV.second, Align{1}, true);
++      }
++    }
++
++    for (auto CI : CallSites) {
++
++      CallBase *CB = CI;
++
++      Function *Callee = CB->getCalledFunction();
++      if (Callee == nullptr) {
++        Callee = dyn_cast<
++          Function>(CB->getCalledOperand()->stripPointerCasts());
++        if (!Callee) {
++          continue;
++        }
++      }
++
++      auto CacheIt = CalleeDedupCache.find(Callee);
++      if (CacheIt != CalleeDedupCache.end()) {
++        IRBuilder<> IRB(CB);
++        auto        FnPtr = IRB.CreateAlignedLoad(
++            Callee->getType(), CacheIt->second, Align{1}, true);
++        FnPtr->setName("Call_" + Callee->getName());
++        CB->setCalledOperand(FnPtr);
++      } else {
++        BuildDecryptArgs buildDecrypt;
++        buildDecrypt.FuncLoopCount = opt.level();
++        buildDecrypt.NextIndex = opt.level()
++                                   ? FuncCalleeIndex[Callee]
++                                   : CalleeIndex[Callee];
++        buildDecrypt.NextIndexValue = nullptr;
++        buildDecrypt.Fn = &Fn;
++        buildDecrypt.InsertBefore = CB;
++        buildDecrypt.LoadTy = Callee->getType();
++        buildDecrypt.ModulePageTable = &CalleePageTable;
++        buildDecrypt.FuncPageTable = &FuncCalleePageTable;
++        buildDecrypt.ModuleKey = CalleeKeys[Callee];
++        buildDecrypt.FuncKey = FuncKeys[Callee];
++        buildDecrypt.PtrEncKey = PtrEncKey;
++        Triple T(M.getTargetTriple());
++        buildDecrypt.PtrAuthKey = T.isAArch64() ? 0 : -1;
++        buildDecrypt.PtrAuthDisc = 0;
++        auto FnPtr = buildPageTableDecryptIR(buildDecrypt);
++        FnPtr->setName("Call_" + Callee->getName());
++        CB->setCalledOperand(FnPtr);
++      }
++    }
++
++    RunOnFuncChanged = true;
++    return true;
++  }
++
++  bool doFinalization(Module &M) override {
++    if (!RunOnFuncChanged || CalleePageTable.empty()) {
++      return false;
++    }
++    for (auto calleePage : CalleePageTable) {
++      appendToCompilerUsed(M, {calleePage});
++    }
++    return true;
++  }
++
++};
++} // anonymous namespace
++
++char IndirectCall::ID = 0;
++
++FunctionPass *llvm::createIndirectCallPass(ObfuscationOptions *argsOptions) {
++  return new IndirectCall(argsOptions);
++}
++
++INITIALIZE_PASS(IndirectCall, "icall", "Enable IR Indirect Call Obfuscation",
++                false, false)
+\ No newline at end of file
+diff --git a/llvm/lib/Transforms/Obfuscation/IndirectGlobalVariable.cpp b/llvm/lib/Transforms/Obfuscation/IndirectGlobalVariable.cpp
+new file mode 100644
+index 000000000..b7488fd2c
+--- /dev/null
++++ b/llvm/lib/Transforms/Obfuscation/IndirectGlobalVariable.cpp
+@@ -0,0 +1,296 @@
++#include "llvm/IR/Constants.h"
++#include "llvm/IR/InstIterator.h"
++#include "llvm/IR/IRBuilder.h"
++#include "llvm/Transforms/Obfuscation/IndirectGlobalVariable.h"
++#include "llvm/Transforms/Obfuscation/ObfuscationOptions.h"
++#include "llvm/Transforms/Obfuscation/Utils.h"
++#include "llvm/Transforms/Utils/ModuleUtils.h"
++#include "llvm/IR/Module.h"
++#include "llvm/ADT/SmallPtrSet.h"
++#include "llvm/ADT/APInt.h"
++#include "llvm/Support/RandomNumberGenerator.h"
++#include "llvm/TargetParser/Triple.h"
++
++#include <random>
++
++#define DEBUG_TYPE "indgv"
++
++using namespace llvm;
++
++namespace {
++struct IndirectGlobalVariable : public FunctionPass {
++  static char         ID;
++  ObfuscationOptions *ArgsOptions;
++
++  DenseMap<Function *, SmallPtrSet<GlobalVariable *, 8>> FunctionGVs;
++
++  std::vector<Constant *>          GlobalVariables;
++  DenseMap<Constant *, unsigned>   GVIndex;
++  DenseMap<Constant *, uint64_t>   GVKeys;
++  SmallVector<GlobalVariable *, 8> GVPageTable;
++
++  std::mt19937_64 RNG;
++  uint64_t        PtrEncKey = 0;
++  bool            RunOnFuncChanged = false;
++
++  IndirectGlobalVariable(ObfuscationOptions *argsOptions) : FunctionPass(ID) {
++    this->ArgsOptions = argsOptions;
++    uint64_t seed = 0;
++    if (auto errorCode = llvm::getRandomBytes(&seed, sizeof(seed))) {
++      llvm::report_fatal_error(
++          StringRef("Failed to get random bytes for page table generation") +
++          errorCode.message());
++    }
++
++    RNG = std::mt19937_64(seed);
++  }
++
++  StringRef getPassName() const override {
++    return {"IndirectGlobalVariable"};
++  }
++
++  void NumberGlobalVariable(Module &M) {
++    for (auto &F : M) {
++      if (F.isIntrinsic()) {
++        continue;
++      }
++      LowerConstantExpr(F);
++      for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
++        Instruction *Inst = &*I;
++
++        if (Inst->isEHPad() || isa<CallInst>(Inst)) {
++          continue;
++        }
++
++        for (auto op = Inst->op_begin(); op != Inst->op_end(); ++op) {
++          Value *val = *op;
++          if (auto GV = dyn_cast<GlobalVariable>(val)) {
++            if (GV->isThreadLocal() || GV->isDLLImportDependent()) {
++              continue;
++            }
++            if (GV->getMetadata("noobf")) {
++              continue;
++            }
++
++            FunctionGVs[&F].insert(GV);
++            if (GVKeys.count(GV) == 0) {
++              GlobalVariables.push_back(GV);
++              GVKeys[GV] = RNG();
++            }
++          }
++        }
++      }
++    }
++  }
++
++  bool doInitialization(Module &M) override {
++    GVIndex.clear();
++    GVPageTable.clear();
++    FunctionGVs.clear();
++    GlobalVariables.clear();
++    GVKeys.clear();
++
++    NumberGlobalVariable(M);
++    if (GlobalVariables.empty()) {
++      return false;
++    }
++
++    PtrEncKey = RNG();
++
++    CreatePageTableArgs createPageTableArgs;
++    createPageTableArgs.CountLoop = 1;
++    createPageTableArgs.GVNamePrefix = M.getName().str() + "_IndirectGVs";
++    createPageTableArgs.RNG = &RNG;
++    createPageTableArgs.M = &M;
++    createPageTableArgs.Objects = &GlobalVariables;
++    createPageTableArgs.IndexMap = &GVIndex;
++    createPageTableArgs.ObjectKeys = &GVKeys;
++    createPageTableArgs.OutPageTable = &GVPageTable;
++    createPageTableArgs.PtrEncKey = PtrEncKey;
++
++    createPageTable(createPageTableArgs);
++    return false;
++  }
++
++
++  bool runOnFunction(Function &Fn) override {
++    const auto opt = ArgsOptions->toObfuscate(ArgsOptions->indGvOpt(), &Fn);
++    if (!opt.isEnabled()) {
++      return false;
++    }
++
++    auto &M = *Fn.getParent();
++
++    if (GlobalVariables.empty()) {
++      return false;
++    }
++
++    auto &FuncGVSet = FunctionGVs[&Fn];
++    if (FuncGVSet.empty()) {
++      return false;
++    }
++
++    std::vector<Constant *>        FuncGVs;
++    DenseMap<Constant *, uint64_t> FuncKeys;
++    for (auto GV : FuncGVSet) {
++      FuncGVs.push_back(GV);
++      FuncKeys[GV] = RNG();
++    }
++
++    SmallVector<GlobalVariable *, 8> FuncGVPageTable;
++    DenseMap<Constant *, unsigned>   FuncGVIndex;
++
++    if (opt.level()) {
++      CreatePageTableArgs createPageTableArgs;
++      createPageTableArgs.CountLoop = opt.level();
++      createPageTableArgs.GVNamePrefix =
++          M.getName().str() + Fn.getName().str() + "_IndirectGVs";
++      createPageTableArgs.RNG = &RNG;
++      createPageTableArgs.M = &M;
++      createPageTableArgs.Objects = &FuncGVs;
++      createPageTableArgs.IndexMap = &GVIndex;
++      createPageTableArgs.ObjectKeys = &FuncKeys;
++      createPageTableArgs.OutPageTable = &FuncGVPageTable;
++
++      enhancedPageTable(createPageTableArgs, &FuncGVIndex);
++    }
++
++    // Count GV references for deduplication
++    DenseMap<GlobalVariable *, unsigned> GVUseCount;
++    for (inst_iterator I = inst_begin(Fn), E = inst_end(Fn); I != E; ++I) {
++      Instruction *Inst = &*I;
++      if (isa<CallInst>(Inst) || isa<CatchReturnInst>(Inst) ||
++          isa<ResumeInst>(Inst) || Inst->isEHPad())
++        continue;
++      for (unsigned i = 0; i < Inst->getNumOperands(); ++i) {
++        if (auto *GV = dyn_cast<GlobalVariable>(Inst->getOperand(i))) {
++          if (GVIndex.count(GV))
++            GVUseCount[GV]++;
++        }
++      }
++    }
++
++    // Pre-decrypt duplicate GVs at function entry
++    DenseMap<GlobalVariable *, AllocaInst *> GVDedupCache;
++    auto &EntryBB = Fn.getEntryBlock();
++    Instruction *AllocaInsertPt = &*EntryBB.begin();
++    auto *PtrTy = PointerType::getUnqual(Fn.getContext());
++    for (auto &KV : GVUseCount) {
++      if (KV.second <= 1)
++        continue;
++      IRBuilder<> AIB(AllocaInsertPt);
++      GVDedupCache[KV.first] = AIB.CreateAlloca(PtrTy, nullptr);
++    }
++
++    if (!GVDedupCache.empty()) {
++      Instruction *DecryptPt = nullptr;
++      for (auto &I : EntryBB) {
++        if (!isa<AllocaInst>(&I)) {
++          DecryptPt = &I;
++          break;
++        }
++      }
++      if (!DecryptPt)
++        DecryptPt = EntryBB.getTerminator();
++      Triple T(M.getTargetTriple());
++      for (auto &KV : GVDedupCache) {
++        auto *           GV = KV.first;
++        BuildDecryptArgs buildDecrypt;
++        buildDecrypt.FuncLoopCount = opt.level();
++        buildDecrypt.NextIndex = opt.level() ? FuncGVIndex[GV] : GVIndex[GV];
++        buildDecrypt.NextIndexValue = nullptr;
++        buildDecrypt.Fn = &Fn;
++        buildDecrypt.InsertBefore = DecryptPt;
++        buildDecrypt.LoadTy = GV->getType();
++        buildDecrypt.ModulePageTable = &GVPageTable;
++        buildDecrypt.FuncPageTable = &FuncGVPageTable;
++        buildDecrypt.ModuleKey = GVKeys[GV];
++        buildDecrypt.FuncKey = FuncKeys[GV];
++        buildDecrypt.PtrEncKey = PtrEncKey;
++        buildDecrypt.PtrAuthKey = T.isAArch64() ? 2 : -1;
++        buildDecrypt.PtrAuthDisc = 0;
++        auto        GVPtr = buildPageTableDecryptIR(buildDecrypt);
++        IRBuilder<> SIB(DecryptPt);
++        SIB.CreateAlignedStore(GVPtr, KV.second, Align{1}, true);
++      }
++    }
++
++    for (inst_iterator I = inst_begin(Fn), E = inst_end(Fn); I != E; ++I) {
++      Instruction *Inst = &*I;
++      if (isa<CallInst>(Inst) || isa<CatchReturnInst>(Inst) || isa<
++            ResumeInst>(Inst) || Inst->isEHPad()) {
++        continue;
++      }
++
++      for (unsigned i = 0; i < Inst->getNumOperands(); ++i) {
++        if (GlobalVariable *GV = dyn_cast<
++          GlobalVariable>(Inst->getOperand(i))) {
++          if (!GVIndex.count(GV)) {
++            continue;
++          }
++
++          auto PHI = dyn_cast<PHINode>(Inst);
++          auto InsertPoint = PHI
++                               ? PHI->getIncomingBlock(i)->getTerminator()
++                               : Inst;
++
++          Value *GVPtr;
++          auto   CacheIt = GVDedupCache.find(GV);
++          if (CacheIt != GVDedupCache.end()) {
++            IRBuilder<> IRB(InsertPoint);
++            GVPtr = IRB.CreateAlignedLoad(
++                GV->getType(), CacheIt->second, Align{1}, true);
++          } else {
++            BuildDecryptArgs buildDecrypt;
++            buildDecrypt.FuncLoopCount = opt.level();
++            buildDecrypt.NextIndex =
++                opt.level() ? FuncGVIndex[GV] : GVIndex[GV];
++            buildDecrypt.NextIndexValue = nullptr;
++            buildDecrypt.Fn = &Fn;
++            buildDecrypt.InsertBefore = InsertPoint;
++            buildDecrypt.LoadTy = GV->getType();
++            buildDecrypt.ModulePageTable = &GVPageTable;
++            buildDecrypt.FuncPageTable = &FuncGVPageTable;
++            buildDecrypt.ModuleKey = GVKeys[GV];
++            buildDecrypt.FuncKey = FuncKeys[GV];
++            buildDecrypt.PtrEncKey = PtrEncKey;
++            Triple T(M.getTargetTriple());
++            buildDecrypt.PtrAuthKey = T.isAArch64() ? 2 : -1;
++            buildDecrypt.PtrAuthDisc = 0;
++            GVPtr = buildPageTableDecryptIR(buildDecrypt);
++          }
++
++          if (PHI)
++            PHI->setIncomingValue(i, GVPtr);
++          else
++            Inst->replaceUsesOfWith(GV, GVPtr);
++          RunOnFuncChanged = true;
++        }
++      }
++    }
++
++    return true;
++  }
++
++  bool doFinalization(Module &M) override {
++    if (!RunOnFuncChanged || GVPageTable.empty()) {
++      return false;
++    }
++    for (auto gvPage : GVPageTable) {
++      appendToCompilerUsed(M, {gvPage});
++    }
++    return true;
++  }
++
++};
++} // anonymous namespace
++
++char IndirectGlobalVariable::ID = 0;
++
++FunctionPass *llvm::createIndirectGlobalVariablePass(
++    ObfuscationOptions *argsOptions) {
++  return new IndirectGlobalVariable(argsOptions);
++}
++
++INITIALIZE_PASS(IndirectGlobalVariable, "indgv",
++                "Enable IR Indirect Global Variable Obfuscation", false, false)
+\ No newline at end of file
+diff --git a/llvm/lib/Transforms/Obfuscation/LegacyLowerSwitch.cpp b/llvm/lib/Transforms/Obfuscation/LegacyLowerSwitch.cpp
+new file mode 100644
+index 000000000..7525f4ae5
+--- /dev/null
++++ b/llvm/lib/Transforms/Obfuscation/LegacyLowerSwitch.cpp
+@@ -0,0 +1,562 @@
++//===- LowerSwitch.cpp - Eliminate Switch instructions --------------------===//
++//
++//                     The LLVM Compiler Infrastructure
++//
++// This file is distributed under the University of Illinois Open Source
++// License. See LICENSE.TXT for details.
++//
++//===----------------------------------------------------------------------===//
++//
++// The LowerSwitch transformation rewrites switch instructions with a sequence
++// of branches, which allows targets to get away with not implementing the
++// switch instruction until it is convenient.
++//
++//===----------------------------------------------------------------------===//
++#include "llvm/Transforms/Obfuscation/LegacyLowerSwitch.h"
++#include "llvm/ADT/DenseMap.h"
++#include "llvm/ADT/STLExtras.h"
++#include "llvm/ADT/SmallPtrSet.h"
++#include "llvm/ADT/SmallVector.h"
++#include "llvm/IR/BasicBlock.h"
++#include "llvm/IR/CFG.h"
++#include "llvm/IR/Constants.h"
++#include "llvm/IR/Function.h"
++#include "llvm/IR/InstrTypes.h"
++#include "llvm/IR/Instructions.h"
++#include "llvm/IR/Value.h"
++#include "llvm/Pass.h"
++#include "llvm/Support/Casting.h"
++#include "llvm/Support/Compiler.h"
++#include "llvm/Support/Debug.h"
++#include "llvm/Support/raw_ostream.h"
++#include "llvm/Transforms/Utils/BasicBlockUtils.h"
++#include <algorithm>
++#include <cassert>
++#include <cstdint>
++#include <iterator>
++#include <limits>
++#include <vector>
++
++using namespace llvm;
++
++#define DEBUG_TYPE "lower-switch"
++
++namespace {
++
++struct IntRange {
++  int64_t Low, High;
++};
++
++} // end anonymous namespace
++
++// Return true iff R is covered by Ranges.
++static bool IsInRanges(const IntRange &             R,
++                       const std::vector<IntRange> &Ranges) {
++  // Note: Ranges must be sorted, non-overlapping and non-adjacent.
++
++  // Find the first range whose High field is >= R.High,
++  // then check if the Low field is <= R.Low. If so, we
++  // have a Range that covers R.
++  auto I = std::lower_bound(
++      Ranges.begin(), Ranges.end(), R,
++      [](const IntRange &A, const IntRange &B) {
++        return A.High < B.High;
++      });
++  return I != Ranges.end() && I->Low <= R.Low;
++}
++
++namespace {
++
++/// Replace all SwitchInst instructions with chained branch instructions.
++class LowerSwitch : public FunctionPass {
++public:
++  // Pass identification, replacement for typeid
++  static char ID;
++
++  LowerSwitch() : FunctionPass(ID) {
++    //initializeLowerSwitchPass(*PassRegistry::getPassRegistry());
++  }
++
++  bool runOnFunction(Function &F) override;
++
++  struct CaseRange {
++    ConstantInt *Low;
++    ConstantInt *High;
++    BasicBlock * BB;
++
++    CaseRange(ConstantInt *low, ConstantInt *high, BasicBlock *bb) : Low(low)
++                                                                 , High(high)
++                                                                 , BB(bb) {}
++  };
++
++  using CaseVector = std::vector<CaseRange>;
++  using CaseItr = std::vector<CaseRange>::iterator;
++
++private:
++  void processSwitchInst(SwitchInst *                   SI,
++                         SmallPtrSetImpl<BasicBlock *> &DeleteList);
++
++  BasicBlock *switchConvert(CaseItr Begin, CaseItr End,
++                            ConstantInt *LowerBound, ConstantInt *UpperBound,
++                            Value *Val, BasicBlock *Predecessor,
++                            BasicBlock *OrigBlock, BasicBlock *Default,
++                            const std::vector<IntRange> &UnreachableRanges);
++  BasicBlock *newLeafBlock(CaseRange & Leaf, Value *Val, BasicBlock *OrigBlock,
++                           BasicBlock *Default);
++  unsigned Clusterify(CaseVector &Cases, SwitchInst *SI);
++};
++
++/// The comparison function for sorting the switch case values in the vector.
++/// WARNING: Case ranges should be disjoint!
++struct CaseCmp {
++  bool operator()(const LowerSwitch::CaseRange &C1,
++                  const LowerSwitch::CaseRange &C2) {
++    const ConstantInt *CI1 = cast<const ConstantInt>(C1.Low);
++    const ConstantInt *CI2 = cast<const ConstantInt>(C2.High);
++    return CI1->getValue().slt(CI2->getValue());
++  }
++};
++
++} // end anonymous namespace
++
++char LowerSwitch::ID = 0;
++
++// Publicly exposed interface to pass...
++//char &llvm::LowerSwitchID = LowerSwitch::ID;
++
++//INITIALIZE_PASS(LowerSwitch, "lowerswitch",
++//                "Lower SwitchInst's to branches", false, false)
++
++// createLowerSwitchPass - Interface to this file...
++FunctionPass *llvm::createLegacyLowerSwitchPass() {
++  return new LowerSwitch();
++}
++
++bool LowerSwitch::runOnFunction(Function &F) {
++  bool                         Changed = false;
++  SmallPtrSet<BasicBlock *, 8> DeleteList;
++
++  for (Function::iterator I = F.begin(), E = F.end(); I != E;) {
++    BasicBlock *Cur = &*I++;
++    // Advance over block so we don't traverse new blocks
++
++    // If the block is a dead Default block that will be deleted later, don't
++    // waste time processing it.
++    if (DeleteList.count(Cur))
++      continue;
++
++    if (SwitchInst *SI = dyn_cast<SwitchInst>(Cur->getTerminator())) {
++      Changed = true;
++      processSwitchInst(SI, DeleteList);
++    }
++  }
++
++  for (BasicBlock *BB : DeleteList) {
++    DeleteDeadBlock(BB);
++  }
++
++  return Changed;
++}
++
++/// Used for debugging purposes.
++LLVM_ATTRIBUTE_USED
++
++static raw_ostream &operator<<(raw_ostream &                  O,
++                               const LowerSwitch::CaseVector &C) {
++  O << "[";
++
++  for (LowerSwitch::CaseVector::const_iterator B = C.begin(),
++                                               E = C.end(); B != E;) {
++    O << *B->Low << " -" << *B->High;
++    if (++B != E)
++      O << ", ";
++  }
++
++  return O << "]";
++}
++
++/// Update the first occurrence of the "switch statement" BB in the PHI
++/// node with the "new" BB. The other occurrences will:
++///
++/// 1) Be updated by subsequent calls to this function.  Switch statements may
++/// have more than one outcoming edge into the same BB if they all have the same
++/// value. When the switch statement is converted these incoming edges are now
++/// coming from multiple BBs.
++/// 2) Removed if subsequent incoming values now share the same case, i.e.,
++/// multiple outcome edges are condensed into one. This is necessary to keep the
++/// number of phi values equal to the number of branches to SuccBB.
++static void fixPhis(BasicBlock *SuccBB, BasicBlock *OrigBB, BasicBlock *NewBB,
++                    unsigned    NumMergedCases) {
++  for (BasicBlock::iterator I = SuccBB->begin(),
++                            IE = SuccBB->getFirstNonPHIIt();
++       I != IE; ++I) {
++    PHINode *PN = cast<PHINode>(I);
++
++    // Only update the first occurrence.
++    unsigned Idx = 0, E = PN->getNumIncomingValues();
++    unsigned LocalNumMergedCases = NumMergedCases;
++    for (; Idx != E; ++Idx) {
++      if (PN->getIncomingBlock(Idx) == OrigBB) {
++        PN->setIncomingBlock(Idx, NewBB);
++        break;
++      }
++    }
++
++    // Remove additional occurrences coming from condensed cases and keep the
++    // number of incoming values equal to the number of branches to SuccBB.
++    SmallVector<unsigned, 8> Indices;
++    for (++Idx; LocalNumMergedCases > 0 && Idx < E; ++Idx)
++      if (PN->getIncomingBlock(Idx) == OrigBB) {
++        Indices.push_back(Idx);
++        LocalNumMergedCases--;
++      }
++    // Remove incoming values in the reverse order to prevent invalidating
++    // *successive* index.
++    for (unsigned III : llvm::reverse(Indices))
++      PN->removeIncomingValue(III);
++  }
++}
++
++/// Convert the switch statement into a binary lookup of the case values.
++/// The function recursively builds this tree. LowerBound and UpperBound are
++/// used to keep track of the bounds for Val that have already been checked by
++/// a block emitted by one of the previous calls to switchConvert in the call
++/// stack.
++BasicBlock *LowerSwitch::switchConvert(CaseItr      Begin, CaseItr End,
++                                       ConstantInt *LowerBound,
++                                       ConstantInt *UpperBound, Value *Val,
++                                       BasicBlock * Predecessor,
++                                       BasicBlock * OrigBlock,
++                                       BasicBlock * Default,
++                                       const std::vector<IntRange> &
++                                       UnreachableRanges) {
++  unsigned Size = End - Begin;
++
++  if (Size == 1) {
++    // Check if the Case Range is perfectly squeezed in between
++    // already checked Upper and Lower bounds. If it is then we can avoid
++    // emitting the code that checks if the value actually falls in the range
++    // because the bounds already tell us so.
++    if (Begin->Low == LowerBound && Begin->High == UpperBound) {
++      unsigned NumMergedCases = 0;
++      if (LowerBound && UpperBound)
++        NumMergedCases =
++            UpperBound->getSExtValue() - LowerBound->getSExtValue();
++      fixPhis(Begin->BB, OrigBlock, Predecessor, NumMergedCases);
++      return Begin->BB;
++    }
++    return newLeafBlock(*Begin, Val, OrigBlock, Default);
++  }
++
++  unsigned               Mid = Size / 2;
++  std::vector<CaseRange> LHS(Begin, Begin + Mid);
++  LLVM_DEBUG(dbgs() << "LHS: " << LHS << "\n");
++  std::vector<CaseRange> RHS(Begin + Mid, End);
++  LLVM_DEBUG(dbgs() << "RHS: " << RHS << "\n");
++
++  CaseRange &Pivot = *(Begin + Mid);
++  LLVM_DEBUG(dbgs() << "Pivot ==> " << Pivot.Low->getValue() << " -"
++      << Pivot.High->getValue() << "\n");
++
++  // NewLowerBound here should never be the integer minimal value.
++  // This is because it is computed from a case range that is never
++  // the smallest, so there is always a case range that has at least
++  // a smaller value.
++  ConstantInt *NewLowerBound = Pivot.Low;
++
++  // Because NewLowerBound is never the smallest representable integer
++  // it is safe here to subtract one.
++  ConstantInt *NewUpperBound = ConstantInt::get(NewLowerBound->getContext(),
++                                                NewLowerBound->getValue() - 1);
++
++  if (!UnreachableRanges.empty()) {
++    // Check if the gap between LHS's highest and NewLowerBound is unreachable.
++    int64_t  GapLow = LHS.back().High->getSExtValue() + 1;
++    int64_t  GapHigh = NewLowerBound->getSExtValue() - 1;
++    IntRange Gap = {GapLow, GapHigh};
++    if (GapHigh >= GapLow && IsInRanges(Gap, UnreachableRanges))
++      NewUpperBound = LHS.back().High;
++  }
++
++  LLVM_DEBUG(dbgs() << "LHS Bounds ==> "; if (LowerBound) {
++      dbgs() << LowerBound->getSExtValue();
++      } else { dbgs() << "NONE"; } dbgs() << " - "
++      << NewUpperBound->getSExtValue() << "\n";
++      dbgs() << "RHS Bounds ==> ";
++      dbgs() << NewLowerBound->getSExtValue() << " - "; if (UpperBound) {
++      dbgs() << UpperBound->getSExtValue() << "\n";
++      } else { dbgs() << "NONE\n"; });
++
++  // Create a new node that checks if the value is < pivot. Go to the
++  // left branch if it is and right branch if not.
++  Function *  F = OrigBlock->getParent();
++  BasicBlock *NewNode = BasicBlock::Create(Val->getContext(), "NodeBlock");
++
++  ICmpInst *Comp = new ICmpInst(ICmpInst::ICMP_SLT,
++                                Val, Pivot.Low, "Pivot");
++
++  BasicBlock *LBranch = switchConvert(LHS.begin(), LHS.end(), LowerBound,
++                                      NewUpperBound, Val, NewNode, OrigBlock,
++                                      Default, UnreachableRanges);
++  BasicBlock *RBranch = switchConvert(RHS.begin(), RHS.end(), NewLowerBound,
++                                      UpperBound, Val, NewNode, OrigBlock,
++                                      Default, UnreachableRanges);
++
++  F->insert(++OrigBlock->getIterator(), NewNode);
++  Comp->insertInto(NewNode, NewNode->end());
++
++  BranchInst::Create(LBranch, RBranch, Comp, NewNode);
++  return NewNode;
++}
++
++/// Create a new leaf block for the binary lookup tree. It checks if the
++/// switch's value == the case's value. If not, then it jumps to the default
++/// branch. At this point in the tree, the value can't be another valid case
++/// value, so the jump to the "default" branch is warranted.
++BasicBlock *LowerSwitch::newLeafBlock(CaseRange & Leaf, Value *Val,
++                                      BasicBlock *OrigBlock,
++                                      BasicBlock *Default) {
++  Function *  F = OrigBlock->getParent();
++  BasicBlock *NewLeaf = BasicBlock::Create(Val->getContext(), "LeafBlock");
++  F->insert(++OrigBlock->getIterator(), NewLeaf);
++
++  // Emit comparison
++  ICmpInst *Comp;
++  if (Leaf.Low == Leaf.High) {
++    // Make the seteq instruction...
++    Comp = new ICmpInst(NewLeaf->end(), ICmpInst::ICMP_EQ, Val,
++                        Leaf.Low, "SwitchLeaf");
++  } else {
++    // Make range comparison
++    if (Leaf.Low->isMinValue(true /*isSigned*/)) {
++      // Val >= Min && Val <= Hi --> Val <= Hi
++      Comp = new ICmpInst(NewLeaf->end(), ICmpInst::ICMP_SLE, Val, Leaf.High,
++                          "SwitchLeaf");
++    } else if (Leaf.Low->isZero()) {
++      // Val >= 0 && Val <= Hi --> Val <=u Hi
++      Comp = new ICmpInst(NewLeaf->end(), ICmpInst::ICMP_ULE, Val, Leaf.High,
++                          "SwitchLeaf");
++    } else {
++      // Emit V-Lo <=u Hi-Lo
++      Constant *   NegLo = ConstantExpr::getNeg(Leaf.Low);
++      Instruction *Add = BinaryOperator::CreateAdd(Val, NegLo,
++                                                   Val->getName() + ".off",
++                                                   NewLeaf);
++      Constant *UpperBound = ConstantExpr::getAdd(NegLo, Leaf.High);
++      Comp = new ICmpInst(NewLeaf->end(), ICmpInst::ICMP_ULE, Add, UpperBound,
++                          "SwitchLeaf");
++    }
++  }
++
++  // Make the conditional branch...
++  BasicBlock *Succ = Leaf.BB;
++  BranchInst::Create(Succ, Default, Comp, NewLeaf);
++
++  // If there were any PHI nodes in this successor, rewrite one entry
++  // from OrigBlock to come from NewLeaf.
++  for (BasicBlock::iterator I = Succ->begin(); isa<PHINode>(I); ++I) {
++    PHINode *PN = cast<PHINode>(I);
++    // Remove all but one incoming entries from the cluster
++    uint64_t Range = Leaf.High->getSExtValue() -
++                     Leaf.Low->getSExtValue();
++    for (uint64_t j = 0; j < Range; ++j) {
++      PN->removeIncomingValue(OrigBlock);
++    }
++
++    int BlockIdx = PN->getBasicBlockIndex(OrigBlock);
++    assert(BlockIdx != -1 && "Switch didn't go to this successor??");
++    PN->setIncomingBlock((unsigned)BlockIdx, NewLeaf);
++  }
++
++  return NewLeaf;
++}
++
++/// Transform simple list of Cases into list of CaseRange's.
++unsigned LowerSwitch::Clusterify(CaseVector &Cases, SwitchInst *SI) {
++  unsigned numCmps = 0;
++
++  // Start with "simple" cases
++  for (auto Case : SI->cases())
++    Cases.push_back(CaseRange(Case.getCaseValue(), Case.getCaseValue(),
++                              Case.getCaseSuccessor()));
++
++  llvm::sort(Cases.begin(), Cases.end(), CaseCmp());
++
++  // Merge case into clusters
++  if (Cases.size() >= 2) {
++    CaseItr I = Cases.begin();
++    for (CaseItr J = std::next(I), E = Cases.end(); J != E; ++J) {
++      int64_t     nextValue = J->Low->getSExtValue();
++      int64_t     currentValue = I->High->getSExtValue();
++      BasicBlock *nextBB = J->BB;
++      BasicBlock *currentBB = I->BB;
++
++      // If the two neighboring cases go to the same destination, merge them
++      // into a single case.
++      assert(nextValue > currentValue && "Cases should be strictly ascending");
++      if ((nextValue == currentValue + 1) && (currentBB == nextBB)) {
++        I->High = J->High;
++        // FIXME: Combine branch weights.
++      } else if (++I != J) {
++        *I = *J;
++      }
++    }
++    Cases.erase(std::next(I), Cases.end());
++  }
++
++  for (CaseItr I = Cases.begin(), E = Cases.end(); I != E; ++I, ++numCmps) {
++    if (I->Low != I->High)
++      // A range counts double, since it requires two compares.
++      ++numCmps;
++  }
++
++  return numCmps;
++}
++
++/// Replace the specified switch instruction with a sequence of chained if-then
++/// insts in a balanced binary search.
++void LowerSwitch::processSwitchInst(SwitchInst *                   SI,
++                                    SmallPtrSetImpl<BasicBlock *> &DeleteList) {
++  BasicBlock *CurBlock = SI->getParent();
++  BasicBlock *OrigBlock = CurBlock;
++  Function *  F = CurBlock->getParent();
++  Value *     Val = SI->getCondition(); // The value we are switching on...
++  BasicBlock *Default = SI->getDefaultDest();
++
++  // Don't handle unreachable blocks. If there are successors with phis, this
++  // would leave them behind with missing predecessors.
++  if ((CurBlock != &F->getEntryBlock() && pred_empty(CurBlock)) ||
++      CurBlock->getSinglePredecessor() == CurBlock) {
++    DeleteList.insert(CurBlock);
++    return;
++  }
++
++  // If there is only the default destination, just branch.
++  if (!SI->getNumCases()) {
++    BranchInst::Create(Default, CurBlock);
++    SI->eraseFromParent();
++    return;
++  }
++
++  // Prepare cases vector.
++  CaseVector Cases;
++  unsigned   numCmps = Clusterify(Cases, SI);
++  LLVM_DEBUG(dbgs() << "Clusterify finished. Total clusters: " << Cases.size()
++      << ". Total compares: " << numCmps << "\n");
++  LLVM_DEBUG(dbgs() << "Cases: " << Cases << "\n");
++  (void)numCmps;
++
++  ConstantInt *         LowerBound = nullptr;
++  ConstantInt *         UpperBound = nullptr;
++  std::vector<IntRange> UnreachableRanges;
++
++  if (isa<UnreachableInst>(Default->getFirstNonPHIOrDbg())) {
++    // Make the bounds tightly fitted around the case value range, because we
++    // know that the value passed to the switch must be exactly one of the case
++    // values.
++    assert(!Cases.empty());
++    LowerBound = Cases.front().Low;
++    UpperBound = Cases.back().High;
++
++    DenseMap<BasicBlock *, unsigned> Popularity;
++    unsigned                         MaxPop = 0;
++    BasicBlock *                     PopSucc = nullptr;
++
++    IntRange R = {std::numeric_limits<int64_t>::min(),
++                  std::numeric_limits<int64_t>::max()};
++    UnreachableRanges.push_back(R);
++    for (const auto &I : Cases) {
++      int64_t Low = I.Low->getSExtValue();
++      int64_t High = I.High->getSExtValue();
++
++      IntRange &LastRange = UnreachableRanges.back();
++      if (LastRange.Low == Low) {
++        // There is nothing left of the previous range.
++        UnreachableRanges.pop_back();
++      } else {
++        // Terminate the previous range.
++        assert(Low > LastRange.Low);
++        LastRange.High = Low - 1;
++      }
++      if (High != std::numeric_limits<int64_t>::max()) {
++        UnreachableRanges.push_back(
++            {High + 1, std::numeric_limits<int64_t>::max()});
++      }
++
++      // Count popularity.
++      int64_t   N = High - Low + 1;
++      unsigned &Pop = Popularity[I.BB];
++      if ((Pop += N) > MaxPop) {
++        MaxPop = Pop;
++        PopSucc = I.BB;
++      }
++    }
++#ifndef NDEBUG
++    /* UnreachableRanges should be sorted and the ranges non-adjacent. */
++    for (auto I = UnreachableRanges.begin(), E = UnreachableRanges.end();
++         I != E; ++I) {
++      assert(I->Low <= I->High);
++      auto Next = I + 1;
++      if (Next != E) {
++        assert(Next->Low > I->High);
++      }
++    }
++#endif
++
++    // As the default block in the switch is unreachable, update the PHI nodes
++    // (remove the entry to the default block) to reflect this.
++    Default->removePredecessor(OrigBlock);
++
++    // Use the most popular block as the new default, reducing the number of
++    // cases.
++    assert(MaxPop > 0 && PopSucc);
++    Default = PopSucc;
++    Cases.erase(
++        llvm::remove_if(
++            Cases, [PopSucc](const CaseRange &R) {
++              return R.BB == PopSucc;
++            }),
++        Cases.end());
++
++    // If there are no cases left, just branch.
++    if (Cases.empty()) {
++      BranchInst::Create(Default, CurBlock);
++      SI->eraseFromParent();
++      // As all the cases have been replaced with a single branch, only keep
++      // one entry in the PHI nodes.
++      for (unsigned I = 0; I < (MaxPop - 1); ++I)
++        PopSucc->removePredecessor(OrigBlock);
++      return;
++    }
++  }
++
++  unsigned NrOfDefaults = (SI->getDefaultDest() == Default) ? 1 : 0;
++  for (const auto &Case : SI->cases())
++    if (Case.getCaseSuccessor() == Default)
++      NrOfDefaults++;
++
++  // Create a new, empty default block so that the new hierarchy of
++  // if-then statements go to this and the PHI nodes are happy.
++  BasicBlock *NewDefault = BasicBlock::Create(SI->getContext(), "NewDefault");
++  F->insert(Default->getIterator(), NewDefault);
++  BranchInst::Create(Default, NewDefault);
++
++  BasicBlock *SwitchBlock =
++      switchConvert(Cases.begin(), Cases.end(), LowerBound, UpperBound, Val,
++                    OrigBlock, OrigBlock, NewDefault, UnreachableRanges);
++
++  // If there are entries in any PHI nodes for the default edge, make sure
++  // to update them as well.
++  fixPhis(Default, OrigBlock, NewDefault, NrOfDefaults);
++
++  // Branch to our shiny new if-then stuff...
++  BranchInst::Create(SwitchBlock, OrigBlock);
++
++  // We are now done with the switch instruction, delete it.
++  BasicBlock *OldDefault = SI->getDefaultDest();
++  CurBlock->erase(SI->getIterator(), ++SI->getIterator());
++
++  // If the Default block has no more predecessors just add it to DeleteList.
++  if (pred_begin(OldDefault) == pred_end(OldDefault))
++    DeleteList.insert(OldDefault);
++}
+\ No newline at end of file
+diff --git a/llvm/lib/Transforms/Obfuscation/MicrosoftRTTIEraser.cpp b/llvm/lib/Transforms/Obfuscation/MicrosoftRTTIEraser.cpp
+new file mode 100644
+index 000000000..52824c69a
+--- /dev/null
++++ b/llvm/lib/Transforms/Obfuscation/MicrosoftRTTIEraser.cpp
+@@ -0,0 +1,128 @@
++#include "llvm/Transforms/Obfuscation/ObfuscationOptions.h"
++#include "llvm/Transforms/Obfuscation/MicrosoftRTTIEraser.h"
++#include "llvm/Transforms/Obfuscation/Utils.h"
++#include "llvm/Transforms/Utils/GlobalStatus.h"
++#include "llvm/Transforms/IPO/Attributor.h"
++#include "llvm/IR/LLVMContext.h"
++#include "llvm/IR/Constants.h"
++#include "llvm/IR/GlobalValue.h"
++#include "llvm/IR/IRBuilder.h"
++#include "llvm/IR/InstIterator.h"
++#include "llvm/Support/raw_ostream.h"
++#include "llvm/ADT/SmallString.h"
++#include "llvm/Support/BLAKE3.h"
++
++#define DEBUG_TYPE "ms_rtti_eraser"
++
++
++using namespace llvm;
++
++namespace {
++class MsRttiEraser : public ModulePass {
++protected:
++  ObfuscationOptions *ArgsOptions;
++  llvm::BLAKE3        Blake3;
++
++public:
++  static char ID;
++
++  MsRttiEraser(ObfuscationOptions *argsOptions) : ModulePass(ID) {
++    this->ArgsOptions = argsOptions;
++    initializeMsRttiEraserPass(*PassRegistry::getPassRegistry());
++  }
++
++  StringRef getPassName() const override {
++    return "MsRttiEraser";
++  }
++
++  bool runOnModule(Module &M) override {
++    auto &seed = ArgsOptions->randomSeed();
++    if (seed.empty()) {
++      report_fatal_error(
++          "No random seed found in config file, but rtti eraser enabled.");
++    }
++    bool         changed = false;
++    LLVMContext &ctx = M.getContext();
++    for (GlobalVariable &gv : M.globals()) {
++      if (gv.isConstant() || !gv.hasInitializer()) {
++        continue;
++      }
++      if (!gv.hasName() || !gv.getName().starts_with("??_R0")) {
++        continue;
++      }
++      Type *tyGv = gv.getValueType();
++      if (!tyGv->isStructTy() ||
++          !tyGv->getStructName().starts_with("rtti.TypeDescriptor")) {
++        continue;
++      }
++
++      ConstantStruct *   initStruct = cast<ConstantStruct>(gv.getInitializer());
++      ConstantDataArray *rttiDA = cast<ConstantDataArray>(
++          initStruct->getOperand(2));
++      if (!rttiDA->isString()) {
++        report_fatal_error("RTTI[2] is not a string.");
++      }
++      StringRef tyInfoString = rttiDA->getAsString();
++      if (!tyInfoString.starts_with(".?AV") &&
++          !tyInfoString.starts_with(".?AU")
++      ) {
++        continue;
++      }
++      auto      newRttiName = randomRttiName(tyInfoString);
++      Constant *newRttiNameConstant = ConstantDataArray::getString(
++          ctx, newRttiName, newRttiName[newRttiName.size() - 1] != '\0');
++
++      SmallVector<Constant *, 4> Ops;
++      for (unsigned k = 0; k < initStruct->getNumOperands(); ++k)
++        Ops.push_back(initStruct->getOperand(k));
++      Ops[2] = newRttiNameConstant;
++      gv.setInitializer(ConstantStruct::get(initStruct->getType(), Ops));
++
++      changed = true;
++    }
++    return changed;
++  }
++
++  SmallString<256> randomRttiName(StringRef rtti) {
++    constexpr char pwTable[] =
++        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
++        "abcdefghijklmnopqrstuvwxyz";
++
++    SmallString<512> passwd;
++    passwd.append(ArgsOptions->randomSeed());
++    passwd.append(rtti);
++    Blake3.init();
++    Blake3.update(passwd);
++    const auto hash = Blake3.final();
++
++    SmallString<256> result = rtti;
++
++    for (size_t i = 4; i < result.size(); ++i) {
++      const char currentChar = result[i];
++      if (currentChar == '\0') {
++        break;
++      }
++      if (currentChar == '@' || currentChar == '.' || currentChar == '?' ||
++          currentChar == '$') {
++        continue;
++      }
++      result[i] = pwTable[(currentChar ^ hash[i % sizeof(hash)]) % (
++                            sizeof(pwTable) - 1)];
++    }
++    return result;
++  }
++
++  bool doFinalization(Module &) override {
++    return false;
++  }
++};
++}
++
++char MsRttiEraser::ID = 0;
++
++ModulePass *llvm::createMsRttiEraserPass(ObfuscationOptions *argsOptions) {
++  return new MsRttiEraser(argsOptions);
++}
++
++INITIALIZE_PASS(MsRttiEraser, "ms_rtti_eraser", "Enable Microsoft RTTI Eraser",
++                false, false)
+\ No newline at end of file
+diff --git a/llvm/lib/Transforms/Obfuscation/ObfuscationOptions.cpp b/llvm/lib/Transforms/Obfuscation/ObfuscationOptions.cpp
+new file mode 100644
+index 000000000..f85d432ca
+--- /dev/null
++++ b/llvm/lib/Transforms/Obfuscation/ObfuscationOptions.cpp
+@@ -0,0 +1,245 @@
++#include "llvm/Support/ErrorOr.h"
++#include "llvm/Support/MemoryBuffer.h"
++#include "llvm/Support/SourceMgr.h"
++#include "llvm/ADT/SmallString.h"
++#include "llvm/Transforms/Obfuscation/ObfuscationOptions.h"
++#include "llvm/Support/FileSystem.h"
++#include "llvm/IR/Constants.h"
++#include "llvm/IR/Module.h"
++#include "llvm/IR/DiagnosticInfo.h"
++#include "llvm/Support/JSON.h"
++
++using namespace llvm;
++
++namespace llvm {
++
++SmallVector<std::string> readAnnotate(Function *f) {
++  SmallVector<std::string> annotations;
++
++  auto *Annotations = f->getParent()->getGlobalVariable(
++      "llvm.global.annotations");
++  auto *C = dyn_cast_or_null<Constant>(Annotations);
++  if (!C || C->getNumOperands() != 1)
++    return annotations;
++
++  C = cast<Constant>(C->getOperand(0));
++
++  // Iterate over all entries in C and attach !annotation metadata to suitable
++  // entries.
++  for (auto &Op : C->operands()) {
++    // Look at the operands to check if we can use the entry to generate
++    // !annotation metadata.
++    auto *OpC = dyn_cast<ConstantStruct>(&Op);
++    if (!OpC || OpC->getNumOperands() < 2)
++      continue;
++    auto *Fn = dyn_cast<Function>(OpC->getOperand(0)->stripPointerCasts());
++    if (Fn != f)
++      continue;
++    auto *StrC = dyn_cast<GlobalValue>(OpC->getOperand(1)->stripPointerCasts());
++    if (!StrC)
++      continue;
++    auto *StrData = dyn_cast<ConstantDataSequential>(StrC->getOperand(0));
++    if (!StrData)
++      continue;
++    annotations.emplace_back(StrData->getAsString());
++  }
++  return annotations;
++}
++
++std::shared_ptr<ObfuscationOptions> ObfuscationOptions::readConfigFile(
++    const Twine &FileName) {
++
++  std::shared_ptr<ObfuscationOptions> result = std::make_shared<
++    ObfuscationOptions>();
++  if (FileName.str().empty()) {
++    return result;
++  }
++  if (!sys::fs::exists(FileName)) {
++    report_fatal_error("Config file doesn't exist: " + FileName);
++  }
++
++  auto BufOrErr = MemoryBuffer::getFileOrSTDIN(FileName);
++  if (const auto ErrCode = BufOrErr.getError()) {
++    report_fatal_error(
++        ("Can not read config file: " + ErrCode.message()).c_str());
++  }
++
++  const auto &    buf = *BufOrErr.get();
++  llvm::SourceMgr sm;
++
++  auto jsonRoot = json::parse(buf.getBuffer());
++  if (!jsonRoot) {
++    report_fatal_error(jsonRoot.takeError());
++  }
++  auto rootObj = jsonRoot->getAsObject();
++  if (!rootObj) {
++    report_fatal_error("Json root is not an object.");
++  }
++
++  static auto procObj = [](const std::shared_ptr<ObfOpt> &obfOpt,
++                           const detail::DenseMapPair<
++                             json::ObjectKey, json::Value> &
++                           obj) ->bool {
++
++    static auto procOptValue = [](const std::shared_ptr<ObfOpt> &obfOpt,
++                                  const json::Value &            value) {
++      if (auto optObj = value.getAsObject()) {
++        if (auto enable = optObj->getBoolean("enable")) {
++          obfOpt->setEnable(enable.value());
++        }
++        if (auto level = optObj->getInteger("level")) {
++          obfOpt->setLevel(static_cast<uint32_t>(level.value()));
++        }
++      }
++    };
++
++    std::string key = obj.getFirst().str();
++    auto &      value = obj.getSecond();
++
++    if (key == obfOpt->attributeName()) {
++      procOptValue(obfOpt, value);
++      return true;
++    }
++    return false;
++  };
++
++  SmallVector<std::shared_ptr<ObfOpt>> allOpt = result->getAllOpt();
++  for (auto &obj : *rootObj) {
++    if (obj.getFirst().str() == "randomSeed") {
++      if (auto objStr = obj.getSecond().getAsString()) {
++        const auto &seedStr = objStr.value();
++        auto &      seed = result->randomSeed();
++        seed = seedStr;
++        seed.resize(32, 0);
++      }
++      continue;
++    }
++    bool objHit = false;
++    for (auto &opt : allOpt) {
++      if ((objHit = procObj(opt, obj))) {
++        break;
++      }
++    }
++    if (!objHit) {
++      llvm::errs() << "warning: unknown hikari config node: "
++          << obj.getFirst().str() << '\n';
++    }
++  }
++  return result;
++}
++
++ObfOpt ObfuscationOptions::toObfuscate(const std::shared_ptr<ObfOpt> &option,
++                                       Function *                     f) {
++  const auto attrEnable = "+" + option->attributeName();
++  const auto attrDisable = "-" + option->attributeName();
++  const auto attrLevel = "^" + option->attributeName();
++  ObfOpt     result = option->none();
++  if (f->isDeclaration()) {
++    return result;
++  }
++
++  if (f->hasAvailableExternallyLinkage() != 0) {
++    return result;
++  }
++
++  bool annotationEnableFound = false;
++  bool annotationDisableFound = false;
++
++  auto annotations = readAnnotate(f);
++  int  levelSet = 0;
++  if (!annotations.empty()) {
++    for (const auto &annotation : annotations) {
++      if (annotation.find(attrDisable) != std::string::npos) {
++        result.setEnable(false);
++        annotationDisableFound = true;
++      }
++      if (annotation.find(attrEnable) != std::string::npos) {
++        result.setEnable(true);
++        annotationEnableFound = true;
++      }
++      if (const auto levelPos = annotation.find(attrLevel);
++        levelPos != std::string::npos) {
++        if (annotation.find(attrLevel, levelPos + 1) != std::string::npos) {
++          f->getContext().diagnose(DiagnosticInfoUnsupported{
++              *f,
++              f->getName() + " has multiple annotations for setting " + result.
++              attributeName() +
++              " factors, What are you the fucking want to do?"});
++          return result.none();
++        }
++        int32_t    level = -1;
++        const auto equalPos = annotation.find('=', levelPos + 1);
++        if (equalPos == std::string::npos) {
++          f->getContext().diagnose(DiagnosticInfoUnsupported{
++              *f,
++              f->getName() + ": " + annotation +
++              " missing equal sign, sample: " + attrLevel + " = 0"});
++          return result.none();
++        }
++
++        for (size_t i = levelPos + attrLevel.length(); i < equalPos; ++i) {
++          if (annotation[i] == ' ') {
++            continue;
++          }
++          f->getContext().diagnose(DiagnosticInfoUnsupported{
++              *f,
++              f->getName() + ": " + annotation +
++              " unexpected characters, sample: " + attrLevel + " = 0"});
++          return result.none();
++        }
++
++        for (size_t i = equalPos + 1; i < annotation.length(); ++i) {
++          if (annotation[i] == ' ') {
++            continue;
++          }
++          level = annotation[i] - '0';
++          if (level < 0 || level > 9) {
++            f->getContext().diagnose(DiagnosticInfoUnsupported{
++                *f,
++                f->getName() + ": " + annotation +
++                " unexpected character: " + std::string{annotation[i]} +
++                ", sample: " + attrLevel + " = 0"});
++            return result.none();
++          }
++          break;
++        }
++        if (level == -1) {
++          f->getContext().diagnose(DiagnosticInfoUnsupported{
++              *f,
++              f->getName() + ": " + annotation +
++              " level value not found, sample: " + attrLevel + " = 0"});
++          return result.none();
++        }
++
++        ++levelSet;
++        result.setLevel(level);
++      }
++    }
++  }
++
++  if (annotationDisableFound && annotationEnableFound) {
++    f->getContext().diagnose(DiagnosticInfoUnsupported{
++        *f,
++        f->getName() +
++        " having both enable annotation and disable annotation, What are you the fucking want to do?"});
++    return result.none();
++  }
++
++  if (levelSet > 1) {
++    f->getContext().diagnose(DiagnosticInfoUnsupported{
++        *f,
++        f->getName() + " has multiple annotations for setting " + result.
++        attributeName() + " factors, What are you the fucking want to do?"});
++    return result.none();
++  }
++
++  if (!annotationDisableFound && !annotationEnableFound) {
++    result.setEnable(option->isEnabled());
++  }
++  if (!levelSet) {
++    result.setLevel(option->level());
++  }
++  return result;
++}
++
++}
+\ No newline at end of file
+diff --git a/llvm/lib/Transforms/Obfuscation/ObfuscationPassManager.cpp b/llvm/lib/Transforms/Obfuscation/ObfuscationPassManager.cpp
+new file mode 100644
+index 000000000..9ed01fce6
+--- /dev/null
++++ b/llvm/lib/Transforms/Obfuscation/ObfuscationPassManager.cpp
+@@ -0,0 +1,206 @@
++#include "llvm/Transforms/Obfuscation/ObfuscationPassManager.h"
++#include "llvm/IR/LegacyPassManager.h"
++#include "llvm/Support/CommandLine.h"
++#include "llvm/Support/FileSystem.h"
++#include "llvm/Support/Path.h"
++#include "llvm/Transforms/Obfuscation/ObfuscationOptions.h"
++#include "llvm/IR/Module.h"
++
++
++#define DEBUG_TYPE "ir-obfuscation"
++
++using namespace llvm;
++
++static cl::opt<bool>
++EnableIRObfuscation("irobf", cl::init(false), cl::NotHidden,
++                    cl::desc("Enable IR Code Obfuscation."));
++
++
++static cl::opt<bool>
++EnableIndirectBr("irobf-indbr", cl::init(false), cl::NotHidden,
++                 cl::desc("Enable IR Indirect Branch Obfuscation."));
++static cl::opt<uint32_t>
++LevelIndirectBr("level-indbr", cl::init(0), cl::NotHidden,
++                cl::desc("Set IR Indirect Branch Obfuscation Level."));
++
++
++static cl::opt<bool>
++EnableIndirectCall("irobf-icall", cl::init(false), cl::NotHidden,
++                   cl::desc("Enable IR Indirect Call Obfuscation."));
++static cl::opt<uint32_t>
++LevelIndirectCall("level-icall", cl::init(0), cl::NotHidden,
++                  cl::desc("Set IR Indirect Call Obfuscation Level."));
++
++
++static cl::opt<bool> EnableIndirectGV(
++    "irobf-indgv", cl::init(false), cl::NotHidden,
++    cl::desc("Enable IR Indirect Global Variable Obfuscation."));
++static cl::opt<uint32_t> LevelIndirectGV(
++    "level-indgv", cl::init(0), cl::NotHidden,
++    cl::desc("Set IR Indirect Global Variable Obfuscation Level."));
++
++
++static cl::opt<bool> EnableIRFlattening(
++    "irobf-fla", cl::init(false), cl::NotHidden,
++    cl::desc("Enable IR Control Flow Flattening Obfuscation."));
++
++
++static cl::opt<bool>
++EnableIRStringEncryption("irobf-cse", cl::init(false), cl::NotHidden,
++                         cl::desc("Enable IR Constant String Encryption."));
++
++
++static cl::opt<bool>
++EnableIRConstantIntEncryption("irobf-cie", cl::init(false), cl::NotHidden,
++                              cl::desc(
++                                  "Enable IR Constant Integer Encryption."));
++static cl::opt<uint32_t> LevelIRConstantIntEncryption(
++    "level-cie", cl::init(0), cl::NotHidden,
++    cl::desc("Set IR Constant Integer Encryption Level."));
++
++
++static cl::opt<bool>
++EnableIRConstantFPEncryption("irobf-cfe", cl::init(false), cl::NotHidden,
++                             cl::desc("Enable IR Constant FP Encryption."));
++
++static cl::opt<uint32_t> LevelIRConstantFPEncryption(
++    "level-cfe", cl::init(0), cl::NotHidden,
++    cl::desc("Set IR Constant FP Encryption Level."));
++
++
++static cl::opt<bool>
++EnableRttiEraser("irobf-rtti", cl::init(false), cl::NotHidden,
++                 cl::desc("Enable RTTI Eraser."));
++
++
++static cl::opt<std::string>
++ArkariConfigPath("arkari-cfg", cl::init(std::string{}), cl::NotHidden,
++                 cl::desc("Arkari config path."));
++
++namespace llvm {
++
++struct ObfuscationPassManager : public ModulePass {
++  static char            ID; // Pass identification
++  SmallVector<Pass *, 8> Passes;
++  std::shared_ptr<ObfuscationOptions> Options;
++
++  ObfuscationPassManager() : ModulePass(ID) {
++    initializeObfuscationPassManagerPass(*PassRegistry::getPassRegistry());
++  };
++
++  StringRef getPassName() const override {
++    return "Obfuscation Pass Manager";
++  }
++
++  bool doFinalization(Module &M) override {
++    bool Change = false;
++    for (Pass *P : Passes) {
++      Change |= P->doFinalization(M);
++      delete (P);
++    }
++    Options.reset();
++    return Change;
++  }
++
++  void add(Pass *P) {
++    Passes.push_back(P);
++  }
++
++  bool run(Module &M) {
++    bool Change = false;
++    for (Pass *P : Passes) {
++      switch (P->getPassKind()) {
++      case PassKind::PT_Function:
++        Change |= runFunctionPass(M, (FunctionPass *)P);
++        break;
++      case PassKind::PT_Module:
++        Change |= runModulePass(M, (ModulePass *)P);
++        break;
++      default:
++        continue;
++      }
++    }
++    return Change;
++  }
++
++  bool runFunctionPass(Module &M, FunctionPass *P) {
++    bool Changed = false;
++    Changed |= P->doInitialization(M);
++    for (Function &F : M) {
++      Changed |= P->runOnFunction(F);
++    }
++    return Changed;
++  }
++
++  bool runModulePass(Module &M, ModulePass *P) {
++    return P->doInitialization(M) || P->runOnModule(M);
++  }
++
++  static std::shared_ptr<ObfuscationOptions> getOptions() {
++    auto Opt = ObfuscationOptions::readConfigFile(ArkariConfigPath);
++
++    Opt->indBrOpt()->readOpt(EnableIndirectBr, LevelIndirectBr);
++    Opt->iCallOpt()->readOpt(EnableIndirectCall, LevelIndirectCall);
++    Opt->indGvOpt()->readOpt(EnableIndirectGV, LevelIndirectGV);
++    Opt->flaOpt()->readOpt(EnableIRFlattening);
++    Opt->cseOpt()->readOpt(EnableIRStringEncryption);
++    Opt->cieOpt()->readOpt(EnableIRConstantIntEncryption,
++                           LevelIRConstantIntEncryption);
++    Opt->cfeOpt()->readOpt(EnableIRConstantFPEncryption,
++                           LevelIRConstantFPEncryption);
++    Opt->rttiOpt()->readOpt(EnableRttiEraser);
++    return Opt;
++  }
++
++  bool runOnModule(Module &M) override {
++
++    if (EnableIndirectBr || EnableIndirectCall || EnableIndirectGV ||
++        EnableIRFlattening || EnableIRStringEncryption ||
++        EnableIRConstantIntEncryption || EnableIRConstantFPEncryption ||
++        EnableRttiEraser || !ArkariConfigPath.empty()) {
++      EnableIRObfuscation = true;
++    }
++
++    if (!EnableIRObfuscation) {
++      return false;
++    }
++
++    const auto Options(getOptions());
++    this->Options = Options;
++    unsigned   pointerSize = M.getDataLayout().getTypeAllocSize(
++        PointerType::getUnqual(M.getContext()));
++
++    add(llvm::createConstantIntEncryptionPass(Options.get()));
++
++    add(llvm::createIndirectGlobalVariablePass(Options.get()));
++
++    add(llvm::createConstantFPEncryptionPass(Options.get()));
++
++    if (EnableIRStringEncryption || Options->cseOpt()->isEnabled()) {
++      add(llvm::createStringEncryptionPass(Options.get()));
++    }
++
++    add(llvm::createIndirectCallPass(Options.get()));
++    add(llvm::createFlatteningPass(pointerSize, Options.get()));
++    add(llvm::createIndirectBranchPass(Options.get()));
++
++    if (EnableRttiEraser || Options->rttiOpt()->isEnabled()) {
++      add(llvm::createMsRttiEraserPass(Options.get()));
++    }
++    bool Changed = run(M);
++
++    return Changed;
++  }
++};
++} // namespace llvm
++
++char ObfuscationPassManager::ID = 0;
++
++ModulePass *llvm::createObfuscationPassManager() {
++  return new ObfuscationPassManager();
++}
++
++INITIALIZE_PASS_BEGIN(ObfuscationPassManager, "irobf", "Enable IR Obfuscation",
++                      false, false)
++INITIALIZE_PASS_END(ObfuscationPassManager, "irobf", "Enable IR Obfuscation",
++                      false, false)
+\ No newline at end of file
+diff --git a/llvm/lib/Transforms/Obfuscation/StringEncryption.cpp b/llvm/lib/Transforms/Obfuscation/StringEncryption.cpp
+new file mode 100644
+index 000000000..0a8d1ded0
+--- /dev/null
++++ b/llvm/lib/Transforms/Obfuscation/StringEncryption.cpp
+@@ -0,0 +1,832 @@
++#include "llvm/Transforms/Obfuscation/ObfuscationOptions.h"
++#include "llvm/Transforms/Obfuscation/StringEncryption.h"
++#include "llvm/Transforms/Obfuscation/Utils.h"
++#include "llvm/Transforms/Utils/GlobalStatus.h"
++#include "llvm/Transforms/IPO/Attributor.h"
++#include "llvm/IR/LLVMContext.h"
++#include "llvm/IR/Constants.h"
++#include "llvm/IR/GlobalValue.h"
++#include "llvm/IR/IRBuilder.h"
++#include "llvm/IR/InstIterator.h"
++#include "llvm/Support/raw_ostream.h"
++#include "llvm/Support/RandomNumberGenerator.h"
++#include "llvm/ADT/DenseMap.h"
++#include "llvm/ADT/SmallPtrSet.h"
++#include <set>
++#include <algorithm>
++
++#define DEBUG_TYPE "string-encryption"
++
++using namespace llvm;
++
++namespace {
++struct StringEncryption : public ModulePass {
++  static char ID;
++
++  struct CSPEntry {
++    CSPEntry() : ID(0)
++             , Offset(0)
++             , DecGV(nullptr)
++             , DecStatus(nullptr)
++             , IsUTF16(false) {}
++
++    unsigned        ID;
++    unsigned        Offset;
++    GlobalVariable *DecGV;
++    GlobalVariable *DecStatus; // is decrypted or not
++    // for 8-bit strings
++    std::vector<uint8_t> Data;
++    std::vector<uint8_t> EncKey;
++    // for 16-bit strings (UTF-16)
++    bool                  IsUTF16;
++    std::vector<uint16_t> Data16;
++    std::vector<uint16_t> EncKey16;
++  };
++
++  struct CSUser {
++    CSUser(Type *ETy, GlobalVariable *User, GlobalVariable *NewGV) : Ty(ETy)
++                                                                 , GV(User)
++                                                                 , DecGV(NewGV)
++                                                                 , DecStatus(
++                                                                       nullptr)
++                                                                 , InitFunc(
++                                                                       nullptr) {
++    }
++
++    Type *Ty;
++    GlobalVariable *GV;
++    GlobalVariable *DecGV;
++    GlobalVariable *DecStatus; // is decrypted or not
++    Function *InitFunc; // InitFunc will use decryted string to initialize DecGV
++  };
++
++  ObfuscationOptions *                   ArgsOptions;
++  std::mt19937_64                        RNG;
++  std::vector<CSPEntry *>                ConstantStringPool;
++  DenseMap<GlobalVariable *, CSPEntry *> CSPEntryMap;
++  DenseMap<GlobalVariable *, CSUser *>   CSUserMap;
++  GlobalVariable *                       EncryptedStringTable = nullptr;
++  Function *                             SharedDecFuncI8 = nullptr;
++  Function *                             SharedDecFuncI16 = nullptr;
++  std::set<GlobalVariable *>             MaybeDeadGlobalVars;
++
++  StringEncryption(ObfuscationOptions *argsOptions) : ModulePass(ID) {
++    this->ArgsOptions = argsOptions;
++    initializeStringEncryptionPass(*PassRegistry::getPassRegistry());
++    uint64_t seed = 0;
++    if (auto errorCode = llvm::getRandomBytes(&seed, sizeof(seed))) {
++      llvm::report_fatal_error(
++          StringRef("Failed to get random bytes for page table generation") +
++          errorCode.message());
++    }
++
++    RNG = std::mt19937_64(seed);
++  }
++
++  bool doFinalization(Module &) override {
++    for (CSPEntry *Entry : ConstantStringPool) {
++      delete (Entry);
++    }
++    for (auto &I : CSUserMap) {
++      CSUser *User = I.second;
++      delete (User);
++    }
++    ConstantStringPool.clear();
++    CSPEntryMap.clear();
++    CSUserMap.clear();
++    MaybeDeadGlobalVars.clear();
++    return false;
++  }
++
++  StringRef getPassName() const override {
++    return {"StringEncryption"};
++  }
++
++  bool        runOnModule(Module &M) override;
++  static void collectConstantStringUser(GlobalVariable *CString,
++                                        SmallPtrSetImpl<GlobalVariable *> &
++                                        Users);
++  static bool      isValidToEncrypt(GlobalVariable *GV);
++  bool             processConstantStringUse(Function *F);
++  void             deleteUnusedGlobalVariable();
++  static Function *buildSharedDecryptFunction(Module *M, bool IsUTF16);
++  Function *       buildInitFunction(Module *M, const CSUser *User);
++  template <typename T>
++  void getRandomBytes(std::vector<T> &Bytes, uint32_t MinSize,
++                      uint32_t        MaxSize);
++  void lowerGlobalConstant(Constant *CV, IRBuilder<> &IRB, Value *Ptr,
++                           Type *    Ty);
++  void lowerGlobalConstantStruct(ConstantStruct *CS, IRBuilder<> &IRB,
++                                 Value *         Ptr, Type *      Ty);
++  void lowerGlobalConstantArray(ConstantArray *CA, IRBuilder<> &IRB, Value *Ptr,
++                                Type *         Ty);
++};
++} // anonymous namespace
++
++char StringEncryption::ID = 0;
++
++bool StringEncryption::runOnModule(Module &M) {
++  SmallPtrSet<GlobalVariable *, 16> ConstantStringUsers;
++
++  // collect all c strings
++
++  LLVMContext &Ctx = M.getContext();
++  ConstantInt *Zero = ConstantInt::get(Type::getInt32Ty(Ctx), 0);
++  for (GlobalVariable &GV : M.globals()) {
++    if (!GV.isConstant() || !GV.hasInitializer() ||
++        GV.hasDLLExportStorageClass() || GV.isDLLImportDependent()) {
++      continue;
++    }
++    Constant *Init = GV.getInitializer();
++    if (Init == nullptr)
++      continue;
++    if (ConstantDataSequential *CDS = dyn_cast<ConstantDataSequential>(Init)) {
++      if (CDS->isCString()) {
++        CSPEntry *Entry = new CSPEntry();
++        Entry->IsUTF16 = false;
++        StringRef Data = CDS->getRawDataValues();
++        Entry->Data.reserve(Data.size());
++        for (unsigned i = 0; i < Data.size(); ++i) {
++          Entry->Data.push_back(static_cast<uint8_t>(Data[i]));
++        }
++        Entry->ID = static_cast<unsigned>(ConstantStringPool.size());
++        Constant *      ZeroInit = Constant::getNullValue(CDS->getType());
++        GlobalVariable *DecGV = new GlobalVariable(
++            M, CDS->getType(), false, GlobalValue::PrivateLinkage,
++            ZeroInit, "dec" + Twine::utohexstr(Entry->ID) + GV.getName());
++        GlobalVariable *DecStatus = new GlobalVariable(
++            M, Type::getInt32Ty(Ctx), false, GlobalValue::PrivateLinkage,
++            Zero, "dec_status_" + Twine::utohexstr(Entry->ID) + GV.getName());
++        DecGV->setAlignment(GV.getAlign());
++        Entry->DecGV = DecGV;
++        Entry->DecStatus = DecStatus;
++        ConstantStringPool.push_back(Entry);
++        CSPEntryMap[&GV] = Entry;
++        collectConstantStringUser(&GV, ConstantStringUsers);
++      } else {
++        // treat arrays of i16 as UTF-16 constant strings
++        Type *EltTy = CDS->getElementType();
++        if (EltTy->isIntegerTy(16)) {
++          CSPEntry *Entry = new CSPEntry();
++          Entry->IsUTF16 = true;
++          unsigned NumElems = CDS->getNumElements();
++          Entry->Data16.reserve(NumElems);
++          for (unsigned i = 0; i < NumElems; ++i) {
++            // getElementAsInteger returns uint64_t, safe to cast to uint16_t
++            uint64_t v = CDS->getElementAsInteger(i);
++            Entry->Data16.push_back(static_cast<uint16_t>(v));
++          }
++          Entry->ID = static_cast<unsigned>(ConstantStringPool.size());
++          Constant *      ZeroInit = Constant::getNullValue(CDS->getType());
++          GlobalVariable *DecGV = new GlobalVariable(
++              M, CDS->getType(), false, GlobalValue::PrivateLinkage,
++              ZeroInit, "dec" + Twine::utohexstr(Entry->ID) + GV.getName());
++          GlobalVariable *DecStatus = new GlobalVariable(
++              M, Type::getInt32Ty(Ctx), false, GlobalValue::PrivateLinkage,
++              Zero, "dec_status_" + Twine::utohexstr(Entry->ID) + GV.getName());
++          DecGV->setAlignment(GV.getAlign());
++          Entry->DecGV = DecGV;
++          Entry->DecStatus = DecStatus;
++          ConstantStringPool.push_back(Entry);
++          CSPEntryMap[&GV] = Entry;
++          collectConstantStringUser(&GV, ConstantStringUsers);
++        }
++      }
++    }
++  }
++
++  // encrypt those strings, build corresponding decrypt function
++  bool hasI8Strings = false, hasI16Strings = false;
++  for (CSPEntry *Entry : ConstantStringPool) {
++    if (Entry->IsUTF16)
++      hasI16Strings = true;
++    else
++      hasI8Strings = true;
++  }
++  if (hasI8Strings)
++    SharedDecFuncI8 = buildSharedDecryptFunction(&M, false);
++  if (hasI16Strings)
++    SharedDecFuncI16 = buildSharedDecryptFunction(&M, true);
++
++  for (CSPEntry *Entry : ConstantStringPool) {
++    if (!Entry->IsUTF16) {
++      getRandomBytes(Entry->EncKey, 16, 32);
++      uint8_t LastPlainChar = 0;
++      for (unsigned i = 0; i < Entry->Data.size(); ++i) {
++        const uint32_t KeyIndex = i % Entry->EncKey.size();
++        const uint8_t  CurrentKey = Entry->EncKey[KeyIndex];
++        const uint8_t  CurrentPlainChar = Entry->Data[i];
++        uint8_t        val = CurrentPlainChar;
++        val ^= CurrentKey;
++        if ((KeyIndex * CurrentKey) % 2 == 0) {
++          val = ~val;
++          val ^= CurrentKey;
++          val = val - LastPlainChar;
++        } else {
++          val = -val;
++          val ^= CurrentKey;
++          val = val + LastPlainChar;
++        }
++        Entry->Data[i] = val;
++        LastPlainChar = CurrentPlainChar;
++      }
++    } else {
++      // 16-bit oriented keys for UTF-16
++      getRandomBytes(Entry->EncKey16, 8, 16); // key length in 16-bit words
++      uint16_t LastPlainChar = 0;
++      for (unsigned i = 0; i < Entry->Data16.size(); ++i) {
++        const uint32_t KeyIndex = i % Entry->EncKey16.size();
++        const uint16_t CurrentKey = Entry->EncKey16[KeyIndex];
++        const uint16_t CurrentPlainChar = Entry->Data16[i];
++        uint16_t       val = CurrentPlainChar;
++        val ^= CurrentKey;
++        if (((KeyIndex * CurrentKey) % 2) == 0) {
++          val = ~val;
++          val ^= CurrentKey;
++          val = static_cast<uint16_t>(val - LastPlainChar);
++        } else {
++          val = static_cast<uint16_t>(-static_cast<int16_t>(val));
++          val ^= CurrentKey;
++          val = static_cast<uint16_t>(val + LastPlainChar);
++        }
++        Entry->Data16[i] = val;
++        LastPlainChar = CurrentPlainChar;
++      }
++    }
++  }
++
++  // build initialization function for supported constant string users
++  for (GlobalVariable *GV : ConstantStringUsers) {
++    if (isValidToEncrypt(GV)) {
++      Type *          EltType = GV->getValueType();
++      Constant *      ZeroInit = Constant::getNullValue(EltType);
++      GlobalVariable *DecGV = new GlobalVariable(
++          M, EltType, false, GlobalValue::PrivateLinkage,
++          ZeroInit, "dec_" + GV->getName());
++      DecGV->setAlignment(GV->getAlign());
++      GlobalVariable *DecStatus = new GlobalVariable(
++          M, Type::getInt32Ty(Ctx), false, GlobalValue::PrivateLinkage,
++          Zero, "dec_status_" + GV->getName());
++      CSUser *User = new CSUser(EltType, GV, DecGV);
++      User->DecStatus = DecStatus;
++      User->InitFunc = buildInitFunction(&M, User);
++      CSUserMap[GV] = User;
++    }
++  }
++
++  // emit the constant string pool
++  // | junk bytes | key 1 | encrypted string 1 | junk bytes | key 2 | encrypted string 2 | ...
++  std::vector<uint8_t> Data;
++  std::vector<uint8_t> JunkBytes;
++
++  JunkBytes.reserve(32);
++  for (CSPEntry *Entry : ConstantStringPool) {
++    JunkBytes.clear();
++    getRandomBytes(JunkBytes, 16, 32);
++    Data.insert(Data.end(), JunkBytes.begin(), JunkBytes.end());
++
++    // For UTF-16: ensure 2-byte alignment to avoid misaligned i16 loads
++    if (Entry->IsUTF16 && (Data.size() % 2) != 0) {
++      Data.push_back(0);
++    }
++
++    Entry->Offset = static_cast<unsigned>(Data.size());
++    if (!Entry->IsUTF16) {
++      Data.insert(Data.end(), Entry->EncKey.begin(), Entry->EncKey.end());
++      Data.insert(Data.end(), Entry->Data.begin(), Entry->Data.end());
++    } else {
++      // for UTF-16: write keys as little-endian uint16_t bytes
++      for (uint16_t w : Entry->EncKey16) {
++        Data.push_back(static_cast<uint8_t>(w & 0xff));
++        Data.push_back(static_cast<uint8_t>((w >> 8) & 0xff));
++      }
++      // append Data16 as little-endian bytes
++      for (uint16_t w : Entry->Data16) {
++        Data.push_back(static_cast<uint8_t>(w & 0xff));
++        Data.push_back(static_cast<uint8_t>((w >> 8) & 0xff));
++      }
++    }
++  }
++
++  Constant *CDA = ConstantDataArray::get(M.getContext(),
++                                         ArrayRef<uint8_t>(Data));
++  EncryptedStringTable = new GlobalVariable(M, CDA->getType(), false,
++                                            GlobalValue::PrivateLinkage,
++                                            CDA, "EncryptedStringTable");
++
++  // decrypt string back at every use, change the plain string use to the decrypted one
++  bool Changed = false;
++  for (Function &F : M) {
++    if (F.isDeclaration())
++      continue;
++    Changed |= processConstantStringUse(&F);
++  }
++
++  for (auto &I : CSUserMap) {
++    CSUser *User = I.second;
++    Changed |= processConstantStringUse(User->InitFunc);
++  }
++
++  // delete unused global variables
++  deleteUnusedGlobalVariable();
++  return Changed;
++}
++
++template <typename T>
++void StringEncryption::getRandomBytes(std::vector<T> &Bytes, uint32_t MinSize,
++                                      uint32_t        MaxSize) {
++  uint32_t N = static_cast<uint32_t>(RNG());
++  uint32_t Len;
++
++  assert(MaxSize >= MinSize);
++
++  if (MinSize == MaxSize) {
++    Len = MinSize;
++  } else {
++    Len = MinSize + (N % (MaxSize - MinSize));
++  }
++
++  char *Buffer = new char[Len * sizeof(T)];
++  if (auto errorCode = llvm::getRandomBytes(Buffer, Len * sizeof(T))) {
++    llvm::report_fatal_error(
++        StringRef("Failed to get random bytes for page table generation") +
++        errorCode.message());
++  }
++  for (uint32_t i = 0; i < Len; ++i) {
++    if constexpr (std::is_same_v<T, uint8_t>) {
++      Bytes.push_back(static_cast<uint8_t>(Buffer[i]));
++    } else {
++      uint8_t b0 = static_cast<uint8_t>(Buffer[i * 2]);
++      uint8_t b1 = static_cast<uint8_t>(Buffer[i * 2 + 1]);
++      // little-endian combine
++      uint16_t w = static_cast<uint16_t>(b0 | (b1 << 8));
++      Bytes.push_back(w);
++    }
++  }
++
++  delete[] Buffer;
++}
++
++//
++//static void goron_decrypt_string(uint8_t *plain_string, const uint8_t *data)
++//{
++//  const uint8_t *key = data;
++//  uint32_t key_size = 1234;
++//  uint8_t *es = (uint8_t *) &data[key_size];
++//  uint32_t i;
++//  uint8_t last_decrypted_char = 0;
++//  for (i = 0;i < 5678;i ++) {
++//    uint32_t key_index = i % key_size;
++//    uint8_t current_key = key[key_index];
++//    uint8_t ds;
++//    if ((key_index * current_key) % 2 == 0) {
++//      ds = es[i] + last_decrypted_char;
++//      ds = ds ^ current_key;
++//      ds = ~ds;
++//    } else {
++//      ds = es[i] - last_decrypted_char;
++//      ds = ds ^ current_key;
++//      ds = -ds;
++//    }
++//    ds = ds ^ current_key;
++//    last_decrypted_char = ds;
++//    plain_string[i] = ds;
++//  }
++//}
++
++Function *
++StringEncryption::buildSharedDecryptFunction(Module *M, bool IsUTF16) {
++  LLVMContext &Ctx = M->getContext();
++  IRBuilder<>  IRB(Ctx);
++
++  Type *PlainEltTy = IsUTF16 ? Type::getInt16Ty(Ctx) : Type::getInt8Ty(Ctx);
++  PointerType *PtrTy = PointerType::getUnqual(Ctx);
++  Type *I32Ty = Type::getInt32Ty(Ctx);
++
++  // Shared signature: void(ptr plain_string, ptr data, i32 key_elem_size, i32 data_size, ptr dec_status)
++  FunctionType *FuncTy = FunctionType::get(
++      Type::getVoidTy(Ctx),
++      {PtrTy, PtrTy, I32Ty, I32Ty, PtrTy},
++      false);
++  Function *DecFunc =
++      Function::Create(FuncTy, GlobalValue::PrivateLinkage,
++                       IsUTF16
++                         ? "goron_decrypt_string_i16"
++                         : "goron_decrypt_string_i8", M);
++  DecFunc->addFnAttr(Attribute::NoInline);
++  DecFunc->addFnAttr(Attribute::OptimizeForSize);
++
++  auto      ArgIt = DecFunc->arg_begin();
++  Argument *PlainString = ArgIt++;
++  Argument *Data = ArgIt++;
++  Argument *KeyElemSizeArg = ArgIt++;
++  Argument *DataSizeArg = ArgIt++;
++  Argument *DecStatusArg = ArgIt;
++
++  AttrBuilder NoCaptureAttrBuilder{Ctx};
++  NoCaptureAttrBuilder.addCapturesAttr(
++      llvm::CaptureInfo(llvm::CaptureComponents::None));
++
++  PlainString->setName("plain_string");
++  PlainString->addAttrs(NoCaptureAttrBuilder);
++  Data->setName("data");
++  Data->addAttrs(NoCaptureAttrBuilder);
++  KeyElemSizeArg->setName("key_elem_size");
++  DataSizeArg->setName("data_size");
++  DecStatusArg->setName("dec_status");
++  DecStatusArg->addAttrs(NoCaptureAttrBuilder);
++
++  BasicBlock *Enter = BasicBlock::Create(Ctx, "Enter", DecFunc);
++  BasicBlock *LoopBody = BasicBlock::Create(Ctx, "LoopBody", DecFunc);
++  BasicBlock *LoopBr0 = BasicBlock::Create(Ctx, "LoopBr0", DecFunc);
++  BasicBlock *LoopBr1 = BasicBlock::Create(Ctx, "LoopBr1", DecFunc);
++  BasicBlock *LoopEnd = BasicBlock::Create(Ctx, "LoopEnd", DecFunc);
++  BasicBlock *UpdateDecStatus = BasicBlock::Create(
++      Ctx, "UpdateDecStatus", DecFunc);
++  BasicBlock *Exit = BasicBlock::Create(Ctx, "Exit", DecFunc);
++
++  IRB.SetInsertPoint(Enter);
++  // Compute key size in bytes: for i8 it equals key_elem_size, for i16 it's key_elem_size * 2
++  Value *KeySizeBytesVal = IsUTF16
++                             ? IRB.CreateShl(KeyElemSizeArg, 1)
++                             : static_cast<Value *>(KeyElemSizeArg);
++
++  Value *EncPtr = IRB.CreateInBoundsGEP(IRB.getInt8Ty(), Data, KeySizeBytesVal);
++  Value *DecStatus = IRB.CreateLoad(I32Ty, DecStatusArg);
++  Value *IsDecrypted = IRB.CreateICmpEQ(DecStatus, IRB.getInt32(1));
++  IRB.CreateCondBr(IsDecrypted, Exit, LoopBody);
++
++  IRB.SetInsertPoint(LoopBody);
++  PHINode *LoopCounter = IRB.CreatePHI(IRB.getInt32Ty(), 2);
++  LoopCounter->addIncoming(IRB.getInt32(0), Enter);
++
++  PHINode *LastDecrypted = IRB.CreatePHI(PlainEltTy, 2);
++  LastDecrypted->addIncoming(Constant::getNullValue(PlainEltTy), Enter);
++
++  Value *KeyIdx = IRB.CreateURem(LoopCounter, KeyElemSizeArg);
++
++  Value *KeyChar = nullptr;
++  if (!IsUTF16) {
++    Value *KeyCharPtr = IRB.CreateInBoundsGEP(IRB.getInt8Ty(), Data, KeyIdx);
++    KeyChar = IRB.CreateLoad(IRB.getInt8Ty(), KeyCharPtr);
++  } else {
++    Value *KeyCharPtr = IRB.CreateInBoundsGEP(Type::getInt16Ty(Ctx), Data,
++                                              KeyIdx);
++    KeyChar = IRB.CreateLoad(Type::getInt16Ty(Ctx), KeyCharPtr);
++  }
++
++  Value *EncChar = nullptr;
++  if (!IsUTF16) {
++    Value *EncCharPtr = IRB.CreateInBoundsGEP(IRB.getInt8Ty(), EncPtr,
++                                              LoopCounter);
++    EncChar = IRB.CreateLoad(IRB.getInt8Ty(), EncCharPtr, true);
++  } else {
++    Value *IdxBytes = IRB.CreateShl(LoopCounter, 1);
++    Value *EncCharBytePtr = IRB.CreateInBoundsGEP(
++        IRB.getInt8Ty(), EncPtr, IdxBytes);
++    EncChar = IRB.CreateLoad(Type::getInt16Ty(Ctx), EncCharBytePtr, true);
++  }
++
++  Value *KeyIdxZext = IRB.CreateZExt(KeyIdx, IRB.getInt32Ty());
++  Value *KeyCharZext = IRB.CreateZExt(KeyChar, IRB.getInt32Ty());
++  Value *Mul = IRB.CreateMul(KeyIdxZext, KeyCharZext);
++  Value *BrKey = IRB.CreateAnd(Mul, IRB.getInt32(1));
++  Value *BrCond = IRB.CreateICmpEQ(BrKey, IRB.getInt32(0));
++  IRB.CreateCondBr(BrCond, LoopBr0, LoopBr1);
++
++  IRB.SetInsertPoint(LoopBr0);
++  {
++    Value *Tmp = IRB.CreateAdd(EncChar, LastDecrypted);
++    Tmp = IRB.CreateXor(Tmp, KeyChar);
++    Tmp = IRB.CreateNot(Tmp);
++    IRB.CreateBr(LoopEnd);
++  }
++  Value *DecChar0 = &*std::prev(LoopBr0->end(), 2); // the Not instruction
++
++  IRB.SetInsertPoint(LoopBr1);
++  {
++    Value *Tmp = IRB.CreateSub(EncChar, LastDecrypted);
++    Tmp = IRB.CreateXor(Tmp, KeyChar);
++    Tmp = IRB.CreateNeg(Tmp);
++    IRB.CreateBr(LoopEnd);
++  }
++  Value *DecChar1 = &*std::prev(LoopBr1->end(), 2); // the Neg instruction
++
++  IRB.SetInsertPoint(LoopEnd);
++  PHINode *BrDecChar = IRB.CreatePHI(PlainEltTy, 2);
++  BrDecChar->addIncoming(DecChar0, LoopBr0);
++  BrDecChar->addIncoming(DecChar1, LoopBr1);
++  Value *DecChar = IRB.CreateXor(BrDecChar, KeyChar);
++
++  LastDecrypted->addIncoming(DecChar, LoopEnd);
++  Value *DecCharPtr = IRB.CreateInBoundsGEP(PlainEltTy,
++                                            PlainString, LoopCounter);
++  IRB.CreateStore(DecChar, DecCharPtr);
++
++  Value *NewCounter = IRB.CreateAdd(LoopCounter, IRB.getInt32(1), "", true,
++                                    true);
++  LoopCounter->addIncoming(NewCounter, LoopEnd);
++
++  Value *Cond = IRB.CreateICmpEQ(NewCounter, DataSizeArg);
++  IRB.CreateCondBr(Cond, UpdateDecStatus, LoopBody);
++
++  IRB.SetInsertPoint(UpdateDecStatus);
++  IRB.CreateStore(IRB.getInt32(1), DecStatusArg);
++  IRB.CreateBr(Exit);
++
++  IRB.SetInsertPoint(Exit);
++  IRB.CreateRetVoid();
++
++  return DecFunc;
++}
++
++Function *StringEncryption::buildInitFunction(Module *M,
++                                              const StringEncryption::CSUser *
++                                              User) {
++  LLVMContext & Ctx = M->getContext();
++  IRBuilder<>   IRB(Ctx);
++  FunctionType *FuncTy = FunctionType::get(Type::getVoidTy(Ctx),
++                                           {User->DecGV->getType()}, false);
++  Function *InitFunc =
++      Function::Create(FuncTy, GlobalValue::PrivateLinkage,
++                       "__global_variable_initializer_" + User->GV->getName(),
++                       M);
++
++  auto      ArgIt = InitFunc->arg_begin();
++  Argument *thiz = ArgIt;
++
++  AttrBuilder NoCaptureAttrBuilder{Ctx};
++  NoCaptureAttrBuilder.addCapturesAttr(
++      llvm::CaptureInfo(llvm::CaptureComponents::None));
++  thiz->setName("this");
++  thiz->addAttrs(NoCaptureAttrBuilder);
++
++  // convert constant initializer into a series of instructions
++  BasicBlock *Enter = BasicBlock::Create(Ctx, "Enter", InitFunc);
++  BasicBlock *InitBlock = BasicBlock::Create(Ctx, "InitBlock", InitFunc);
++  BasicBlock *Exit = BasicBlock::Create(Ctx, "Exit", InitFunc);
++
++  IRB.SetInsertPoint(Enter);
++  Value *DecStatus = IRB.CreateLoad(
++      User->DecStatus->getValueType(), User->DecStatus);
++  Value *IsDecrypted = IRB.CreateICmpEQ(DecStatus, IRB.getInt32(1));
++  IRB.CreateCondBr(IsDecrypted, Exit, InitBlock);
++
++  IRB.SetInsertPoint(InitBlock);
++  Constant *Init = User->GV->getInitializer();
++  lowerGlobalConstant(Init, IRB, User->DecGV, User->Ty);
++  IRB.CreateStore(IRB.getInt32(1), User->DecStatus);
++  IRB.CreateBr(Exit);
++
++  IRB.SetInsertPoint(Exit);
++  IRB.CreateRetVoid();
++  return InitFunc;
++}
++
++void StringEncryption::lowerGlobalConstant(Constant *CV, IRBuilder<> &IRB,
++                                           Value *   Ptr, Type *      Ty) {
++  if (isa<ConstantAggregateZero>(CV)) {
++    IRB.CreateStore(CV, Ptr);
++    return;
++  }
++
++  if (ConstantArray *CA = dyn_cast<ConstantArray>(CV)) {
++    lowerGlobalConstantArray(CA, IRB, Ptr, Ty);
++  } else if (ConstantStruct *CS = dyn_cast<ConstantStruct>(CV)) {
++    lowerGlobalConstantStruct(CS, IRB, Ptr, Ty);
++  } else {
++    IRB.CreateStore(CV, Ptr);
++  }
++}
++
++void StringEncryption::lowerGlobalConstantArray(ConstantArray *CA,
++                                                IRBuilder<> &  IRB, Value *Ptr,
++                                                Type *         Ty) {
++  for (unsigned i = 0, e = CA->getNumOperands(); i != e; ++i) {
++    Constant *CV = CA->getOperand(i);
++    Value *   GEP = IRB.CreateGEP(Ty,
++                                  Ptr, {IRB.getInt32(0), IRB.getInt32(i)});
++    lowerGlobalConstant(CV, IRB, GEP, CV->getType());
++  }
++}
++
++void StringEncryption::lowerGlobalConstantStruct(
++    ConstantStruct *CS, IRBuilder<> &IRB, Value *Ptr, Type *Ty) {
++  for (unsigned i = 0, e = CS->getNumOperands(); i != e; ++i) {
++    Constant *CV = CS->getOperand(i);
++    Value *   GEP = IRB.CreateGEP(Ty,
++                                  Ptr, {IRB.getInt32(0), IRB.getInt32(i)});
++    lowerGlobalConstant(CV, IRB, GEP, CV->getType());
++  }
++}
++
++bool StringEncryption::processConstantStringUse(Function *F) {
++  auto opt = ArgsOptions->toObfuscate(ArgsOptions->cseOpt(), F);
++  if (!opt.isEnabled()) {
++    return false;
++  }
++  LowerConstantExpr(*F);
++  SmallPtrSet<GlobalVariable *, 16> DecryptedGV;
++  // if GV has multiple use in a block, decrypt only at the first use
++  bool Changed = false;
++  for (BasicBlock &BB : *F) {
++    DecryptedGV.clear();
++    for (Instruction &Inst : BB) {
++      if (PHINode *PHI = dyn_cast<PHINode>(&Inst)) {
++        for (unsigned int i = 0; i < PHI->getNumIncomingValues(); ++i) {
++          if (GlobalVariable *GV = dyn_cast<GlobalVariable>(
++              PHI->getIncomingValue(i))) {
++            auto Iter1 = CSPEntryMap.find(GV);
++            auto Iter2 = CSUserMap.find(GV);
++            if (Iter2 != CSUserMap.end()) {
++              // GV is a constant string user
++              CSUser *User = Iter2->second;
++              if (DecryptedGV.count(GV) > 0) {
++                Inst.replaceUsesOfWith(GV, User->DecGV);
++              } else {
++                Instruction *InsertPoint = PHI->getIncomingBlock(i)->
++                                                getTerminator();
++                IRBuilder<> IRB(InsertPoint);
++                fixEH(IRB.CreateCall(User->InitFunc, {User->DecGV}));
++                Inst.replaceUsesOfWith(GV, User->DecGV);
++                MaybeDeadGlobalVars.insert(GV);
++                DecryptedGV.insert(GV);
++              }
++              Changed = true;
++            } else if (Iter1 != CSPEntryMap.end()) {
++              // GV is a constant string
++              CSPEntry *Entry = Iter1->second;
++              if (DecryptedGV.count(GV) > 0) {
++                Inst.replaceUsesOfWith(GV, Entry->DecGV);
++              } else {
++                Instruction *InsertPoint = PHI->getIncomingBlock(i)->
++                                                getTerminator();
++                IRBuilder<> IRB(InsertPoint);
++
++                Value *OutBuf = Entry->DecGV;
++                Value *Data = IRB.CreateInBoundsGEP(
++                    EncryptedStringTable->getValueType(),
++                    EncryptedStringTable,
++                    {IRB.getInt32(0), IRB.getInt32(Entry->Offset)});
++                Function *DecFunc = Entry->IsUTF16
++                                      ? SharedDecFuncI16
++                                      : SharedDecFuncI8;
++                uint32_t KeyElemSize = Entry->IsUTF16
++                                         ? static_cast<uint32_t>(Entry->EncKey16
++                                                                       .size())
++                                         : static_cast<uint32_t>(Entry->EncKey.
++                                                                        size());
++                uint32_t DataSize = Entry->IsUTF16
++                                      ? static_cast<uint32_t>(Entry->Data16.
++                                                                     size())
++                                      : static_cast<uint32_t>(Entry->Data.
++                                                                     size());
++                fixEH(IRB.CreateCall(DecFunc, {OutBuf,
++                                               Data,
++                                               IRB.getInt32(KeyElemSize),
++                                               IRB.getInt32(DataSize),
++                                               Entry->DecStatus}));
++
++                Inst.replaceUsesOfWith(GV, Entry->DecGV);
++                MaybeDeadGlobalVars.insert(GV);
++                DecryptedGV.insert(GV);
++              }
++              Changed = true;
++            }
++          }
++        }
++      } else {
++        for (User::op_iterator op = Inst.op_begin(); op != Inst.op_end(); ++
++             op) {
++          if (GlobalVariable *GV = dyn_cast<GlobalVariable>(*op)) {
++            auto Iter1 = CSPEntryMap.find(GV);
++            auto Iter2 = CSUserMap.find(GV);
++            if (Iter2 != CSUserMap.end()) {
++              CSUser *User = Iter2->second;
++              if (DecryptedGV.count(GV) > 0) {
++                Inst.replaceUsesOfWith(GV, User->DecGV);
++              } else {
++
++                IRBuilder<> IRB(Inst.isEHPad()
++                                  ? &*Inst.getParent()->getPrevNode()->
++                                           getFirstInsertionPt()
++                                  : &Inst);
++                fixEH(IRB.CreateCall(User->InitFunc, {User->DecGV}));
++                Inst.replaceUsesOfWith(GV, User->DecGV);
++                MaybeDeadGlobalVars.insert(GV);
++                DecryptedGV.insert(GV);
++              }
++              Changed = true;
++            } else if (Iter1 != CSPEntryMap.end()) {
++              CSPEntry *Entry = Iter1->second;
++              if (DecryptedGV.count(GV) > 0) {
++                Inst.replaceUsesOfWith(GV, Entry->DecGV);
++              } else {
++                IRBuilder<> IRB(Inst.isEHPad()
++                                  ? &*Inst.getParent()->getPrevNode()->
++                                           getFirstInsertionPt()
++                                  : &Inst);
++
++                Value *OutBuf = Entry->DecGV;
++                Value *Data = IRB.CreateInBoundsGEP(
++                    EncryptedStringTable->getValueType(),
++                    EncryptedStringTable,
++                    {IRB.getInt32(0), IRB.getInt32(Entry->Offset)});
++                Function *DecFunc = Entry->IsUTF16
++                                      ? SharedDecFuncI16
++                                      : SharedDecFuncI8;
++                uint32_t KeyElemSize = Entry->IsUTF16
++                                         ? static_cast<uint32_t>(Entry->EncKey16
++                                                                       .size())
++                                         : static_cast<uint32_t>(Entry->EncKey.
++                                                                        size());
++                uint32_t DataSize = Entry->IsUTF16
++                                      ? static_cast<uint32_t>(Entry->Data16.
++                                                                     size())
++                                      : static_cast<uint32_t>(Entry->Data.
++                                                                     size());
++                fixEH(IRB.CreateCall(DecFunc, {OutBuf,
++                                               Data,
++                                               IRB.getInt32(KeyElemSize),
++                                               IRB.getInt32(DataSize),
++                                               Entry->DecStatus}));
++
++                Inst.replaceUsesOfWith(GV, Entry->DecGV);
++                MaybeDeadGlobalVars.insert(GV);
++                DecryptedGV.insert(GV);
++              }
++              Changed = true;
++            }
++          }
++        }
++      }
++    }
++  }
++  return Changed;
++}
++
++void StringEncryption::collectConstantStringUser(
++    GlobalVariable *CString, SmallPtrSetImpl<GlobalVariable *> &Users) {
++  SmallPtrSet<Value *, 16> Visited;
++  SmallVector<Value *, 16> ToVisit;
++
++  ToVisit.push_back(CString);
++  while (!ToVisit.empty()) {
++    Value *V = ToVisit.pop_back_val();
++    if (Visited.count(V) > 0)
++      continue;
++    Visited.insert(V);
++    for (Value *User : V->users()) {
++      if (auto *GV = dyn_cast<GlobalVariable>(User)) {
++        Users.insert(GV);
++      } else {
++        ToVisit.push_back(User);
++      }
++    }
++  }
++}
++
++bool StringEncryption::isValidToEncrypt(GlobalVariable *GV) {
++  if (GV->isConstant() && GV->hasInitializer()) {
++    return GV->getInitializer() != nullptr;
++  } else {
++    return false;
++  }
++}
++
++void StringEncryption::deleteUnusedGlobalVariable() {
++  bool Changed = true;
++  while (Changed) {
++    Changed = false;
++    for (auto Iter = MaybeDeadGlobalVars.begin();
++         Iter != MaybeDeadGlobalVars.end();) {
++      GlobalVariable *GV = *Iter;
++      if (!GV->hasLocalLinkage()) {
++        ++Iter;
++        continue;
++      }
++
++      GV->removeDeadConstantUsers();
++      if (GV->use_empty()) {
++        if (GV->hasInitializer()) {
++          Constant *Init = GV->getInitializer();
++          GV->setInitializer(nullptr);
++          if (isSafeToDestroyConstant(Init))
++            Init->destroyConstant();
++        }
++        Iter = MaybeDeadGlobalVars.erase(Iter);
++        GV->eraseFromParent();
++        Changed = true;
++      } else {
++        ++Iter;
++      }
++    }
++  }
++}
++
++ModulePass *llvm::createStringEncryptionPass(ObfuscationOptions *argsOptions) {
++  return new StringEncryption(argsOptions);
++}
++
++INITIALIZE_PASS(StringEncryption, "string-encryption",
++                "Enable IR String Encryption", false, false)
+\ No newline at end of file
+diff --git a/llvm/lib/Transforms/Obfuscation/Utils.cpp b/llvm/lib/Transforms/Obfuscation/Utils.cpp
+new file mode 100644
+index 000000000..639bb252e
+--- /dev/null
++++ b/llvm/lib/Transforms/Obfuscation/Utils.cpp
+@@ -0,0 +1,585 @@
++#include "llvm/Transforms/Obfuscation/Utils.h"
++#include "llvm/IR/InstIterator.h"
++#include "llvm/IR/IntrinsicInst.h"
++#include "llvm/IR/IRBuilder.h"
++#include "llvm/IR/Module.h"
++#include "llvm/IR/DiagnosticInfo.h"
++#include "llvm/IR/EHPersonalities.h"
++#include "llvm/IR/NoFolder.h"
++#include "llvm/IR/Intrinsics.h"
++#include "llvm/IR/IntrinsicsAArch64.h"
++#include "llvm/ADT/ArrayRef.h"
++#include "llvm/TargetParser/Triple.h"
++
++#include <random>
++#include <algorithm>
++
++// Shamefully borrowed from ../Scalar/RegToMem.cpp :(
++bool valueEscapes(Instruction *Inst) {
++  BasicBlock *BB = Inst->getParent();
++  for (Value::use_iterator UI = Inst->use_begin(), E = Inst->use_end(); UI != E;
++       ++UI) {
++    Instruction *I = cast<Instruction>(*UI);
++    if (I->getParent() != BB || isa<PHINode>(I)) {
++      return true;
++    }
++  }
++  return false;
++}
++
++void fixStack(Function *f) {
++  // Try to remove phi node and demote reg to stack
++  SmallVector<PHINode *, 16>     tmpPhi;
++  SmallVector<Instruction *, 16> tmpReg;
++  BasicBlock *                   bbEntry = &*f->begin();
++
++  do {
++    tmpPhi.clear();
++    tmpReg.clear();
++
++    for (Function::iterator i = f->begin(); i != f->end(); ++i) {
++
++      for (BasicBlock::iterator j = i->begin(); j != i->end(); ++j) {
++
++        if (isa<PHINode>(j)) {
++          PHINode *phi = cast<PHINode>(j);
++          tmpPhi.push_back(phi);
++          continue;
++        }
++        if (!(isa<AllocaInst>(j) && j->getParent() == bbEntry) &&
++            (valueEscapes(&*j) || j->isUsedOutsideOfBlock(&*i))) {
++          tmpReg.push_back(&*j);
++          continue;
++        }
++      }
++    }
++    for (unsigned int i = 0; i != tmpReg.size(); ++i) {
++      DemoteRegToStack(*tmpReg[i]);
++    }
++
++    for (unsigned int i = 0; i != tmpPhi.size(); ++i) {
++      DemotePHIToStack(tmpPhi[i]);
++    }
++
++  } while (tmpReg.size() != 0 || tmpPhi.size() != 0);
++}
++
++CallBase *fixEH(CallBase *CB) {
++  const auto BB = CB->getParent();
++  if (!BB) {
++    return CB;
++  }
++  const auto Fn = BB->getParent();
++  if (!Fn || !Fn->hasPersonalityFn()
++      || !isScopedEHPersonality(
++          classifyEHPersonality(Fn->getPersonalityFn()))) {
++    return CB;
++  }
++  const auto BlockColors = colorEHFunclets(*Fn);
++  const auto BBColor = BlockColors.find(BB);
++  if (BBColor == BlockColors.end()) {
++    return CB;
++  }
++  const auto &ColorVec = BBColor->getSecond();
++  assert(ColorVec.size() == 1 && "non-unique color for block!");
++
++  const auto EHBlock = ColorVec.front();
++  if (!EHBlock || !EHBlock->isEHPad()) {
++    return CB;
++  }
++  const auto EHPad = &*EHBlock->getFirstNonPHIIt();
++
++  const OperandBundleDef OB("funclet", EHPad);
++  auto *NewCall = CallBase::addOperandBundle(CB, LLVMContext::OB_funclet, OB,
++                                             CB->getIterator());
++  NewCall->copyMetadata(*CB);
++  CB->replaceAllUsesWith(NewCall);
++  CB->eraseFromParent();
++  return NewCall;
++}
++
++void LowerConstantExpr(Function &F) {
++  SmallPtrSet<Instruction *, 8> WorkList;
++
++  for (inst_iterator It = inst_begin(F), E = inst_end(F); It != E; ++It) {
++    Instruction *I = &*It;
++
++    if (isa<LandingPadInst>(I) || isa<CatchPadInst>(I) || isa<
++          CatchSwitchInst>(I) || isa<CatchReturnInst>(I))
++      continue;
++    if (auto *II = dyn_cast<IntrinsicInst>(I)) {
++      if (II->getIntrinsicID() == Intrinsic::eh_typeid_for) {
++        continue;
++      }
++    }
++
++    for (unsigned int i = 0; i < I->getNumOperands(); ++i) {
++      if (isa<ConstantExpr>(I->getOperand(i)))
++        WorkList.insert(I);
++    }
++  }
++
++  while (!WorkList.empty()) {
++    auto         It = WorkList.begin();
++    Instruction *I = *It;
++    WorkList.erase(*It);
++
++    if (PHINode *PHI = dyn_cast<PHINode>(I)) {
++      for (unsigned int i = 0; i < PHI->getNumIncomingValues(); ++i) {
++        Instruction *TI = PHI->getIncomingBlock(i)->getTerminator();
++        if (ConstantExpr *CE = dyn_cast<
++          ConstantExpr>(PHI->getIncomingValue(i))) {
++          Instruction *NewInst = CE->getAsInstruction();
++          NewInst->insertBefore(TI->getIterator());
++          PHI->setIncomingValue(i, NewInst);
++          WorkList.insert(NewInst);
++        }
++      }
++    } else {
++      for (unsigned int i = 0; i < I->getNumOperands(); ++i) {
++        if (ConstantExpr *CE = dyn_cast<ConstantExpr>(I->getOperand(i))) {
++          Instruction *NewInst = CE->getAsInstruction();
++          NewInst->insertBefore(I->getIterator());
++          I->replaceUsesOfWith(CE, NewInst);
++          WorkList.insert(NewInst);
++        }
++      }
++    }
++  }
++}
++
++bool expandConstantExpr(Function &F) {
++  bool                Changed = false;
++  LLVMContext &       Ctx = F.getContext();
++  IRBuilder<NoFolder> IRB(Ctx);
++
++  for (auto &BB : F) {
++    for (auto &I : BB) {
++      if (I.isEHPad() || isa<AllocaInst>(&I) || isa<IntrinsicInst>(&I) ||
++          isa<SwitchInst>(&I) || I.isAtomic()) {
++        continue;
++      }
++      auto CI = dyn_cast<CallInst>(&I);
++      auto GEP = dyn_cast<GetElementPtrInst>(&I);
++      auto IsPhi = isa<PHINode>(&I);
++      auto InsertPt = IsPhi
++                        ? F.getEntryBlock().getFirstInsertionPt()
++                        : I.getIterator();
++      for (unsigned i = 0; i < I.getNumOperands(); ++i) {
++        if (CI && CI->isBundleOperand(i)) {
++          continue;
++        }
++        if (GEP && (i < 2 || GEP->getSourceElementType()->isStructTy())) {
++          continue;
++        }
++        auto Opr = I.getOperand(i);
++        if (auto CEP = dyn_cast<ConstantExpr>(Opr)) {
++          IRB.SetInsertPoint(InsertPt);
++          auto CEPInst = CEP->getAsInstruction();
++          IRB.Insert(CEPInst);
++          I.setOperand(i, CEPInst);
++          Changed = true;
++        }
++      }
++    }
++  }
++  return Changed;
++}
++
++IntegerType *getPageTableIntTy(Module &M) {
++  return IntegerType::get(M.getContext(),
++                          M.getDataLayout().getPointerSizeInBits());
++}
++
++void maskCipher(uint8_t  mask, APInt &preIndex, uint64_t objKey,
++                unsigned newIndex) {
++  switch (mask) {
++  case 1:
++    preIndex = -preIndex;
++    break;
++  case 2:
++    preIndex = preIndex.rotl(static_cast<unsigned>(objKey + newIndex));
++    break;
++  case 3:
++    preIndex = preIndex.byteSwap();
++    break;
++  case 4:
++    preIndex = ~preIndex;
++    break;
++  case 5:
++    preIndex = preIndex.rotr(static_cast<unsigned>(objKey - newIndex));
++    break;
++  case 6:
++    preIndex += objKey;
++    break;
++  case 7:
++    preIndex -= objKey;
++    break;
++  case 8: {
++    unsigned Half = preIndex.getBitWidth() / 2;
++    APInt    Mask = APInt::getLowBitsSet(preIndex.getBitWidth(), Half);
++    APInt    Hi = preIndex.lshr(Half) & Mask;
++    APInt    Lo = preIndex & Mask;
++    preIndex = (Hi << Half) | (Hi ^ Lo);
++    break;
++  }
++  case 9:
++    preIndex ^= (objKey + newIndex);
++    break;
++  case 10:
++    preIndex ^= ~objKey;
++    break;
++  case 11:
++    preIndex ^= (objKey - newIndex);
++    break;
++  case 12:
++    preIndex ^= (objKey * newIndex);
++    break;
++  case 13:
++    preIndex += newIndex;
++    break;
++  case 14:
++    preIndex -= newIndex;
++    break;
++  case 15:
++    preIndex = preIndex.rotl(static_cast<unsigned>(objKey));
++    break;
++  default:
++    preIndex = preIndex ^ objKey;
++    break;
++  }
++}
++
++void createPageTable(const CreatePageTableArgs &args) {
++  auto *         IntTy = getPageTableIntTy(*args.M);
++  const unsigned BitWidth = IntTy->getBitWidth();
++
++  std::mt19937_64 re(args.RNG->operator()());
++  std::shuffle(args.Objects->begin(), args.Objects->end(), re);
++
++  auto PtrEncKeyConst = ConstantInt::get(IntTy, args.PtrEncKey);
++  std::vector<Constant *> GVObjects;
++  for (unsigned i = 0; i < args.Objects->size(); ++i) {
++    auto Obj = args.Objects->at(i);
++    if (auto *CPA = dyn_cast<ConstantPtrAuth>(Obj))
++      Obj = CPA->getPointer();
++    auto PtrInt = ConstantExpr::getPtrToInt(Obj, IntTy);
++    GVObjects.push_back(
++        ConstantExpr::get(Instruction::Add, PtrInt, PtrEncKeyConst));
++    args.IndexMap->insert_or_assign(Obj, i);
++  }
++
++  {
++    auto GVNameObjects(args.GVNamePrefix + "_objects");
++    auto ATy = ArrayType::get(IntTy, GVObjects.size());
++    auto CA = ConstantArray::get(ATy, ArrayRef(GVObjects));
++    auto GV = new GlobalVariable(*args.M, ATy, false,
++                                 GlobalValue::LinkageTypes::InternalLinkage,
++                                 CA, GVNameObjects);
++    GV->addMetadata("noobf", *MDNode::get(args.M->getContext(), {}));
++    args.OutPageTable->push_back(GV);
++  }
++
++  for (unsigned i = 0; i < args.CountLoop; ++i) {
++    std::shuffle(args.Objects->begin(), args.Objects->end(), re);
++
++    std::vector<Constant *> ConstantObjectIndex;
++    for (unsigned j = 0; j < args.Objects->size(); ++j) {
++      const auto Obj = args.Objects->at(j);
++      const auto ObjFullKey = args.ObjectKeys->at(Obj);
++      const auto ObjMask = static_cast<uint32_t>(ObjFullKey >> 32);
++
++      APInt preIndex(BitWidth, args.IndexMap->at(Obj));
++      for (unsigned k = 0; k < 4; ++k) {
++        const auto mask = static_cast<uint8_t>(ObjMask >> (k * 4)) % 16u;
++        maskCipher(mask, preIndex, ObjFullKey, j);
++      }
++      auto toWriteData = ConstantInt::get(IntTy, preIndex);
++      ConstantObjectIndex.push_back(toWriteData);
++      args.IndexMap->insert_or_assign(Obj, j);
++    }
++
++    {
++
++      auto GVNameObjPageTable(
++          args.GVNamePrefix + "_page_table_" + std::to_string(i));
++      auto IATy = ArrayType::get(IntTy, ConstantObjectIndex.size());
++      auto IA = ConstantArray::get(IATy, ArrayRef(ConstantObjectIndex));
++      auto GV = new GlobalVariable(*args.M, IATy, true,
++                                   GlobalValue::LinkageTypes::InternalLinkage,
++                                   IA, GVNameObjPageTable);
++      GV->addMetadata("noobf", *MDNode::get(args.M->getContext(), {}));
++      args.OutPageTable->push_back(GV);
++    }
++  }
++
++}
++
++void enhancedPageTable(const CreatePageTableArgs &     args,
++                       DenseMap<Constant *, unsigned> *FuncIndexMap) {
++  auto *         IntTy = getPageTableIntTy(*args.M);
++  const unsigned BitWidth = IntTy->getBitWidth();
++
++  std::mt19937_64 re(args.RNG->operator()());
++
++  for (unsigned i = 0; i < args.CountLoop; ++i) {
++    std::shuffle(args.Objects->begin(), args.Objects->end(), re);
++    std::vector<Constant *> ConstantObjectIndex;
++    for (unsigned j = 0; j < args.Objects->size(); ++j) {
++      auto       Obj = args.Objects->at(j);
++      const auto ObjFullKey = args.ObjectKeys->at(Obj);
++      const auto ObjMask = static_cast<uint32_t>(ObjFullKey >> 32);
++
++      APInt preIndex(BitWidth,
++                     FuncIndexMap->find(Obj) == FuncIndexMap->end()
++                       ? args.IndexMap->at(Obj)
++                       : FuncIndexMap->at(Obj));
++
++      for (unsigned k = 0; k < 2 * args.CountLoop; ++k) {
++        const auto mask = static_cast<uint8_t>(ObjMask >> (k * 4)) % 16u;
++        maskCipher(mask, preIndex, ObjFullKey, j);
++      }
++      auto toWriteData = ConstantInt::get(IntTy, preIndex);
++      ConstantObjectIndex.push_back(toWriteData);
++      FuncIndexMap->insert_or_assign(Obj, j);
++    }
++
++    {
++      auto GVNameObjPage(
++          args.GVNamePrefix + "_enhanced_page_table_" + std::to_string(i));
++      auto IATy = ArrayType::get(IntTy, ConstantObjectIndex.size());
++      auto IA = ConstantArray::get(IATy, ArrayRef(ConstantObjectIndex));
++      auto GV = new GlobalVariable(*args.M, IATy, true,
++                                   GlobalValue::LinkageTypes::PrivateLinkage,
++                                   IA, GVNameObjPage);
++      GV->addMetadata("noobf", *MDNode::get(args.M->getContext(), {}));
++      args.OutPageTable->push_back(GV);
++    }
++  }
++}
++
++Value *buildPageTableDecryptIR(const BuildDecryptArgs &args) {
++  auto        M = args.Fn->getParent();
++  auto &      Ctx = args.Fn->getContext();
++  auto *      IntTy = getPageTableIntTy(*M);
++  auto        Zero = ConstantInt::getNullValue(IntTy);
++  const auto  ModuleMask = static_cast<uint32_t>(args.ModuleKey >> 32);
++  const auto  FuncMask = static_cast<uint32_t>(args.FuncKey >> 32);
++  IRBuilder<> IRB{args.InsertBefore};
++
++  Value *NextIndex = args.NextIndexValue;
++  if (!NextIndex) {
++    auto GVInitIndex =
++        new GlobalVariable(*M, IntTy, true, GlobalValue::PrivateLinkage,
++                           ConstantInt::get(IntTy, args.NextIndex),
++                           M->getName() + args.Fn->getName() + "_InitIndex" +
++                           std::to_string(args.NextIndex));
++    GVInitIndex->addMetadata("noobf", *MDNode::get(Ctx, {}));
++    NextIndex = IRB.CreateAlignedLoad(IntTy, GVInitIndex, Align{1}, true);
++  }
++
++  auto createDecIndexSwitch = [&IRB, &M](uint8_t mask, Value *NextIndex,
++                                         Value * PrevIndex,
++                                         Value * ObjKey) ->Value * {
++    switch (mask) {
++    case 1:
++      // preIndex = -preIndex;
++      NextIndex = IRB.CreateNeg(NextIndex);
++      break;
++    case 2:
++      // preIndex = preIndex.rotl(ObjKey + j);
++      NextIndex = IRB.CreateCall(
++          Intrinsic::getOrInsertDeclaration(M, Intrinsic::fshr,
++                                            {NextIndex->getType()}),
++          {NextIndex, NextIndex, IRB.CreateAdd(ObjKey, PrevIndex)});
++      break;
++    case 3:
++      // preIndex = preIndex.byteSwap();
++      NextIndex = IRB.CreateCall(
++          Intrinsic::getOrInsertDeclaration(M, Intrinsic::bswap,
++                                            {NextIndex->getType()}),
++          {NextIndex});
++      break;
++    case 4:
++      // preIndex = ~preIndex;
++      NextIndex = IRB.CreateNot(NextIndex);
++      break;
++    case 5:
++      // preIndex = preIndex.rotr(ObjKey - j);
++      NextIndex = IRB.CreateCall(
++          Intrinsic::getOrInsertDeclaration(M, Intrinsic::fshl,
++                                            {NextIndex->getType()}),
++          {NextIndex, NextIndex, IRB.CreateSub(ObjKey, PrevIndex)});
++      break;
++    case 6:
++      // preIndex += objKey;
++      NextIndex = IRB.CreateSub(NextIndex, ObjKey);
++      break;
++    case 7:
++      // preIndex -= objKey;
++      NextIndex = IRB.CreateAdd(NextIndex, ObjKey);
++      break;
++    case 8: {
++      // Self-inverse half-swap XOR: (Hi, Lo) -> (Hi, Hi^Lo)
++      auto *   ITy = cast<IntegerType>(NextIndex->getType());
++      unsigned Half = ITy->getBitWidth() / 2;
++      auto *   HalfShift = ConstantInt::get(ITy, Half);
++      auto *   HalfMask = ConstantInt::get(
++          ITy, APInt::getLowBitsSet(ITy->getBitWidth(), Half));
++      auto *Hi = IRB.CreateAnd(IRB.CreateLShr(NextIndex, HalfShift), HalfMask);
++      auto *Lo = IRB.CreateAnd(NextIndex, HalfMask);
++      NextIndex = IRB.CreateOr(IRB.CreateShl(Hi, HalfShift),
++                               IRB.CreateXor(Hi, Lo));
++      break;
++    }
++    case 9:
++      // preIndex ^= (objKey + newIndex);
++      NextIndex = IRB.CreateXor(NextIndex, IRB.CreateAdd(ObjKey, PrevIndex));
++      break;
++    case 10:
++      // preIndex ^= ~objKey;
++      NextIndex = IRB.CreateXor(NextIndex, IRB.CreateNot(ObjKey));
++      break;
++    case 11:
++      // preIndex ^= (objKey - newIndex);
++      NextIndex = IRB.CreateXor(NextIndex, IRB.CreateSub(ObjKey, PrevIndex));
++      break;
++    case 12:
++      // preIndex ^= (objKey * newIndex);
++      NextIndex = IRB.CreateXor(NextIndex, IRB.CreateMul(ObjKey, PrevIndex));
++      break;
++    case 13:
++      // preIndex += newIndex;
++      NextIndex = IRB.CreateSub(NextIndex, PrevIndex);
++      break;
++    case 14:
++      // preIndex -= newIndex;
++      NextIndex = IRB.CreateAdd(NextIndex, PrevIndex);
++      break;
++    case 15:
++      // preIndex = rotl(preIndex, objKey);
++      NextIndex = IRB.CreateCall(
++          Intrinsic::getOrInsertDeclaration(M, Intrinsic::fshr,
++                                            {NextIndex->getType()}),
++          {NextIndex, NextIndex, ObjKey});
++      break;
++    default:
++      // preIndex = preIndex ^ ObjKey;
++      NextIndex = IRB.CreateXor(NextIndex, ObjKey);
++      break;
++    }
++    return NextIndex;
++  };
++
++  if (args.FuncLoopCount && !args.FuncPageTable->empty()) {
++    auto ConstantFuncKey = ConstantInt::get(IntTy, args.FuncKey);
++
++    for (int i = args.FuncPageTable->size() - 1; i >= 0; --i) {
++      auto   TargetPage = args.FuncPageTable->operator[](i);
++      auto   PrevIndex = NextIndex;
++      Value *GEP = IRB.CreateGEP(
++          TargetPage->getValueType(), TargetPage,
++          {Zero, NextIndex});
++      NextIndex = IRB.CreateLoad(IntTy, GEP);
++      SmallVector<uint8_t, 16> maskIndex;
++      for (unsigned j = 0; j < 2 * args.FuncLoopCount; ++j) {
++        auto mask = static_cast<uint8_t>(FuncMask >> (j * 4)) % 16u;
++        maskIndex.push_back(mask);
++      }
++      for (int j = maskIndex.size() - 1; j >= 0; --j) {
++        NextIndex = createDecIndexSwitch(maskIndex[j], NextIndex, PrevIndex,
++                                         ConstantFuncKey);
++      }
++    }
++  }
++
++  auto ConstantModuleKey = ConstantInt::get(IntTy, args.ModuleKey);
++
++  for (int i = args.ModulePageTable->size() - 1; i >= 0; --i) {
++    auto   TargetPage = args.ModulePageTable->operator[](i);
++    auto   PrevIndex = NextIndex;
++    Value *GEP = IRB.CreateGEP(
++        TargetPage->getValueType(), TargetPage,
++        {Zero, NextIndex});
++    if (i) {
++      NextIndex = IRB.CreateLoad(IntTy, GEP);
++      SmallVector<uint8_t, 16> maskIndex;
++      for (unsigned j = 0; j < 4; ++j) {
++        auto mask = static_cast<uint8_t>(ModuleMask >> (j * 4)) % 16u;
++        maskIndex.push_back(mask);
++      }
++      for (int j = maskIndex.size() - 1; j >= 0; --j) {
++        NextIndex = createDecIndexSwitch(maskIndex[j], NextIndex, PrevIndex,
++                                         ConstantModuleKey);
++      }
++      continue;
++    }
++    // Objects array stores encrypted integers: ptrtoint(Obj) + PtrEncKey
++    auto EncInt = IRB.CreateLoad(IntTy, GEP);
++    auto DecInt = IRB.
++        CreateSub(EncInt, ConstantInt::get(IntTy, args.PtrEncKey));
++    Value *DecPtr = IRB.CreateIntToPtr(DecInt, args.LoadTy);
++    // Optional PAC pointer signing for AArch64
++    if (args.PtrAuthKey >= 0) {
++      DecPtr = IRB.CreateCall(
++          Intrinsic::getOrInsertDeclaration(M, Intrinsic::ptrauth_sign),
++          {DecPtr,
++           ConstantInt::get(Type::getInt32Ty(Ctx), args.PtrAuthKey),
++           ConstantInt::get(IntTy, args.PtrAuthDisc)});
++    }
++    return DecPtr;
++  }
++  llvm_unreachable("BuildDecryptIR unreachable!!!");
++}
++
++Value *encryptConstant(Constant *plainConstant, Instruction *insertBefore,
++                       std::mt19937_64 &rng, unsigned level) {
++  auto &Ctx = insertBefore->getContext();
++  auto  OriginValTy = plainConstant->getType();
++  if (OriginValTy->isStructTy() || OriginValTy->isArrayTy() || OriginValTy->
++      isPointerTy()) {
++    return plainConstant;
++  }
++  auto BitWidth = plainConstant->getType()->getPrimitiveSizeInBits().
++                                 getFixedValue();
++  if (BitWidth < 8) {
++    return plainConstant;
++  }
++
++  const auto Key = ConstantInt::get(
++      IntegerType::get(Ctx, BitWidth),
++      rng());
++
++  const auto PlainCast =
++      ConstantExpr::getBitCast(plainConstant, Key->getType());
++  auto      Enc = ConstantExpr::getSub(PlainCast, Key);
++  Constant *XorKey = nullptr;
++  if (level) {
++    XorKey = llvm::ConstantInt::get(Key->getType(), rng());
++    Enc = ConstantExpr::getXor(Enc, XorKey);
++    if (level > 1) {
++      Enc = ConstantExpr::getXor(
++          Enc, ConstantExpr::get(Instruction::Add, XorKey, Key));
++    }
++    if (level > 2) {
++      Enc = ConstantExpr::getXor(Enc, ConstantExpr::getNeg(XorKey));
++    }
++  }
++  auto EncGV = new GlobalVariable(*insertBefore->getModule(), Enc->getType(),
++                                  true,
++                                  GlobalValue::InternalLinkage, Enc);
++  EncGV->addMetadata("noobf", *MDNode::get(Ctx, {}));
++  IRBuilder<NoFolder> IRB(insertBefore);
++  Value *Load = IRB.CreateAlignedLoad(Enc->getType(), EncGV, Align{1}, true);
++  if (level) {
++    if (level > 2) {
++      Load = IRB.CreateXor(Load, IRB.CreateNeg(XorKey));
++    }
++    if (level > 1) {
++      Load = IRB.CreateXor(Load, IRB.CreateAdd(XorKey, Key));
++    }
++    Load = IRB.CreateXor(Load, XorKey);
++  }
++  Load = IRB.CreateAdd(Load, Key);
++  return IRB.CreateBitCast(Load, OriginValTy);
++}
+\ No newline at end of file
+-- 
+2.43.0
+
