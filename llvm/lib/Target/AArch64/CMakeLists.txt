@@ -123,6 +123,10 @@ add_llvm_target(AArch64CodeGen
   AArch64
   )
 
+if (MSVC)
+  set_source_files_properties(AArch64Subtarget.cpp PROPERTIES COMPILE_OPTIONS "/Od")
+endif()
+
 add_subdirectory(AsmParser)
 add_subdirectory(Disassembler)
 add_subdirectory(MCTargetDesc)
