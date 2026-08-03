@@ -130,7 +130,7 @@ jobs:
           submodules = true
 
           [target.target-triple]
-          llvm-config   = "/path/to/-DLLVM_INSTALL_PREFIX/bin/llvm-config"
+          llvm-config   = "llvm-config-path"
           EOF
 
           if [[ "$RUNNER_OS" == "Windows" ]]; then
@@ -141,7 +141,7 @@ jobs:
 
           sed -i \
             -e "s|target-triple|$TARGET_TRIPLE|g" \
-            -e "s|/path/to/-DLLVM_INSTALL_PREFIX|$llvm_config|g" \
+            -e "s|llvm-config-path|$llvm_config|g" \
             config.toml
 
       - name: Install Python 3
