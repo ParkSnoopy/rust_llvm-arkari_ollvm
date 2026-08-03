@@ -1,3 +1,10 @@
+> [!WARNING]  
+> This repository is only a merged copy of two separate projects.  
+>   
+> Please open all pull requests that  
+> related with **Rust Programming Language** in **[rust-lang/llvm-project](https://github.com/rust-lang/llvm-project)** instead,  
+> related with **LLVM Obfuscation Module** in **[komimoe/Arkari](https://github.com/komimoe/Arkari)** instead.  
+
 # Rust LLVM + Arkari obfuscation module
 Merge [rust-lang/llvm-project](https://github.com/rust-lang/llvm-project) and [komimoe/Arkari](https://github.com/komimoe/Arkari)
 
