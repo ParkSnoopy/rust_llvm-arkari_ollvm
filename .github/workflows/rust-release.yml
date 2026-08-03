@@ -152,7 +152,7 @@ jobs:
       - name: Build Rust
         working-directory: rust
         shell: bash
-        run: python3 x.py build
+        run: python3 x.py build --stage 1
 
       - name: Prune and archive stage1
         shell: bash
