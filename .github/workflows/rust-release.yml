@@ -1,0 +1,205 @@
+name: Rust Stage1 Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    name: Prepare release
+    runs-on: ubuntu-24.04
+    outputs:
+      rust-version: ${{ steps.versions.outputs.rust-version }}
+      llvm-version: ${{ steps.versions.outputs.llvm-version }}
+      release-tag: ${{ steps.versions.outputs.release-tag }}
+      release-title: ${{ steps.versions.outputs.release-title }}
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@v6
+
+      - name: Get LLVM version
+        id: llvm-version
+        uses: ./.github/workflows/get-llvm-version
+
+      - name: Collect release versions
+        id: versions
+        env:
+          LLVM_VERSION: ${{ steps.llvm-version.outputs.full-no-suffix }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          rust_version=$(git ls-remote --tags --refs --sort='-version:refname' \
+            https://github.com/rust-lang/rust.git '[0-9]*' | awk -F/ 'NR == 1 { print $3 }')
+
+          if [[ ! "$rust_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid latest Rust tag: $rust_version" >&2
+            exit 1
+          fi
+          if [[ ! "$LLVM_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid LLVM version: $LLVM_VERSION" >&2
+            exit 1
+          fi
+
+          rust_compact=${rust_version//./}
+          llvm_compact=${LLVM_VERSION//./}
+
+          echo "rust-version=$rust_version" >> "$GITHUB_OUTPUT"
+          echo "llvm-version=$LLVM_VERSION" >> "$GITHUB_OUTPUT"
+          echo "release-tag=R${rust_compact}-L${llvm_compact}" >> "$GITHUB_OUTPUT"
+          echo "release-title=Rust $rust_version" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build ${{ matrix.target-triple }}
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            target-triple: x86_64-unknown-linux-gnu
+          - runner: windows-2025
+            target-triple: x86_64-pc-windows-msvc
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 360
+    env:
+      RUST_VERSION: ${{ needs.prepare.outputs.rust-version }}
+      TARGET_TRIPLE: ${{ matrix.target-triple }}
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@v6
+
+      - name: Clone Rust
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch "$RUST_VERSION" \
+            https://github.com/rust-lang/rust.git rust
+
+      - name: Install Linux LLVM build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build zip
+
+      - name: Build LLVM on Linux
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir build
+          cd build
+          cmake -GNinja ../llvm -DCMAKE_INSTALL_PREFIX="./Release" -DLLVM_ENABLE_PROJECTS="clang;lld;" -DLLVM_TARGETS_TO_BUILD="X86" -DLLVM_INSTALL_UTILS=ON -DLLVM_INCLUDE_TESTS=OFF -DLLVM_BUILD_TESTS=OFF -DLLVM_INCLUDE_BENCHMARKS=OFF -DLLVM_BUILD_BENCHMARKS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_ENABLE_BACKTRACES=OFF -DLLVM_BUILD_DOCS=OFF -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release
+          ninja
+          ninja install
+
+      - name: Build LLVM on Windows
+        if: runner.os == 'Windows'
+        shell: cmd
+        env:
+          CMAKE_GENERATOR: Ninja
+        run: |
+          for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do call "%%i\VC\Auxiliary\Build\vcvars64.bat"
+          mkdir build
+          cd build
+          cmake ../llvm -DCMAKE_INSTALL_PREFIX="./Release" -DLLVM_ENABLE_PROJECTS="clang;lld;" -DLLVM_TARGETS_TO_BUILD="X86" -DLLVM_INSTALL_UTILS=ON -DLLVM_INCLUDE_TESTS=OFF -DLLVM_BUILD_TESTS=OFF -DLLVM_INCLUDE_BENCHMARKS=OFF -DLLVM_BUILD_BENCHMARKS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_ENABLE_BACKTRACES=OFF -DLLVM_BUILD_DOCS=OFF -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+          ninja
+          ninja install
+
+      - name: Write Rust config
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd rust
+          cat > config.toml <<'EOF'
+          change-id = 999999
+
+          [llvm]
+          targets          = "X86"
+          download-ci-llvm = false
+          link-shared      = false
+          ninja            = true
+
+          [build]
+          build  =  "target-triple"
+          host   = ["target-triple"]
+          target = ["target-triple"]
+          extended = false
+          submodules = true
+
+          [target.target-triple]
+          llvm-config   = "/path/to/-DLLVM_INSTALL_PREFIX/bin/llvm-config"
+          EOF
+
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            llvm_config="$(cygpath -m "$GITHUB_WORKSPACE")/build/Release/bin/llvm-config.exe"
+          else
+            llvm_config="$GITHUB_WORKSPACE/build/Release/bin/llvm-config"
+          fi
+
+          sed -i \
+            -e "s|target-triple|$TARGET_TRIPLE|g" \
+            -e "s|/path/to/-DLLVM_INSTALL_PREFIX|$llvm_config|g" \
+            config.toml
+
+      - name: Install Python 3
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+
+      - name: Build Rust
+        working-directory: rust
+        shell: bash
+        run: python3 x.py build
+
+      - name: Prune and archive stage1
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "rust/build/$TARGET_TRIPLE"
+          find stage1 -type l -delete
+          find stage1 -type d -empty -delete
+
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            7z a -tzip "$GITHUB_WORKSPACE/$TARGET_TRIPLE.zip" stage1
+          else
+            zip -r "$GITHUB_WORKSPACE/$TARGET_TRIPLE.zip" stage1
+          fi
+
+      - name: Upload stage1 artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ matrix.target-triple }}
+          path: ${{ github.workspace }}/${{ matrix.target-triple }}.zip
+          if-no-files-found: error
+
+  release:
+    name: Create release
+    needs:
+      - prepare
+      - build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download stage1 artifacts
+        uses: actions/download-artifact@v7
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Create latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.prepare.outputs.release-tag }}
+          RELEASE_TITLE: ${{ needs.prepare.outputs.release-title }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create "$RELEASE_TAG" release-assets/*.zip \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "$RELEASE_TITLE" \
+            --latest
