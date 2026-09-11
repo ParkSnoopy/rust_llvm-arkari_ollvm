@@ -206,6 +206,7 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       RUST_VERSION: ${{ needs.prepare.outputs.rust-version }}
+      RUSTC_BOOTSTRAP: 1
     steps:
       - name: Checkout test project
         uses: actions/checkout@v6
@@ -235,6 +236,8 @@ jobs:
       - build-baseline
     runs-on: ubuntu-24.04
     timeout-minutes: 120
+    env:
+      RUSTC_BOOTSTRAP: 1
     strategy:
       fail-fast: false
       matrix:
