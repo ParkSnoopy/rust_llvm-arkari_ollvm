@@ -195,9 +195,21 @@ void TypeTraitsCheck::registerMatchers(MatchFinder *Finder) {
                            .bind(Bind),
                        this);
   }
-  Finder->addMatcher(
-      traverse(TK_IgnoreUnlessSpelledInSource, typeLoc(isType()).bind(Bind)),
-      this);
+  Finder->addMatcher(typeLoc(isType()).bind(Bind), this);
+
+  // Only register matchers for std::remove_cvref_t simplification in c++20
+  // mode.
+  if (getLangOpts().CPlusPlus20) {
+    Finder->addMatcher(templateSpecializationTypeLoc(
+                           loc(qualType(hasDeclaration(
+                               namedDecl(hasName("::std::remove_cv_t"))))),
+                           hasTemplateArgumentLoc(
+                               0, hasTypeLoc(templateSpecializationTypeLoc(loc(
+                                      qualType(hasDeclaration(namedDecl(hasName(
+                                          "::std::remove_reference_t")))))))))
+                           .bind("remove_cvref"),
+                       this);
+  }
 }
 
 static bool isNamedDeclInStdTraitsSet(const NamedDecl *ND,
@@ -308,6 +320,24 @@ void TypeTraitsCheck::check(const MatchFinder::MatchResult &Result) {
     if (checkTemplatedDecl(QualLoc.getNestedNameSpecifier(), TypeTraits))
       EmitTypeWarning(QualLoc, DNTL->getEndLoc(),
                       DNTL->getElaboratedKeywordLoc());
+    return;
+  }
+
+  if (const auto *TSTL = Result.Nodes.getNodeAs<TemplateSpecializationTypeLoc>(
+          "remove_cvref")) {
+    auto InnerTL = TSTL->getArgLoc(0)
+                       .getTypeSourceInfo()
+                       ->getTypeLoc()
+                       .castAs<TemplateSpecializationTypeLoc>();
+    if (IgnoreMacros &&
+        (TSTL->getBeginLoc().isMacroID() || InnerTL.getBeginLoc().isMacroID()))
+      return;
+
+    auto Diag = diag(TSTL->getBeginLoc(), "use c++20 type alias");
+    Diag << FixItHint::CreateReplacement(
+                SourceRange(TSTL->getBeginLoc(), InnerTL.getLAngleLoc()),
+                "std::remove_cvref_t<")
+         << FixItHint::CreateRemoval(InnerTL.getRAngleLoc());
     return;
   }
 }

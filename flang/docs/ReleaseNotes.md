@@ -5,9 +5,9 @@ ReleaseNotes.md and ReleaseNotesTemplate.txt. -->
 
 ````{only} PreRelease
 ```{warning}
- These are in-progress notes for the upcoming LLVM {{version}} release.
- Release notes for previous releases can be found on [the Download
- Page](https://releases.llvm.org/download.html).
+These are in-progress notes for the upcoming LLVM {{version}} release.
+Release notes for previous releases can be found on [the Download
+Page](https://releases.llvm.org/download.html).
 ```
 ````
 
@@ -29,30 +29,23 @@ page](https://llvm.org/releases/).
 
 ## Major New Features
 
-* Support for LOWER= argument for C_F_POINTER.
-* Experimental support for multi-image program launch, collective subroutines,
-  synchronization, teams, and image enumeration.
-
-### `do concurrent` mapping to OpenMP
-
-Flang now has better support for `do concurrent` parallelization on the CPU and
-GPU. On the CPU, we validated the feature using
-[FIATS'](https://github.com/BerkeleyLab/fiats) inference and training codes. On
-the GPU, we have basic support that is still in progress; we have offload tests
-for 1D and 2D saxpy. We also validated using codes that do not use extensive
-user-defined types and/or allocatables.
-
-To use the feature, use `-fdo-concurrent-to-openmp=[none|host|device]`. OpenMP
-must be enabled as well, for example: `-fopenmp [--offload-arch=<target_arch>]`.
+### Advances in experimental multi-image support, using [PRIF](ParallelMultiImageFortranRuntime.md)
+- Added support for declaration of nonallocatable save coarrays
+- Added coarray query intrinsics (`ucobound`, `lcobound`, `coshape`, `image_index`)
+- Fixed `stop` and `error stop` to provide conforming behavior in multi-image execution
 
 ## Bug Fixes
 
 ## Non-comprehensive list of changes in this release
 
+- Global, allocatable, and pointer arrays are now aligned to 64 bytes. The
+  flang runtime allocator was updated to honor this alignment for allocatable
+  and pointer arrays.
+
 ## New Compiler Flags
 
-* -fexperimental-loop-fusion is now recognized by flang.
-* -fcoarray activates experimental multi-image support in flang.
+- The warning flags with prefixes -Wopen-mp and -Wopen-acc have been deprecated in favor of corrected spellings with the respective prefixes -Wopenmp and -Wopenacc. Removal of the deprecated options is planned for LLVM 25 (July 2027).
+- The `-Werror` flag will cause all warnings to become errors. This includes warnings about support for OpenMP versions, which will now prevent the compilation from happening with the `-Werror` flag. These OpenMP warnings can be disabled with `-Wno-experimental-option`.
 
 ## Windows Support
 

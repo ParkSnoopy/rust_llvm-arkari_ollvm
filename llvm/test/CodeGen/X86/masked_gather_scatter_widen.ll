@@ -353,8 +353,7 @@ define <2 x i32> @test_gather_v2i32_data_index(ptr %base, <2 x i32> %ind, <2 x i
 ;
 ; WIDEN_AVX2-LABEL: test_gather_v2i32_data_index:
 ; WIDEN_AVX2:       # %bb.0:
-; WIDEN_AVX2-NEXT:    vxorps %xmm3, %xmm3, %xmm3
-; WIDEN_AVX2-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,2],xmm3[2,3]
+; WIDEN_AVX2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,2],zero,zero
 ; WIDEN_AVX2-NEXT:    vpslld $31, %xmm1, %xmm1
 ; WIDEN_AVX2-NEXT:    vpgatherdd %xmm1, (%rdi,%xmm0,4), %xmm2
 ; WIDEN_AVX2-NEXT:    vmovdqa %xmm2, %xmm0
@@ -582,7 +581,13 @@ define void @test_mscatter_v17f32(ptr %base, <17 x i32> %index, <17 x float> %va
 ; WIDEN_AVX2-NEXT:    vmovq %xmm0, %rax
 ; WIDEN_AVX2-NEXT:    vmovss %xmm6, (%rax)
 ; WIDEN_AVX2-NEXT:    vpextrq $1, %xmm0, %rax
-; WIDEN_AVX2-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; WIDEN_AVX2-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; WIDEN_AVX2-NEXT:    vpinsrd $1, {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; WIDEN_AVX2-NEXT:    vpinsrd $2, {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; WIDEN_AVX2-NEXT:    vpinsrd $3, {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; WIDEN_AVX2-NEXT:    vpmovsxdq %xmm0, %ymm0
+; WIDEN_AVX2-NEXT:    vpsllq $2, %ymm0, %ymm0
+; WIDEN_AVX2-NEXT:    vpaddq %ymm0, %ymm8, %ymm0
 ; WIDEN_AVX2-NEXT:    vmovss %xmm7, (%rax)
 ; WIDEN_AVX2-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; WIDEN_AVX2-NEXT:    vpinsrd $1, {{[0-9]+}}(%rsp), %xmm1, %xmm1
@@ -591,45 +596,37 @@ define void @test_mscatter_v17f32(ptr %base, <17 x i32> %index, <17 x float> %va
 ; WIDEN_AVX2-NEXT:    vpmovsxdq %xmm1, %ymm1
 ; WIDEN_AVX2-NEXT:    vpsllq $2, %ymm1, %ymm1
 ; WIDEN_AVX2-NEXT:    vpaddq %ymm1, %ymm8, %ymm1
+; WIDEN_AVX2-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; WIDEN_AVX2-NEXT:    vmovq %xmm1, %rax
-; WIDEN_AVX2-NEXT:    vmovss %xmm0, (%rax)
-; WIDEN_AVX2-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; WIDEN_AVX2-NEXT:    vmovss %xmm2, (%rax)
+; WIDEN_AVX2-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; WIDEN_AVX2-NEXT:    vpextrq $1, %xmm1, %rax
-; WIDEN_AVX2-NEXT:    vmovss %xmm0, (%rax)
-; WIDEN_AVX2-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; WIDEN_AVX2-NEXT:    vmovss %xmm2, (%rax)
+; WIDEN_AVX2-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; WIDEN_AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm1
 ; WIDEN_AVX2-NEXT:    vmovq %xmm1, %rax
-; WIDEN_AVX2-NEXT:    vmovss %xmm0, (%rax)
-; WIDEN_AVX2-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; WIDEN_AVX2-NEXT:    vmovss %xmm2, (%rax)
 ; WIDEN_AVX2-NEXT:    vpextrq $1, %xmm1, %rax
 ; WIDEN_AVX2-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; WIDEN_AVX2-NEXT:    vmovss %xmm1, (%rax)
-; WIDEN_AVX2-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; WIDEN_AVX2-NEXT:    vpinsrd $1, {{[0-9]+}}(%rsp), %xmm1, %xmm1
-; WIDEN_AVX2-NEXT:    vpinsrd $2, {{[0-9]+}}(%rsp), %xmm1, %xmm1
-; WIDEN_AVX2-NEXT:    vpinsrd $3, {{[0-9]+}}(%rsp), %xmm1, %xmm1
-; WIDEN_AVX2-NEXT:    vpmovsxdq %xmm1, %ymm1
-; WIDEN_AVX2-NEXT:    vpsllq $2, %ymm1, %ymm1
-; WIDEN_AVX2-NEXT:    vpaddq %ymm1, %ymm8, %ymm1
-; WIDEN_AVX2-NEXT:    vmovq %xmm1, %rax
-; WIDEN_AVX2-NEXT:    vmovss %xmm0, (%rax)
-; WIDEN_AVX2-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; WIDEN_AVX2-NEXT:    vpextrq $1, %xmm1, %rax
-; WIDEN_AVX2-NEXT:    vmovss %xmm0, (%rax)
-; WIDEN_AVX2-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; WIDEN_AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm1
-; WIDEN_AVX2-NEXT:    vmovq %xmm1, %rax
-; WIDEN_AVX2-NEXT:    vmovss %xmm0, (%rax)
-; WIDEN_AVX2-NEXT:    vpextrq $1, %xmm1, %rax
+; WIDEN_AVX2-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; WIDEN_AVX2-NEXT:    vmovq %xmm0, %rax
+; WIDEN_AVX2-NEXT:    vmovss %xmm1, (%rax)
+; WIDEN_AVX2-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; WIDEN_AVX2-NEXT:    vpextrq $1, %xmm0, %rax
+; WIDEN_AVX2-NEXT:    vmovss %xmm1, (%rax)
+; WIDEN_AVX2-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; WIDEN_AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; WIDEN_AVX2-NEXT:    vmovq %xmm0, %rax
+; WIDEN_AVX2-NEXT:    vmovss %xmm1, (%rax)
+; WIDEN_AVX2-NEXT:    vpextrq $1, %xmm0, %rax
 ; WIDEN_AVX2-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; WIDEN_AVX2-NEXT:    vmovss %xmm0, (%rax)
 ; WIDEN_AVX2-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; WIDEN_AVX2-NEXT:    vpmovsxdq %xmm0, %xmm0
-; WIDEN_AVX2-NEXT:    vpsllq $2, %xmm0, %xmm0
-; WIDEN_AVX2-NEXT:    vpaddq %xmm0, %xmm8, %xmm0
 ; WIDEN_AVX2-NEXT:    vmovq %xmm0, %rax
 ; WIDEN_AVX2-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; WIDEN_AVX2-NEXT:    vmovss %xmm0, (%rax)
+; WIDEN_AVX2-NEXT:    vmovss %xmm0, (%rdi,%rax,4)
 ; WIDEN_AVX2-NEXT:    vzeroupper
 ; WIDEN_AVX2-NEXT:    retq
 {

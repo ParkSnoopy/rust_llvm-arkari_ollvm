@@ -19,7 +19,7 @@ namespace clang::tidy::readability {
 
 void RedundantTypenameCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      traverse(TK_IgnoreUnlessSpelledInSource, typeLoc().bind("typeLoc")),
+      typeLoc(unless(hasAncestor(decl(isInstantiated())))).bind("typeLoc"),
       this);
 
   if (!getLangOpts().CPlusPlus20)
@@ -34,13 +34,15 @@ void RedundantTypenameCheck::registerMatchers(MatchFinder *Finder) {
                     cxxMethodDecl(), hasParent(friendDecl()),
                     functionDecl(has(nestedNameSpecifier())),
                     cxxDeductionGuideDecl(hasDeclContext(recordDecl())))))))),
-                // Match return types.
+                // Match return types. FIXME: CWG2413 made conversion operators
+                // an implicit typename context.
                 functionDecl(unless(cxxConversionDecl()))))),
             hasParent(expr(anyOf(cxxNamedCastExpr(), cxxNewExpr()))));
   Finder->addMatcher(
       typeLoc(InImplicitTypenameContext).bind("dependentTypeLoc"), this);
   Finder->addMatcher(
-      varDecl(hasDeclContext(anyOf(namespaceDecl(), translationUnitDecl())),
+      varDecl(hasDeclContext(anyOf(namespaceDecl(), translationUnitDecl(),
+                                   cxxRecordDecl())),
               unless(parmVarDecl()),
               hasTypeLoc(typeLoc().bind("dependentTypeLoc"))),
       this);

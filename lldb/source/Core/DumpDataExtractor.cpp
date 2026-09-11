@@ -361,7 +361,7 @@ lldb::offset_t lldb_private::DumpDataExtractor(
 
   if (item_format == eFormatPointer) {
     if (item_byte_size != 4 && item_byte_size != 8)
-      item_byte_size = s->GetAddressByteSize();
+      item_byte_size = DE.GetAddressByteSize();
   }
 
   offset_t offset = start_offset;
@@ -401,8 +401,7 @@ lldb::offset_t lldb_private::DumpDataExtractor(
         if (base_addr != LLDB_INVALID_ADDRESS && memory_tag_map) {
           size_t line_len = offset - line_start_offset;
           lldb::addr_t line_base =
-              base_addr +
-              (offset - start_offset - line_len) / DE.getTargetByteSize();
+              base_addr + (offset - start_offset - line_len);
           printMemoryTags(DE, s, line_base, line_len, memory_tag_map);
         }
 
@@ -410,8 +409,7 @@ lldb::offset_t lldb_private::DumpDataExtractor(
       }
       if (base_addr != LLDB_INVALID_ADDRESS)
         s->Printf("0x%8.8" PRIx64 ": ",
-                  (uint64_t)(base_addr +
-                             (offset - start_offset) / DE.getTargetByteSize()));
+                  (uint64_t)(base_addr + (offset - start_offset)));
 
       line_start_offset = offset;
     } else if (item_format != eFormatChar &&
@@ -700,12 +698,19 @@ lldb::offset_t lldb_private::DumpDataExtractor(
     } break;
 
     case eFormatUnicode16:
-      s->Printf("U+%4.4x", DE.GetU16(&offset));
+      // The Unicode notation is "U+" followed by uppercase hexadecimal digits,
+      // zero-padded to a minimum of four.
+      s->Format("U+{0:X-4}", DE.GetU16(&offset));
       break;
 
-    case eFormatUnicode32:
-      s->Printf("U+0x%8.8x", DE.GetU32(&offset));
-      break;
+    case eFormatUnicode32: {
+      const uint32_t cp = DE.GetU32(&offset);
+      // Use Unicode notation for valid code points, i.e., <= U+10FFFF.
+      if (cp <= 0x10FFFF)
+        s->Format("U+{0:X-4}", cp);
+      else
+        s->Format("0x{0:x-8}", cp);
+    } break;
 
     case eFormatAddressInfo: {
       addr_t addr = DE.GetMaxU64Bitfield(&offset, item_byte_size, item_bit_size,
@@ -897,8 +902,7 @@ lldb::offset_t lldb_private::DumpDataExtractor(
 
     if (base_addr != LLDB_INVALID_ADDRESS && memory_tag_map) {
       size_t line_len = offset - line_start_offset;
-      lldb::addr_t line_base = base_addr + (offset - start_offset - line_len) /
-                                               DE.getTargetByteSize();
+      lldb::addr_t line_base = base_addr + (offset - start_offset - line_len);
       printMemoryTags(DE, s, line_base, line_len, memory_tag_map);
     }
   }

@@ -1,6 +1,5 @@
 add_llvm_component_library(LLVMPasses
   CodeGenPassBuilder.cpp
-  OptimizationLevel.cpp
   PassBuilder.cpp
   PassBuilderBindings.cpp
   PassBuilderPipelines.cpp
@@ -32,5 +31,4 @@ add_llvm_component_library(LLVMPasses
   TransformUtils
   Vectorize
   Instrumentation
-  Obfuscation
   )

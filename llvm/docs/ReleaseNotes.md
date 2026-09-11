@@ -4,8 +4,7 @@ MyST (https://myst-parser.readthedocs.io/en/latest/). -->
 <!-- If you want to modify sections/contents permanently, you should modify both
 ReleaseNotes.md and ReleaseNotesTemplate.txt. -->
 
-LLVM {{env.config.release}} Release Notes
-=========================================
+# LLVM {{env.config.release}} Release Notes
 
 ```{contents}
 ```
@@ -17,8 +16,7 @@ LLVM {{env.config.release}} Release Notes
 ```
 ````
 
-Introduction
-============
+## Introduction
 
 This document contains the release notes for the LLVM Compiler Infrastructure,
 release {{env.config.release}}.  Here we describe the status of LLVM, including
@@ -36,8 +34,7 @@ LLVM web page, this document applies to the *next* release, not the current
 one.  To see the release notes for a specific release, please see the
 [releases page](https://llvm.org/releases/).
 
-Non-comprehensive list of changes in this release
-=================================================
+## Non-comprehensive list of changes in this release
 
 <!-- For small 1-3 sentence descriptions, just add an entry at the end of
 this list. If your description won't fit comfortably in one bullet
@@ -50,356 +47,582 @@ for adding a new subsection. -->
 <!-- If you would like to document a larger change, then you can add a
 subsection about it right here. You can copy the following boilerplate:
 
-Special New Feature
--------------------
+### Special New Feature
 
 Makes programs 10x faster by doing Special New Thing.
 -->
 
-Changes to the LLVM IR
-----------------------
+### Changes to the LLVM IR
 
-* The `ptrtoaddr` instruction was introduced. This instruction returns the
-  address component of a pointer type variable but unlike `ptrtoint` does not
-  capture provenance ([#139357](https://github.com/llvm/llvm-project/pull/139357)).
-* The alignment argument of the `@llvm.masked.load`, `@llvm.masked.store`,
-  `@llvm.masked.gather` and `@llvm.masked.scatter` intrinsics has been removed.
-  Instead, the `align` attribute should be placed on the pointer (or vector of
-  pointers) argument.
-* A `load atomic` may now be used with vector types on x86.
-* Added `@llvm.reloc.none` intrinsic to emit null relocations to symbols. This
-  emits an undefined symbol reference without adding any dedicated code or data to
-  to bear the relocation.
-* Added `modular-format` attribute to dynamically pull in aspects of libc
-  format string function implementations from statically-linked libc's based on
-  the requirements of each call. Currently only `float` is supported; this can
-  keep floating point support out of printf if it can be proven unused.
-* Case values are no longer operands of `SwitchInst`.
-* Allow metadata to be attached to IFuncs.
+* Removed `llvm.convert.to.fp16` and `llvm.convert.from.fp16`
+  intrinsics. These are equivalent to `fptrunc` and `fpext` with half
+  with a bitcast.
 
-Changes to LLVM infrastructure
-------------------------------
-* On AIX, fixed the OS version in target triples on PASE.
-* On AIX, automatically raise soft memory limits to hard limits on tool startup ([#167928](https://github.com/llvm/llvm-project/pull/167928)).
+* "denormal-fp-math" and "denormal-fp-math-f32" string attributes were
+  migrated to first-class denormal_fpenv attribute.
 
-Changes to building LLVM
-------------------------
+* The `"nooutline"` attribute is now writen as `nooutline`. Existing IR and
+  bitcode will be automatically updated.
 
-* On AIX, remove default flag `-fno-semantic-interposition`.
-* On AIX, LLVM shared libraries are now built as shared library archives by default ([#155686](https://github.com/llvm/llvm-project/pull/155686)).
-* On AIX, enable building with CMake 4.0 and above ([#154537](https://github.com/llvm/llvm-project/pull/154537)).
-* On AIX, enable building with the AIX form of the lto cache dir option ([#168868](https://github.com/llvm/llvm-project/pull/168868)).
+* `ConstantPointerNull` can now represent fixed and scalable vector splats of
+  null pointers. Such constants may print as `splat (ptr null)` instead of
+  `zeroinitializer`.
 
-Changes to TableGen
--------------------
+* LLVM IR floating-point literals have greatly changed:
 
-* The `!getop` and `!setop` bang operators have been removed in favor of
-  `!getdagop` and `!setdagop`.
+  * The old hexadecimal bitwise representation is deprecated and will be removed
+    in the next revision. It is replaced with a unified `f0x` prefix.
 
-Changes to Interprocedural Optimizations
-----------------------------------------
+  * Hexadecimal literals akin to C99's syntax are supported.
 
-* Added `-enable-machine-outliner={optimistic-pgo,conservative-pgo}` to read
-  profile data to guide the machine outliner
-  ([#154437](https://github.com/llvm/llvm-project/pull/154437)).
-* Fixed static resolution of indirect calls to versioned functions on AArch64,
-  by separating unrelated caller versions which were previously mixed together.
-  Also improved the accuracy of the algorithm for low version counts.
+  * Special values for infinities and NaNs, including NaN payloads, are added.
 
-Changes to Vectorizers
-----------------------------------------
+* The standard textual output for floating-point literals is changed to take
+  advantage of the new floating-point literals formats.
 
-* Added initial support for copyable elements in SLP, which models copyable
-  elements as add <element>, 0, i.e. uses identity constants for missing lanes.
-* SLP vectorizer supports initial recognition of FMA/FMAD pattern
+* The resume/destroy functions emitted for the switch-resume ABI (C++20
+  coroutines) now use `CallingConv::C` instead of `CallingConv::Fast`. This
+  stabilizes the coroutine ABI across LLVM versions and aligns it with other
+  vendors. The change is observationally identical on targets where `fastcc`
+  and `ccc` agree for `void(ptr)` (x86_64, AArch64, RISC-V, ...) but is an ABI
+  break on i686, MIPS O32, PowerPC64 ELFv1, and Lanai.
 
-Changes to the AArch64 Backend
-------------------------------
+* Assume bundles now only accept attributes that are actually handled.
+  Specifically, they are ``align``, ``cold``, ``dereferenceable``,
+  ``dereferenceable_or_null``, ``nonnull``, ``noundef`` and
+  ``separate_storage``.
 
-* Assembler/disassembler support has been added for Armv9.7-A (2025)
-  architecture extensions.
+* Fast math flags are now permitted on `uitofp` and `sitofp`.
 
-* Assembler/disassembler support has been added for 'Virtual Tagging
-  Extension (vMTE)' and 'Permission Overlay Extension version 2 (POE2)'
-  Future Architecture Technologies extensions.
+* The ``modular-format`` attribute now supports the ``fixed`` aspect for C
+  ISO 18037 fixed-point ``printf`` specifiers.
 
-* `FEAT_TME` support has been removed, as it has been withdrawn from
-   all future versions of the A-profile architecture.
+* Added `noipa` attribute which disables interprocedural analyses that inspect
+  the definition of the function. This attribute does *not* control inlining or
+  outlining. Add the `noinline` and `nooutline` attributes as well in cases
+  where inlining and outlining should additionally be disabled.
 
-* Added support for C1-Nano, C1-Pro, C1-Premium, and C1-Ultra CPUs.
+* Added support for ``callgraph`` metadata. The `!callgraph` metadata
+  associates a function definition with its type identifier and is used for call
+  graph section generation. See the [callgraph Metadata](https://llvm.org/docs/LangRef.html#callgraph-metadata)
+  section of the LangRef for details.
 
-* Added support for Ampere1C cores.
+* The `dereferenceable` and `dereferenceable_or_null` attributes (and
+  corresponding metadata) now apply only at the point of definition, instead of
+  for the execution of the function (for arguments) or forever (for returns).
 
-Changes to the AMDGPU Backend
------------------------------
+* `alwaysinline` no longer bypasses inlining compatibility checks based on
+  target features. Inlining will only be performed if it is safe to do so.
 
-* Removed `llvm.amdgcn.atomic.cond.sub.u32` and
-  `llvm.amdgcn.atomic.csub.u32` intrinsics. Users should use the
-  `atomicrmw` instruction with `usub_cond` and `usub_sat` instead.
+* Module-level inline assembly now accepts optional `target_features` and
+  `target_cpu` properties. This resolves errors during LTO on some
+  architectures.
 
-Changes to the ARM Backend
---------------------------
+### Changes to LLVM infrastructure
 
-Changes to the AVR Backend
---------------------------
+* Removed ``Constant::isZeroValue``. It was functionally identical to
+  ``Constant::isNullValue`` for all types except floating-point negative
+  zero. All callers should use ``isNullValue`` instead. ``isZeroValue``
+  will be reintroduced in the future with bitwise-all-zeros semantics
+  to support non-zero null pointers.
 
-Changes to the DirectX Backend
-------------------------------
+* Added support for specifying the null pointer bit representation per
+  address space in `DataLayout`. Pointer specifications (`p`) accept new
+  flags: `z` (null is all-zeros) and `o` (null is all-ones). Address
+  spaces without an explicit flag default to all-zeros. See the
+  `DataLayout` section of the
+  [LangRef](https://llvm.org/docs/LangRef.html#data-layout) for details.
 
-Changes to the Hexagon Backend
-------------------------------
+* Removed TypePromoteFloat legalization from SelectionDAG
 
-Changes to the LoongArch Backend
---------------------------------
+* Removed `bugpoint`. Usage has been replaced by `llvm-reduce` and
+  `llvm/utils/reduce_pipeline.py`.
 
-* RuntimeDyld now supports the `Large` code model for LoongArch64.
-* The `PreserveMost` calling convention is now supported.
-* An option named `loongarch-enable-merge-offset` is added to allow disabling the `MergeBaseOffset` pass.
-* A macro instruction named `ud` is added.
-* `la.abs` now generates `R_LARCH_MARK_LA` relocation.
-* LASX and LSX conversion intrinsics are added.
-* Tail calls for `sret` and `byval` functions are now supported.
-* Always emit symbol-based relocations regardless of relaxation.
+* The ``Br`` opcode was split into two opcodes separating unconditional
+  (``UncondBr``) and conditional (``CondBr``) branches.
+
+* ``BranchInst`` was deprecated in favor of ``UncondBrInst`` and ``CondBrInst``.
+
+* The operand order of ``CondBr`` instructions was adjusted to match the
+  successor order. This can cause subtle breakage when using ``getOperand`` or
+  ``setOperand`` to access successors.
+
+* The ``llvm::sys::fs`` link creation API has been refactored:
+
+  * ``create_link`` now tries to create a symbolic link first, falling back to a
+    hard link if that fails (previously it created a symlink on Unix and a hard
+    link on Windows).
+  * Added ``create_symlink``, which always creates a symbolic link. On windows
+    this may fail if symlink permissions are not available.
+  * Added ``readlink``, which reads the target of a symbolic link.
+
+* Bitcode libraries can now implement compiler-managed library functions
+  (libcalls) without causing incorrect API manipulation or undefined references
+  ([#177046](https://github.com/llvm/llvm-project/pull/125687)). Note that
+  there are still issues with invalid compiler reasoning about some functions
+  in bitcode, e.g. `malloc`. Not yet supported on MachO or when using
+  distributed ThinLTO.
+
+* ``ConstantFP`` now supports vector types and is the canonical form returned by
+  ``ConstantVector::getSplat(C)`` when ``C`` is a scalar ``ConstantFP``.
+
+* ``DenseMap``, ``DenseSet``, ``StringMap``, and ``StringSet`` ``erase`` now
+  invalidates all iterators and references into the container, not just the
+  iterator for the erased element. Use the new ``remove_if`` member to erase
+  matching elements in a single pass instead of erasing while iterating.
+
+* ``TargetRegisterInfo::getMinimalPhysRegClass`` and related APIs have been
+  refactored and no longer take a type. This API is also now precomputed in
+  TableGen to improve compile-time.
+
+* ``APInt::sqrt`` (square root rounded to nearest integer) has been replaced
+  with ``APInt::sqrtFloor`` (floor of square root).
+
+### Changes to building LLVM
+
+### Changes to TableGen
+
+* Outer let statements use ``ID{n-m}`` instead of ``ID<n-m>`` to be consistent
+  with inner let statements.
+
+### Changes to Interprocedural Optimizations
+
+### Changes to Vectorizers
+
+### Changes to the AArch64 Backend
+
+* The `sysp`, `mrrs`, and `msrr` instructions are now accepted without
+  requiring the `+d128` feature gating.
+* Added a new internal option `-aarch64-emit-debug-tls-location` to allow the
+  emission of `DW_AT_location` for thread-local variables. This is currently
+  disabled by default to maintain compatibility with Binutils and LLVM older
+  toolchains that do not define the `R_AARCH64_TLS_DTPREL64` static relocation
+  type for TLS offsets.
+* A bug was fixed that caused LLVM IR inline assembly clobbers of the x29 and
+  x30 registers to be ignored when they were written using their xN names
+  instead of the ABI names FP and LR. Note that LLVM IR produced by Clang
+  always uses the ABI names, but other frontends may not.
+  ([#167783](https://github.com/llvm/llvm-project/pull/167783))
+* On AArch64 Windows targets, return address signing now uses the B-key by
+  default because Windows unwind information only supports B-key signing.
+
+### Changes to the AMDGPU Backend
+
+* Initial support for gfx1310
+
+* The `"amdgpu-num-sgpr"` and `"amdgpu-num-vgpr"` IR function attributes
+  (generated by the Clang `amdgpu_num_sgpr` and `amdgpu_num_vgpr` attributes)
+  are now deprecated. Use `"amdgpu-waves-per-eu"` instead. The backend still
+  honors the attributes; Clang emits a `-Wdeprecated-declarations` warning when
+  the source attributes are used.
+* The `relaxed-buffer-oob-mode` subtarget feature has been replaced by two
+  module flags, `amdgpu.buffer.oob.mode` and `amdgpu.tbuffer.oob.mode`, which
+  control out-of-bounds semantics (see the AMDGPU User Guide). Frontends that
+  previously relied on the subtarget feature to enable misaligned buffer merging
+  must now set the corresponding module flag to `1` (relaxed). An absent flag is
+  treated as strict by the backend.
+
+* Changed triple naming system from "amdgcn" to "amdgpu" plus a subarch suffix.
+
+### Changes to the ARM Backend
+
+* The `r14` register can now be used as an alias for the link register `lr`
+  in inline assembly. Clang always canonicalizes the name to `lr`, but other
+  frontends may not.
+* `subs pc, lr, #imm` can now be predicated in Thumb2.
+
+### Changes to the AVR Backend
+
+### Changes to the DirectX Backend
+
+### Changes to the Hexagon Backend
+
+* v79 and later targets get code generation support for XQFloat, an
+  extended-precision floating point format, along with an extraneous
+  conversion removal pass and a post-register-allocation compliance checker.
+* IEEE HVX floating point intrinsics are automatically translated to their
+  QFloat equivalents on v79+ targets.
+* `vselect` can now be lowered for HVX.
+* Partial reduction intrinsics are now supported.
+* HVX gained V128i1/V64i1/V32i1 predicate load and store support.
+* The Machine Combiner pass is enabled for Hexagon.
+* A new AggressiveRDF copy propagation pass extends RDF copy propagation
+  with super-register and sub-register handling.
+* The HexagonGlobalScheduler pass was added.
+* ShadowCallStack (`-fsanitize=shadow-call-stack`) is now supported, along
+  with a corresponding multilib.
+* Stack clash protection can use `probe-stack=inline-asm`.
+* KCFI is now supported.
+* The CFI indirect-call sanitizer is now supported.
+* `-ffixed-rXX` can reserve caller-saved registers r16-r28.
+* A new HVX caller-save remark pass diagnoses call sites that force HVX
+  register spills.
+* Several Hexagon IR and MIR passes now emit optimization remarks.
+* XRay custom and typed events are now supported.
+* JITLink gained an ELF backend for Hexagon.
+* The `.reloc` assembler directive is now supported.
+* HVX build-vector lowering now reuses word splats for repeated words.
+* Sign-extend-then-multiply patterns are now recognized and lowered to
+  `vmpyh`.
+
+### Changes to the LoongArch Backend
+
 * DWARF fission is now compatible with linker relaxations, allowing `-gsplit-dwarf` and `-mrelax`
   to be used together when building for the LoongArch platform.
-* Improved LoongArch32 support by adding LA32R/LA32S relocations, PC-relative address materialization, and `call`/`tail` macro instructions.
-* Assorted codegen improvements.
 
-Changes to the MIPS Backend
----------------------------
+### Changes to the MIPS Backend
 
-Changes to the PowerPC Backend
-------------------------------
+### Changes to the NVPTX Backend
 
-* `half` now uses a soft float ABI, which works correctly in more cases.
-* Add ``mtpidr`` alias introduced in ISA3.0.
-* Update `tlbie` instruction implementation for ISA3.0+.
-* Update ``strlen``, ``strcpy`` and ``memcmp`` to use milicode calls instead of library calls.
-* Prototyped intrinsic for xvrlw and load/store with right length left-justified.
-* Prototyped Elliptic Curve Cryptography (ECC) Instructions.
-* Prototyped VSX Vector Integer Arithmetic Instructions.
-* Prototyped AES Acceleration Instructions.
-* Prototyped vector uncompress instructions.
-* Prototyped vector unpack instructions.
-* Prototyped 32-byte indexed paired load and store instructions.
-* Prototyped Context Switch instruction ``mtlpl``.
-* Prototyped VSX rotate left word instruction.
-* Prototyped paddis.
-* Prototyped eTCE instructions.
-* Prototyped Dense Math Facility and DMR COPY support.
-* Implement the trampoline intrinsics and nest parameter for AIX.
-* Introduced a minimum threshold for the largest number of comparisons needed to trigger bit test generation during switch lowering.
-* Relax strictfp to constrain only ``libm`` libcalls, permitting non-FP optimizations.
-* Use ``bne-`` for atomic operations after store conditional.
-* Consolidated predicate definitions into ``PPC.td``.
-* Cleanup asm parser code to use template functions for the various versions of
-  ``getImm*Encoding()`` and ``is*Imm()`` used in ``PPCRegisterInfo.td``.
+* The default SM version has been changed from `sm_30` to `sm_75`. `sm_75` is
+  the oldest GPU variant compatible with the widest range of recent major CUDA
+  Toolkit versions (11/12/13).
 
-Changes to the RISC-V Backend
------------------------------
+### Changes to the PowerPC Backend
 
-* The loop vectorizer now performs tail folding by default on RISC-V, which
-  removes the need for a scalar epilogue loop. To restore the previous behaviour
-  use `-prefer-predicate-over-epilogue=scalar-epilogue`.
-* `llvm-objdump` now has basic support for switching between disassembling code
-  and data using mapping symbols such as `$x` and `$d`. Switching architectures
-  using `$x` with an architecture string suffix is not yet supported.
-* Ssctr and Smctr extensions are no longer experimental.
-* Add support for Zvfbfa (Additional BF16 vector compute support)
-* Adds experimental support for the 'Zibi` (Branch with Immediate) extension.
-* Add support for Zvfofp8min (OFP8 conversion extension)
-* Adds assembler support for the Andes `XAndesvsinth` (Andes Vector Small Int Handling Extension).
-* DWARF fission is now compatible with linker relaxations, allowing `-gsplit-dwarf` and `-mrelax`
-  to be used together when building for the RISC-V platform.
-* The Xqci Qualcomm uC Vendor Extension is no longer marked as experimental.
-* The Xqccmp Qualcomm Vendor Extension is no longer marked as experimental.
+* Added backend support for partial reductions and cost modeling for length-type
+  VP intrinsic load/store.
+* `vec_rl()` on `v4i32` now generates `xvrlw` when targeting `-mcpu=future`.
+* `v256i1` loads and stores use paired vector instructions (`lxvp`/`stxvp`) on `-mcpu=future`.
+* Added support for the `MSGSNDP` (Message Send Privileged) instruction.
+* Enabled custom lowering for `__builtin_bswap64` on Power8 in 64-bit mode
+  by splitting the 64-bit byte-swap into independent 32-bit high/low swaps
+  for improved instruction-level parallelism. Power9 and later continue to
+  use their existing paths.
+* Added missing `BR_CC` handler in `DAGTypeLegalizer` for soft-promoted half
+  operands, fixing a crash when a half-typed `fcmp` result feeds directly
+  into a conditional branch.
+* Various codegen improvements and bug fixes.
+* AIX: Implemented support for the `ifunc` attribute.
+* AIX: Implemented Function Multi-Versioning using `target_clones`; versioning by cpu only, and diagnosis of invalid feature strings on the `target` attribute.
+* AIX: Added sorting of relocations in the XCOFF object writer.
+* AIX: The default code model for 64-bit targets has been changed from `small`
+  to `large`. This avoids the need for expensive linker fixups (e.g.
+  `-Wl,-bigtoc`) that many applications require with the small code model.
 
-Changes to the WebAssembly Backend
-----------------------------------
+### Changes to the RISC-V Backend
 
-* `half` now uses a soft float lowering, which resolves various precision and
-  bitcast issues.
+* `llvm-objdump` now has support for `--symbolize-operands` with RISC-V.
+* `-mcpu=spacemit-x100` was added.
+* Change P extension version to match the 0.21 draft specification.
+* Mnemonics for MOP/HINT-based instructions (`lpad`, `pause`, `ntl.*`, `c.ntl.*`,
+  `sspush`, `sspopchk`, `ssrdp`, `c.sspush`, `c.sspopchk`) are now always
+  available in the assembler and disassembler without requiring their respective
+  extensions.
+* Adds experimental assembler support for the 'Zvabd` (RISC-V Integer Vector
+  Absolute Difference) extension.
+* Adds CodeGen support for the 'Zvabd` extension.
+* `-mcpu=spacemit-a100` was added.
+* Adds assembler support for the `XSMTVDotII` (SpacemiT Vector Extension for Matrix 2.0) extension.
+* The opt-in `-riscv-enable-p-ext-simd-codegen` flag has been removed. P extension SIMD code generation is now enabled automatically if the P extension is supported.
+* `-mcpu=xt-c910v2` and `-mcpu=xt-c920v2` were added.
+* Adds experimental assembler support for the 'Zvzip` (RISC-V Vector
+  Reordering Structured Data) extension.
+* `-mcpu=sifive-x160` and `-mcpu=sifive-x180` were added.
+* Support for the experimental `XRivosVisni` vendor extension has been removed.
+* Support for the experimental `XRivosVizip` vendor extension has been removed.
+* Adds experimental assembler support for the 'Zvvmm` (RISC-V Integer Matrix Multiply-Accumulate) extension.
+* Adds experimental assembler support for the 'Zvvfmm` (RISC-V Floating-Point Matrix Multiply-Accumulate) extension.
+* Adds experimental assembler support for the 'Zvvmtls` and 'Zvvmttls` (RISC-V
+  Matrix Tile Load/Store) extensions.
+* Adds support for 'Ziccid' (Instruction/Data Coherence and Consistency) extension.
+* Adds experimental assembler support for the `Xqccmt` (Qualcomm 16-bit Table Jump) vendor extension.
+* `-mcpu=sifive-870` has been renamed `-mcpu=sifive-p870-d`.
+* Adds experimental assembler support for batched dot-product extensions(Zvqwbdota8i, Zvqwbdota16i, Zvfwbdota16bf, Zvfqwbdota8f and Zvfbdota32f).
+* Adds experimental assembler support for dot-product extensions(Zvqwdota8i, Zvqwdota16i, Zvfwdota16bf and Zvfqwdota8f).
+* `-mtune=generic` now uses the scheduling model from SpacemiT X60 instead of an empty scheduling model.
+* The Xqcilo pseudos now emit sequences that can be relaxed.
 
-- The `wasm32-wasi` target has been renamed to `wasm32-wasip1`. The old
-  option is still recognized, though by default will emit a deprecation
-  warning.
+### Changes to the SystemZ Backend
 
-Changes to the Windows Target
------------------------------
+The SystemZ backend now contains initial support to generate code for z/OS using the XPLINK 64 bit
+ABI and emitting the code into GOFF object files:
 
-* `-fpseudo-probe-for-profiling` is now supported for COFF.
+* Adds support for writing GOFF object files.
+* Adds new class `SystemZHASMAsmStreamer` to emit assembly in HLASM syntax.
+* The temporary GNU AS assembly output is removed; all assembly output is in
+  HLASM syntax, and all z/OS-specific test cases are updated.
+* Jump tables are now emitted into the text section.
+* PPA1 data is now collected and written at the end of the code generation into
+  the text section.
+* The PPA1 now contains the prologue length and the offset to the stack update
+  symbol.
+* Adds a new attribute to control if the symbol name is emitted into the PPA1.
+* Changed the order of caller-saved registers to match legacy compiler.
+* Register R5 is no longer restored, matching the XPLINK specification.
+* Implements stack guard support for XPLINK
 
-Changes to the X86 Backend
---------------------------
+Code-generation changes:
+* Add support for the dataflow sanitizer.
+* Add support for the `-mstack-protector-guard=global` and
+  `-mstack-protector-guard-record` command line options.
+* Fix incorrect code generated for the `vec_insert` intrinsic
+   when used with the `vector float` data type.
 
-* `-mcpu=wildcatlake` is now supported.
-* `-mcpu=novalake` is now supported.
+Performance enhancements:
+* Added a SystemZ-specific pre-RA scheduling strategy with latency-aware
+   heuristics, liveness-reduction, and a minimum-latency-5 filter.
+* Enabled interleaving for vectorized loops and epilogue loop vectorization.
+* Enabled scalar load rematerialization.
+* Cost model improvements to enable better auto-vectorization
+* Improved codegen for minimum/maximum operations.
+* Allow folding memory accesses across basic-block boundaries.
+* Avoid stack overalignment for vector types.
+* Avoid unaligned vector loads/stores in memcpy/memmove/memset lowering.
+* Avoid redundant zero-extension after VLGV[BHF].
 
-Changes to the OCaml bindings
------------------------------
+### Changes to the WebAssembly Backend
 
-* The IR reader bindings renamed `parse_ir` to
-  `parse_ir_bitcode_or_assembly` to clarify that the parser accepts both
-  textual IR and bitcode. This rename is intentional to force existing code to
-  update because the ownership semantics changed: the function no longer takes
-  ownership of the input memory buffer.
+* WebAssembly reference types are now represented in LLVM IR as the target
+  extension types `target("wasm.externref")` and `target("wasm.funcref")`,
+  rather than as pointers in address spaces 10 and 20 (`ptr addrspace(10)` /
+  `ptr addrspace(20)`).
+* As a consequence of the representation change, reference types are no longer
+  treated as vectorizable pointers. This fixes a crash in the SLP vectorizer,
+  which previously would attempt to gather `externref`/`funcref` values into a
+  vector and then crash.
 
-Changes to the Python bindings
-------------------------------
+### Changes to the Windows Target
 
-Changes to the C API
---------------------
+* The `.seh_startchained` and `.seh_endchained` assembly instructions have been removed and replaced
+  with a new `.seh_splitchained` instruction.
 
-* Add `LLVMGetOrInsertFunction` to get or insert a function, replacing the combination of `LLVMGetNamedFunction` and `LLVMAddFunction`.
-* Allow `LLVMGetVolatile` to work with any kind of Instruction.
-* Add `LLVMConstFPFromBits` to get a constant floating-point value from an array of 64 bit values.
-* Add `LLVMParseIRInContext2`, which is equivalent to `LLVMParseIRInContext`
-  but does not take ownership of the input `LLVMMemoryBufferRef`. This matches
-  the underlying C++ API and avoids ownership surprises in language bindings
-  and examples.
-* Functions working on the global context have been deprecated. Use the
-  functions that work on a specific context instead.
+### Changes to the X86 Backend
 
-  * `LLVMGetGlobalContext` -> use `LLVMContextCreate` context instead
-  * `LLVMInt1Type` -> `LLVMInt1TypeInContext`
-  * `LLVMInt8Type` -> `LLVMInt8TypeInContext`
-  * `LLVMInt16Type` -> `LLVMInt16TypeInContext`
-  * `LLVMInt32Type` -> `LLVMInt32TypeInContext`
-  * `LLVMInt64Type` -> `LLVMInt64TypeInContext`
-  * `LLVMInt128Type` -> `LLVMInt128TypeInContext`
-  * `LLVMIntType` -> `LLVMIntTypeInContext`
-  * `LLVMHalfType` -> `LLVMHalfTypeInContext`
-  * `LLVMBFloatType` -> `LLVMBFloatTypeInContext`
-  * `LLVMFloatType` -> `LLVMFloatTypeInContext`
-  * `LLVMDoubleType` -> `LLVMDoubleTypeInContext`
-  * `LLVMX86FP80Type` -> `LLVMX86FP80TypeInContext`
-  * `LLVMFP128Type` -> `LLVMFP128TypeInContext`
-  * `LLVMPPCFP128Type` -> `LLVMPPCFP128TypeInContext`
-  * `LLVMStructType` -> `LLVMStructTypeInContext`
-  * `LLVMVoidType` -> `LLVMVoidTypeInContext`
-  * `LLVMLabelType` -> `LLVMLabelTypeInContext`
-  * `LLVMX86AMXType` -> `LLVMX86AMXTypeInContext`
-  * `LLVMConstString` -> `LLVMConstStringInContext2`
-  * `LLVMConstStruct` -> `LLVMConstStructInContext`
-  * `LLVMMDString` -> `LLVMMDStringInContext2`
-  * `LLVMMDNode` -> `LLVMMDNodeInContext2`
-  * `LLVMAppendBasicBlock` -> `LLVMAppendBasicBlockInContext`
-  * `LLVMInsertBasicBlock` -> `LLVMInsertBasicBlockInContext`
-  * `LLVMCreateBuilder` -> `LLVMCreateBuilderInContext`
-  * `LLVMIntPtrType` -> `LLVMIntPtrTypeInContext`
-  * `LLVMIntPtrTypeForAS` -> `LLVMIntPtrTypeForASInContext`
-  * `LLVMParseBitcode` -> `LLVMParseBitcodeInContext2`
-  * `LLVMParseBitcode2` -> `LLVMParseBitcodeInContext2`
-  * `LLVMGetBitcodeModule` -> `LLVMGetBitcodeModuleInContext2`
-  * `LLVMGetBitcodeModule2` -> `LLVMGetBitcodeModuleInContext2`
-* Add `LLVMGetSwitchCaseValue` and `LLVMSetSwitchCaseValue` to get and set switch case values; switch case values are no longer operands of the instruction.
+* `.att_syntax` directive is now emitted for assembly files when AT&T syntax is
+  in use. This matches the behaviour of Intel syntax and aids with
+  compatibility when changing the default Clang syntax to the Intel syntax.
 
-Changes to the CodeGen infrastructure
--------------------------------------
+* EGPR (R16-R31) now requires V3 unwind info on Windows x64. Using EGPR
+  without V3 unwind produces a fatal error.
+* Implemented Win64 APX ABI callee-saved registers: R30 and R31 are now
+  treated as non-volatile in the Win64 calling convention when APX is
+  available, per the Microsoft x64 calling convention specification.
 
-Changes to the Metadata Info
----------------------------------
+* Functions using setjmp with Win64 APX ABI now reserve R30/R31 from
+  register allocation, as the unwinder cannot restore APX extended
+  registers across longjmp. A warning is emitted for large functions
+  where this reservation may impact performance.
 
-Changes to the Debug Info
----------------------------------
+* Added ``.seh_push2regs`` assembly directive for explicitly encoding a
+  two-register push in Windows x64 V3 unwind info. The directive takes two
+  register operands: ``.seh_push2regs %r12, %r13``.
 
-Changes to the LLVM tools
----------------------------------
+* The `fp128` type is now returned via sret instead of XMM0 for some calling
+  conventions to match GCC. The C and Win64 calling conventions now use
+  sret, other calling conventions do not need to be compatible with
+  GCC and still return via XMM0.
 
-* `llvm-profgen` now supports decoding pseudo probe for COFF binaries.
+### Changes to the OCaml bindings
 
-* `llvm-readelf` now dumps all hex format values in lower-case mode.
-* Some code paths for supporting Python 2.7 in `llvm-lit` have been removed.
-* Support for `%T` in lit has been removed.
-* Add `--save-stats` option to `llc` to save LLVM statistics to a file. Compatible with the Clang option.
-* Add `--save-stats` option to `opt` to save LLVM statistics to a file. Compatible with the Clang option.
+### Changes to the Python bindings
 
-* `llvm-config` gained a new flag `--quote-paths` which quotes and escapes paths
-  emitted on stdout, to account for spaces or other special characters in path.
-  (`#97305 <https://github.com/llvm/llvm-project/pull/97305>`_).
+### Changes to the C API
 
-* `llvm-objdump` now supports using `--mcpu=help` and `--mattr=help` with the `--triple` option
-  without requiring an input file or the `-d` (disassemble) flag.
+* Replaced opcode ``LLVMBr`` with ``LLVMUncondBr`` and ``LLVMCondBr``.
 
-Changes to LLDB
----------------------------------
+* The operand order of ``CondBr`` instructions was adjusted to match the
+  successor order. This can cause subtle breakage when using ``LLVMGetOperand``
+  or ``LLVMSetOperand`` to access successors.
 
-* LLDB can now set breakpoints, show backtraces, and display variables when
-  debugging Wasm with supported runtimes (WAMR and V8).
-* LLDB now has a Wasm platform, which can be configured to run WebAssembly
-  binaries directly under a Wasm runtime. Configurable through the
-  platform.plugin.wasm settings.
-* LLDB no longer stops processes by default when receiving SIGWINCH signals
-  (window resize events) on Linux. This is the default on other Unix platforms.
-  You can re-enable it using `process handle --notify=true --stop=true SIGWINCH`.
-* The `show-progress` setting, which became a NOOP with the introduction of the
-  statusline, now defaults to off and controls using OSC escape codes to show a
-  native progress bar in supporting terminals like Ghostty and ConEmu.
-* The default PDB reader on Windows was changed from DIA to native, which uses
-  LLVM's PDB and CodeView support. You can switch back to the DIA reader with
-  `settings set plugin.symbol-file.pdb.reader dia`. Note that support for the
-  DIA reader will be removed in a future version of LLDB.
-* A `--verbose` option was added to the `version` command. When `--verbose` is used,
-  LLDB's build configuration is included in the command's output. This includes
-  all the supported targets, along with the presence of (or lack of) optional
-  features like XML parsing.
-* LLDB now includes formatters for many types from the MSVC STL.
-* DIL (the new `frame variable` implementation) now uses ':' as a bitfield
-  extraction range character. '-' is deprecated and will output an error when used.
-* LLDB 22 is the last release supporting FreeBSD 13 and below. As a result,
-  LLDB 23 will remove support for FreeBSD on MIPS64 and assume that FreeBSD targets
-  have watchpoint support.
+### Changes to the CodeGen infrastructure
 
-Changes to BOLT
----------------------------------
+* Renamed ISD::CTLZ_ZERO_UNDEF to ISD::CTLZ_ZERO_POISON opcode to make it clear that
+  a zero input results in poison.
 
-*	Added support for lite mode on AArch64. It can be enabled with -lite=1. When
-  used, BOLT avoids duplicating cold code by reusing the original code, which
-  reduces output binary size.
+* Renamed ISD::CTTZ_ZERO_UNDEF to ISD::CTTZ_ZERO_POISON opcode to make it clear that
+  a zero input results in poison.
 
-Changes to Sanitizers
----------------------
+* LLVM intrinsics can now declare required target features using the
+  ``TargetFeatures`` TableGen field. SelectionDAG and GlobalISel use this
+  metadata to reject unsupported target intrinsics generically, so targets do
+  not need custom lowering checks for each annotated intrinsic.
 
-* Support running TypeSanitizer with UndefinedBehaviourSanitizer.
-* TypeSanitizer no longer inlines all instrumentation by default. Added the
-  `-f[no-]sanitize-type-outline-instrumentation` flags to give users control
-  over this behaviour.
+### Changes to the GlobalISel infrastructure
 
-Other Changes
--------------
+* Renamed G_CTLZ_ZERO_UNDEF to G_CTLZ_ZERO_POISON opcode to make it clear that
+  a zero input results in poison.
 
-* Introduces the `AllocToken` pass, an instrumentation pass providing tokens to
-  memory allocators enabling various heap organization strategies, such as heap
-  partitioning.
+* Renamed G_CTTZ_ZERO_UNDEF to G_CTTZ_ZERO_POISON opcode to make it clear that
+  a zero input results in poison.
 
-* Integrated Distributed ThinLTO (DTLTO) aims to support distribution of ThinLTO
-  backend compilations for any in-process ThinLTO invocation. To enable this,
-  support for the ThinLTO cache (for incremental builds) has been added in this
-  release, and support for additional input file types has been implemented.
+* GlobalISel's IRTranslator now supports the LLVM IR byte type (`bN`). Byte
+  values are translated as the equi-sized integer scalar (`sN`), `ConstantByte`
+  is materialised via `G_CONSTANT`, and `bitcast` between a byte type and a
+  pointer is lowered to `G_INTTOPTR` / `G_PTRTOINT` rather than the
+  verifier-illegal `G_BITCAST`.
 
-  Bitcode objects contained in static libraries and archives (e.g. libc.a) are
-  now handled transparently by temporarily extracting referenced objects for
-  distribution. When thin archives are used (supported since LLVM 21), no
-  extraction is required.
-  
-  DTLTO creates a number of temporary files during operation, which are now
-  cleaned up correctly when the process exits abnormally, for example due to
-  Ctrl+C or similar termination events.
-  
-  A new DTLTO linker option, --thinlto-remote-compiler-prepend-arg, has been
-  added to support multi-call LLVM drivers. This option allows specifying an
-  additional argument to select the desired subcommand, for example
-  `llvm clang ....`
-  
-  Note that ELF and COFF remain the only supported platforms.
+### Changes to the Metadata Info
 
-External Open Source Projects Using LLVM {{env.config.release}}
-===============================================================
+### Changes to the Debug Info
 
-* A project...
+### Changes to the LLVM tools
 
-Additional Information
-======================
+* llvm-ml now supports the `/unwindv3` flag to enable V3 unwind information
+  format for x64 exception handling.
+* llvm-ml now supports the `@UnwindVersion` built-in symbol, which returns the
+  current unwind version (1 by default, 3 when `/unwindv3` is specified).
+* llvm-ml now supports the `.push2reg`, `.pop2reg`, `.beginepilog`, and
+  `.endepilog` MASM directives for V3 unwind information.
+* llvm-ml now supports the `.popreg`, `.freestack`, `.restorereg`,
+  `.restorexmm128`, and `.unsetframe` MASM epilog directives. These are the
+  epilog counterparts of `.pushreg`, `.allocstack`, `.savereg`,
+  `.savexmm128`, and `.setframe` respectively, and are valid only inside
+  `.beginepilog`/`.endepilog` blocks and only for V3 unwind information.
+* llvm-ml now supports `.pushframe code` syntax (without the `@` prefix)
+  for interrupt handlers with error codes.
+* llvm-ml now diagnoses:
+  - Prolog directives (including `.allocstack`) used outside of prologs (after `.endprolog`).
+  - Epilog directives used outside of epilogs (outside of `.beginepilog` + `.endepilog` blocks).
+  - Beginning an epilog (`.beginepilog`) inside another epilog.
+
+* `llvm-profgen` now supports ETM trace decoding using the OpenCSD library for Cortex-M targets. OpenCSD version 1.5.4 or higher is required.
+
+* `llvm-objcopy` no longer corrupts the symbol table when `--update-section` is called for ELF files.
+* `llvm-objcopy` now reports an error when `--compress-sections` requests unavailable zlib or zstd support.
+  The diagnostic is emitted while parsing the option, matching `--compress-debug-sections`.
+  Such commands may now fail even if the input file contains no sections that would be compressed.
+* `FileCheck` option `-check-prefix` now accepts a comma-separated list of
+  prefixes, making it an alias of the existing `-check-prefixes` option.
+* Add `-mtune` option to `llc`.
+* Add `-mtune` option to `opt`.
+* Fixed `llvm-ar` to correctly handle the `N` count modifier on Windows for archive members whose names differ only
+  in case (e.g. `FOO.OBJ` and `foo.obj`). Previously, `-N 2` would fail with "not found" even when two matching members existed.
+* `llvm-readobj` and `llvm-readelf` now support the `--call-graph-section` option to dump the contents of the experimental [call graph section](CallGraphSection.md).
+* `lit` now supports `--unsupported` and `--unsupported-not` command-line
+  options (and corresponding `LIT_UNSUPPORTED` / `LIT_UNSUPPORTED_NOT`
+  environment variables) to mark tests as `UNSUPPORTED` without modifying
+  the test files, mirroring the existing `--xfail` / `LIT_XFAIL` mechanism.
+* Added support for hybrid ARM64X object files to `llvm-ar` and `llvm-lib`. When these files are added to
+  an archive, they are automatically split into separate native and EC members. Because the resulting members
+  are no longer hybrid object files, consumers of these archives do not need to support the hybrid format themselves.
+* `llvm-ar` now supports reading and writing z/OS archives.
+* `ObjectFile::createObjectFile` now correctly handles GOFF object files,
+  routing them through `createGOFFObjectFile` instead of returning an error.
+
+### Changes to LLDB
+
+* A new ``webinspector-wasm`` platform was added to list and attach to WebAssembly processes in Safari.
+* The default for `load-script-from-symbol-file` was changed from `warn` to `trusted`. This means that scripts from
+  code signed dSYM bundles are now loaded automatically, while untrusted bundles continue to produce a warning.
+* Pressing enter after `frame variable` repeats the command with an incremented `--depth` option, allowing quick
+  expansion of nested data.
+* Breakpoint commands now accept `.` to refer to the location(s) at which the current thread is stopped. For
+  example, `breakpoint disable .` disables the just-hit breakpoint location. Another usage is to automate a
+  command to run at the current location: `breakpoint command add -o 'p my_var' .`.
+* The `apropos` command now:
+  * Highlights matching keywords in its output when color is enabled.
+  * Searches the components of settings paths. For example `apropos qemu-user` will now
+    show `platform.plugin.qemu-user` as one of the results.
+* Reading global and static variables on WebAssembly targets now works correctly. Previously their
+  values could not be read because data sections were mapped to the wrong address space.
+* A new `diagnostics report` command (aliased `bugreport`) assembles a diagnostics bundle and files
+  a pre-filled GitHub issue, pointing at the bundle to attach. The GitHub reporter is built by
+  default and can be disabled with the `LLDB_ENABLE_GITHUB_BUG_REPORTER=OFF` CMake option.
+* The script interpreter plugins are now built as shared libraries by default on Darwin and FreeBSD
+  (`LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS=ON`). This can be opted into on Linux also.
+
+#### Deprecated APIs
+
+* ``SBTarget::GetDataByteSize()``, ``SBTarget::GetCodeByteSize()``, and ``SBSection::GetTargetByteSize()``
+  have been deprecated. They always return `1`, as before.
+
+#### FreeBSD
+
+##### Userspace Debugging
+
+* Support for MIPS64 has been removed.
+* The minimum assumed FreeBSD version is now 14. The effect of which is that watchpoints are
+  assumed to be supported.
+
+##### Kernel Debugging
+
+* The plugin that analyzes FreeBSD kernel core dump and live core has been renamed from `freebsd-kernel` to
+ `freebsd-kernel-core`. Remote kernel debugging is still handled by the `gdb-remote` plugin.
+* Support for libfbsdvmcore has been removed. As a result, FreeBSD kernel dump debugging is now only
+  available on FreeBSD hosts. Live kernel debugging through the GDB remote protocol is still available
+  from any platform.
+* Support for ARM, PPC64le, and RISCV64 has been added.
+* The crashed thread is now automatically selected on start.
+* Threads are listed in incrmental order by pid then by tid.
+* Unread kernel messages saved in `msgbufp` are now printed when LLDB starts.
+* Writing to the core is now supported. For safety reasons, this feature is off by default. To enable it,
+  `plugin.process.freebsd-kernel-core.read-only` must be set to `false`. This setting is available when
+  using `/dev/mem` or a kernel dump. However, since `kvm_write()` does not support writing to kernel dumps,
+  writes to a kernel dump will still fail when the setting is false.
+* Added a command `process plugin refresh-threads`, enabling on-demand thread-list reconstruction from `/dev/mem`
+  so users can resync live kernel thread state without restarting LLDB. Note that this has no impact on full dump
+  and minidump files.
+
+#### Linux
+
+* On Arm Linux, the `tpidruro` register can now be read. Writing to this register is not supported.
+* Thread local variables are now supported on Arm and RISC-V Linux if the program being debugged is using glibc.
+* LLDB now supports AArch64 Linux systems that only have SME (as opposed to
+  SVE and SME). See the AArch64 Linux [documentation](https://lldb.llvm.org/use/aarch64-linux.html#sme-only-systems)
+  for more details.
+
+  Prior to this version of LLDB, there was a bug that caused LLDB to crash on
+  startup on these systems ([#138717](https://github.com/llvm/llvm-project/issues/138717)).
+  This affected LLDB versions from 18 up to and including 22. 17 and below are not affected.
+  If you are using such a system and cannot change LLDB version, or want to package
+  an affected version in a way that is compatible with these systems, the issue
+  contains details of backports that could be done to fix the affected versions.
+* When an ELF core file is loaded, LLDB now shows the command line that created the core file.
+  If you need to see it again, use the command `process status -v`.
+* LLDB now supports debugging Linux [Memory Protection Keys](https://docs.kernel.org/core-api/protection-keys.html)
+  on AArch64 systems that have the Permission Overlay Extension (POE / FEAT_S1POE).
+  See the [LLDB on AArch64 Linux](https://lldb.llvm.org/use/aarch64-linux.html#permission-overlay-extension-poe)
+  guide for more information.
+
+#### Windows
+
+* Python 3.11 or later is now recommended for building LLDB 23 on Windows. From LLDB 24, Python 3.11 or later will be required.
+* Messages from `OutputDebugString[A|W]` are now shown inline when using LLDB
+  from the command-line and in the output window when using lldb-dap.
+* LLDB now uses `lldb-server.exe` to launch and manage the program being debugged,
+  instead of running it within LLDB's own process. To revert to the previous behavior, set the environment variable `LLDB_USE_LLDB_SERVER=0`.
+* Support for PDB symbol servers has been added. By default, no symbol servers are used.
+  You can control this either through the [`_NT_SYMBOL_PATH`](https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/symbol-path)
+  environment variable or by setting `plugin.symbol-locator.symstore.urls`
+  (see [`plugin.symbol-locator.symstore`](https://lldb.llvm.org/use/settings.html#symstore) for more info).
+* LLDB no longer depends on the Python private API on Windows. Users are now free to
+  use any Python version they want, as long as it is 3.8 or later and LLDB can find it
+  (i.e. it is on their `PATH`).
+
+
+### Changes to BOLT
+
+* BOLT supports AArch64 binaries using Pointer Authentication (PAC) and Branch
+  Target Identification (BTI). For PAC-enabled binaries, BOLT preserves pointer
+  authentication CFI state during optimization. For BTI-enabled binaries, BOLT
+  can patch PLT entries or indirect branch targets with BTI landing pads where
+  possible.
+
+* BOLT adds compact-code-model support for Armv9.6-A FEAT_CMPBR
+  compare-and-branch instructions, including support for block reordering,
+  function splitting, branch inversion where legal.
+
+* BOLT supports AArch64 profile data collected with Arm SPE and branch-stack
+  profiles from hardware such as BRBE. LLVM 23 adds pre-parsed perf-script and
+  profile-format support for these workflows.
+
+### Changes to Sanitizers
+
+* Add a random delay into ThreadSanitizer to help find rare thread interleavings.
+* `sancov` now supports XCOFF object files (used on AIX). The tool strips
+  the `.` prefix that AIX adds to function entry-point symbols (e.g.
+  `.__sanitizer_cov_trace_pc_guard`) so that coverage symbols are
+  correctly identified.
+* The `mmap`/`munmap` memory-mapping interceptors now fail early when the
+  requested address range is not covered by shadow memory, avoiding
+  hard-to-diagnose failures later in the sanitizer runtime.
+
+### Other Changes
+
+## External Open Source Projects Using LLVM {{env.config.release}}
+
+## Additional Information
 
 A wide variety of additional information is available on the
 [LLVM web page](https://llvm.org/), in particular in the
