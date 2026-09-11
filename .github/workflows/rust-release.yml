@@ -1,0 +1,356 @@
+name: Build, Test, and Release Rust Stage1
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rust-stage1-release
+  cancel-in-progress: false
+
+env:
+  TEST_REPOSITORY: ParkSnoopy/eve-route-optimizer
+
+jobs:
+  prepare:
+    name: Prepare versions
+    runs-on: ubuntu-24.04
+    outputs:
+      rust-version: ${{ steps.versions.outputs.rust-version }}
+      release-tag: ${{ steps.versions.outputs.release-tag }}
+      release-title: ${{ steps.versions.outputs.release-title }}
+      test-revision: ${{ steps.versions.outputs.test-revision }}
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@v6
+
+      - name: Read LLVM version
+        id: llvm-version
+        uses: ./.github/workflows/get-llvm-version
+
+      - name: Resolve Rust and test revisions
+        id: versions
+        env:
+          LLVM_VERSION: ${{ steps.llvm-version.outputs.full-no-suffix }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          rust_version=$(git ls-remote --tags --refs --sort='-version:refname' \
+            https://github.com/rust-lang/rust.git '[0-9]*' | awk -F/ 'NR == 1 { print $3 }')
+          test_revision=$(git ls-remote "https://github.com/$TEST_REPOSITORY.git" HEAD | cut -f1)
+
+          [[ "$rust_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
+            echo "Invalid Rust version: $rust_version" >&2
+            exit 1
+          }
+          [[ "$LLVM_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
+            echo "Invalid LLVM version: $LLVM_VERSION" >&2
+            exit 1
+          }
+          [[ "$test_revision" =~ ^[0-9a-f]{40}$ ]] || {
+            echo "Invalid test revision: $test_revision" >&2
+            exit 1
+          }
+
+          echo "rust-version=$rust_version" >> "$GITHUB_OUTPUT"
+          echo "release-tag=R${rust_version//./}-L${LLVM_VERSION//./}" >> "$GITHUB_OUTPUT"
+          echo "release-title=Rust $rust_version" >> "$GITHUB_OUTPUT"
+          echo "test-revision=$test_revision" >> "$GITHUB_OUTPUT"
+
+  build-toolchain:
+    name: Build · ${{ matrix.target }}
+    needs: prepare
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+          - runner: windows-2025
+            target: x86_64-pc-windows-msvc
+    env:
+      RUST_VERSION: ${{ needs.prepare.outputs.rust-version }}
+      TARGET: ${{ matrix.target }}
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@v6
+
+      - name: Clone Rust
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch "$RUST_VERSION" \
+            https://github.com/rust-lang/rust.git rust
+
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build zip
+
+      - name: Build and install LLVM · Linux
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake -S llvm -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/build/Release" \
+            -DLLVM_ENABLE_PROJECTS="" \
+            -DLLVM_TARGETS_TO_BUILD=X86 \
+            -DLLVM_INSTALL_UTILS=ON \
+            -DLLVM_INCLUDE_TESTS=OFF \
+            -DLLVM_BUILD_TESTS=OFF \
+            -DLLVM_INCLUDE_BENCHMARKS=OFF \
+            -DLLVM_BUILD_BENCHMARKS=OFF \
+            -DLLVM_INCLUDE_EXAMPLES=OFF \
+            -DLLVM_ENABLE_BACKTRACES=OFF \
+            -DLLVM_BUILD_DOCS=OFF \
+            -DBUILD_SHARED_LIBS=OFF
+          cmake --build build --target install --parallel
+
+      - name: Build and install LLVM · Windows
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do call "%%i\VC\Auxiliary\Build\vcvars64.bat"
+          cmake -S llvm -B build -G Ninja ^
+            -DCMAKE_BUILD_TYPE=Release ^
+            -DCMAKE_INSTALL_PREFIX="%GITHUB_WORKSPACE%/build/Release" ^
+            -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded ^
+            -DLLVM_ENABLE_PROJECTS="" ^
+            -DLLVM_TARGETS_TO_BUILD=X86 ^
+            -DLLVM_INSTALL_UTILS=ON ^
+            -DLLVM_INCLUDE_TESTS=OFF ^
+            -DLLVM_BUILD_TESTS=OFF ^
+            -DLLVM_INCLUDE_BENCHMARKS=OFF ^
+            -DLLVM_BUILD_BENCHMARKS=OFF ^
+            -DLLVM_INCLUDE_EXAMPLES=OFF ^
+            -DLLVM_ENABLE_BACKTRACES=OFF ^
+            -DLLVM_BUILD_DOCS=OFF ^
+            -DBUILD_SHARED_LIBS=OFF
+          cmake --build build --target install --parallel
+
+      - name: Install Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+
+      - name: Configure Rust
+        working-directory: rust
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            llvm_config="$(cygpath -m "$GITHUB_WORKSPACE")/build/Release/bin/llvm-config.exe"
+          else
+            llvm_config="$GITHUB_WORKSPACE/build/Release/bin/llvm-config"
+          fi
+
+          cat > config.toml <<EOF
+          change-id = 999999
+
+          [llvm]
+          targets = "X86"
+          download-ci-llvm = false
+          link-shared = false
+          ninja = true
+
+          [build]
+          build = "$TARGET"
+          host = ["$TARGET"]
+          target = ["$TARGET"]
+          extended = false
+          submodules = true
+
+          [target.$TARGET]
+          llvm-config = "$llvm_config"
+          EOF
+
+      - name: Build Rust stage1
+        working-directory: rust
+        shell: bash
+        run: python3 x.py build --stage 1
+
+      - name: Archive Rust stage1
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "rust/build/$TARGET"
+          find stage1 -type l -delete
+          find stage1 -type d -empty -delete
+
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            7z a -tzip "$GITHUB_WORKSPACE/$TARGET.zip" stage1
+          else
+            zip -qr "$GITHUB_WORKSPACE/$TARGET.zip" stage1
+          fi
+
+      - name: Upload Rust stage1
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ matrix.target }}
+          path: ${{ github.workspace }}/${{ matrix.target }}.zip
+          if-no-files-found: error
+          retention-days: 1
+
+  build-baseline:
+    name: Build size baseline
+    needs: prepare
+    runs-on: ubuntu-24.04
+    env:
+      RUST_VERSION: ${{ needs.prepare.outputs.rust-version }}
+    steps:
+      - name: Checkout test project
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ env.TEST_REPOSITORY }}
+          ref: ${{ needs.prepare.outputs.test-revision }}
+
+      - name: Install matching standard Rust
+        run: rustup toolchain install "$RUST_VERSION" --profile minimal
+
+      - name: Build with standard Rust
+        run: cargo +"$RUST_VERSION" build --release
+
+      - name: Upload baseline binary
+        uses: actions/upload-artifact@v6
+        with:
+          name: size-baseline
+          path: target/release/route-optimizer
+          if-no-files-found: error
+          retention-days: 1
+
+  test-obfuscation:
+    name: Test · ${{ matrix.mode }} · ${{ matrix.flag }}
+    needs:
+      - prepare
+      - build-toolchain
+      - build-baseline
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        mode:
+          - single
+          - all-except
+        flag:
+          - indbr
+          - icall
+          - indgv
+          - cse
+          - fla
+          - cie
+          - cfe
+        include:
+          - mode: all
+            flag: all
+    steps:
+      - name: Checkout test project
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ env.TEST_REPOSITORY }}
+          ref: ${{ needs.prepare.outputs.test-revision }}
+          path: benchmark
+
+      - name: Download self-built Rust
+        uses: actions/download-artifact@v7
+        with:
+          name: x86_64-unknown-linux-gnu
+          path: toolchain-archive
+
+      - name: Download size baseline
+        uses: actions/download-artifact@v7
+        with:
+          name: size-baseline
+          path: baseline
+
+      - name: Link self-built Rust
+        shell: bash
+        run: |
+          set -euo pipefail
+          unzip -q toolchain-archive/x86_64-unknown-linux-gnu.zip -d toolchain
+          rustup toolchain link self-built "$GITHUB_WORKSPACE/toolchain/stage1"
+
+      - name: Select obfuscation flags
+        env:
+          MODE: ${{ matrix.mode }}
+          FLAG: ${{ matrix.flag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          flags=(indbr icall indgv cse fla cie cfe)
+          rustflags=(-Cllvm-args=--irobf)
+
+          for flag in "${flags[@]}"; do
+            if [[ "$MODE" == all || ( "$MODE" == single && "$flag" == "$FLAG" ) || ( "$MODE" == all-except && "$flag" != "$FLAG" ) ]]; then
+              rustflags+=("-Cllvm-args=--irobf-$flag")
+            fi
+          done
+
+          printf 'RUSTFLAGS=%s\n' "${rustflags[*]}" >> "$GITHUB_ENV"
+
+      - name: Build and smoke-test with self-built Rust
+        working-directory: benchmark
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo +self-built build --release
+          target/release/route-optimizer --help >/dev/null
+
+      - name: Compare binary size
+        env:
+          CONFIGURATION: ${{ matrix.mode }} / ${{ matrix.flag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          baseline_size=$(stat -c '%s' baseline/route-optimizer)
+          self_built_size=$(stat -c '%s' benchmark/target/release/route-optimizer)
+          difference=$((self_built_size - baseline_size))
+
+          {
+            echo "### Binary size · $CONFIGURATION"
+            echo
+            echo '| Standard Rust | Self-built Rust | Difference |'
+            echo '| ---: | ---: | ---: |'
+            printf '| %s bytes | %s bytes | %+d bytes |\n' \
+              "$baseline_size" "$self_built_size" "$difference"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  release:
+    name: Create release
+    needs:
+      - prepare
+      - build-toolchain
+      - test-obfuscation
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download Rust stage1 archives
+        uses: actions/download-artifact@v7
+        with:
+          pattern: x86_64-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Publish latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.prepare.outputs.release-tag }}
+          RELEASE_TITLE: ${{ needs.prepare.outputs.release-title }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create "$RELEASE_TAG" release-assets/*.zip \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "$RELEASE_TITLE" \
+            --latest
