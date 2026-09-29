@@ -20,6 +20,10 @@
 
 #include <__libunwind_config.h>
 
+#ifdef RUST_SGX
+#include "UnwindRustSgx.h"
+#endif
+
 // Platform specific configuration defines.
 #ifdef __APPLE__
   #if defined(FOR_DYLD)

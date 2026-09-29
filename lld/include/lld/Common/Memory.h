@@ -65,8 +65,16 @@ template <typename T, typename... U> T *make(U &&... args) {
 template <typename T>
 inline llvm::SpecificBumpPtrAllocator<T> &
 getSpecificAllocSingletonThreadLocal() {
+#if defined(__MINGW32__) && !defined(__clang__) && defined(__GNUC__) && \
+    __GNUC__ < 16
+  // Mingw using GCC < 16 (using emuTLS) has broken TLS destructors. Make sure
+  // the thread_local has no destructor and leak the allocator.
+  thread_local SpecificAlloc<T> *instance = new SpecificAlloc<T>();
+  return instance->alloc;
+#else
   thread_local SpecificAlloc<T> instance;
   return instance.alloc;
+#endif
 }
 
 // Create a new instance of T off a thread-local SpecificAlloc, used by code

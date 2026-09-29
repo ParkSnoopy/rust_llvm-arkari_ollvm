@@ -379,7 +379,11 @@ void multiThreadedPageInBackground(DeferredFiles &deferred) {
 #define DEBUG_TYPE "lld-madvise"
     auto aligned =
         llvm::alignDown(reinterpret_cast<uintptr_t>(buff.data()), pageSize);
+#if defined(POSIX_MADV_WILLNEED)
+    if (posix_madvise((void *)aligned, buff.size(), POSIX_MADV_WILLNEED) < 0)
+#else
     if (madvise((void *)aligned, buff.size(), MADV_WILLNEED) < 0)
+#endif
       LLVM_DEBUG(llvm::dbgs() << "madvise error: " << strerror(errno) << "\n");
 #undef DEBUG_TYPE
 #endif
