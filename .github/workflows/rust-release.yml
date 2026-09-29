@@ -33,13 +33,13 @@ jobs:
       - name: Resolve Rust and test revisions
         id: versions
         env:
+          GH_TOKEN: ${{ github.token }}
           LLVM_VERSION: ${{ steps.llvm-version.outputs.full-no-suffix }}
         shell: bash
         run: |
           set -euo pipefail
 
-          rust_version=$(git ls-remote --tags --refs --sort='-version:refname' \
-            https://github.com/rust-lang/rust.git '[0-9]*' | awk -F/ 'NR == 1 { print $3 }')
+          rust_version=$(gh release view --repo rust-lang/rust --json tagName --jq .tagName)
           test_revision=$(git ls-remote "https://github.com/$TEST_REPOSITORY.git" HEAD | cut -f1)
 
           [[ "$rust_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
