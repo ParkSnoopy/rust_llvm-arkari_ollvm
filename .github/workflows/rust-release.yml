@@ -87,6 +87,22 @@ jobs:
           git clone --depth 1 --branch "$RUST_VERSION" \
             https://github.com/rust-lang/rust.git rust
 
+      - name: Remove Rust features dropped by LLVM 23
+        working-directory: rust
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -q '"amx-tf32"' compiler/rustc_target/src/target_features.rs; then
+            curl -fsSL --retry 3 https://github.com/rust-lang/rust/commit/1a56799fef3e4746385da26590928c54a39520ca.patch -o amx-tf32-compiler.patch
+            curl -fsSL --retry 3 https://github.com/rust-lang/rust/commit/f7a6c996c5618a071ce07f7b29599dced5b52c50.patch -o amx-tf32-stdarch.patch
+            sha256sum -c <<'EOF'
+          dcdd0ba275bd4ce7521f613ac7fbca901303ee0fd3e8515c13dfa207c20820c2  amx-tf32-compiler.patch
+          3ad63bcfff0eb086c59d1be5b178ef7e3e0806be646aea2fbb5429eba9abc236  amx-tf32-stdarch.patch
+          EOF
+            git apply --check amx-tf32-compiler.patch amx-tf32-stdarch.patch
+            git apply amx-tf32-compiler.patch amx-tf32-stdarch.patch
+          fi
+
       - name: Install Linux build dependencies
         if: runner.os == 'Linux'
         run: |
