@@ -237,15 +237,16 @@ jobs:
       - name: Install matching standard Rust
         run: rustup toolchain install "$RUST_VERSION" --profile minimal
 
-      - name: Build and smoke-test with standard Rust
+      - name: Build with standard Rust
         id: benchmark
         timeout-minutes: 55
         env:
+          PHASE: build
           RUST_TOOLCHAIN: ${{ env.RUST_VERSION }}
           MODE: baseline
           FLAG: baseline
         shell: bash
-        run: &build-and-test |
+        run: &supervise-benchmark |
           python3 - <<'PY'
           import json
           import math
@@ -255,10 +256,17 @@ jobs:
           import subprocess
           import time
 
-          metrics = {"result": "failure", "build_memory_p99_mib": None, "elapsed_seconds": None}
           directory = Path(os.environ["RUNNER_TEMP"])
-          metrics_file = directory / f"test-metrics-{os.environ['MODE']}-{os.environ['FLAG']}.json"
           page_size = os.sysconf("SC_PAGE_SIZE")
+          phase = os.environ["PHASE"]
+          if phase == "build":
+              configurations = [(os.environ["MODE"], os.environ["FLAG"])]
+          elif phase == "benchmark":
+              flags = ("indbr", "icall", "indgv", "cse", "fla", "cie", "cfe")
+              configurations = [("baseline", "baseline")] + [(mode, flag) for mode in ("single", "all-except") for flag in flags] + [("all", "all")]
+          else:
+              raise ValueError(f"Invalid benchmark phase: {phase}")
+          results = {}
 
           def run(command, limit, sample_memory=False, stdout=None):
               start = time.monotonic()
@@ -301,43 +309,58 @@ jobs:
                   if samples:
                       metrics["build_memory_p99_mib"] = sorted(samples)[math.ceil(len(samples) * 0.99) - 1]
 
-          try:
-              run(["cargo", f"+{os.environ['RUST_TOOLCHAIN']}", "build", "--locked", "-p", "nu", "--bin", "nu"], 40 * 60, sample_memory=True)
-              run(["target/debug/nu", "--help"], 120, stdout=subprocess.DEVNULL)
-              result_file = directory / "nu-result.txt"
-              command = [
-                  "target/debug/nu", "--no-config-file", "--no-history", "--commands",
-                  "def fib [n: int] { if $n < 2 { $n } else { (fib ($n - 1)) + (fib ($n - 2)) } }; fib 20",
-              ]
-              timings = []
-              deadline = time.monotonic() + 10 * 60
-              for _ in range(1000):
-                  remaining = deadline - time.monotonic()
-                  if remaining <= 0:
-                      raise subprocess.TimeoutExpired(command, 10 * 60)
-                  with result_file.open("w") as output:
-                      timings.append(run(command, min(120, remaining), stdout=output))
-                  if result_file.read_text().strip() != "6765":
-                      raise RuntimeError("F20 did not return 6,765.")
-              metrics["elapsed_seconds"] = sum(sorted(timings)[:900]) / 900
-              metrics["result"] = "success"
-          except subprocess.TimeoutExpired:
-              metrics["result"] = "skipped"
-              print("::notice::Benchmark exceeded its time limit. Configuration skipped.")
-          except (OSError, subprocess.CalledProcessError, RuntimeError) as error:
-              print(f"::error::{error}")
-          finally:
-              metrics_file.write_text(json.dumps(metrics))
-              with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+          for mode, flag in configurations:
+              metrics_file = directory / f"test-metrics-{mode}-{flag}.json"
+              metrics = {"result": "failure", "build_memory_p99_mib": None, "elapsed_seconds": None}
+              try:
+                  if phase == "build":
+                      run(["cargo", f"+{os.environ['RUST_TOOLCHAIN']}", "build", "--locked", "-p", "nu", "--bin", "nu"], 40 * 60, sample_memory=True)
+                      run(["target/debug/nu", "--help"], 120, stdout=subprocess.DEVNULL)
+                  else:
+                      try:
+                          built = json.loads(metrics_file.read_text())
+                      except (OSError, ValueError):
+                          pass
+                      else:
+                          if isinstance(built, dict):
+                              metrics["build_memory_p99_mib"] = built.get("build_memory_p99_mib")
+                      binary = Path("performance-binaries") / ("baseline" if mode == "baseline" else f"nu-build-{mode}-{flag}") / "nu"
+                      if not binary.is_file():
+                          metrics["result"] = "skipped"
+                          continue
+                      result_file = directory / "nu-result.txt"
+                      command = [
+                          str(binary), "--no-config-file", "--no-history", "--commands",
+                          "def fib [n: int] { if $n < 2 { $n } else { (fib ($n - 1)) + (fib ($n - 2)) } }; fib 20",
+                      ]
+                      timings = []
+                      deadline = time.monotonic() + 10 * 60
+                      for _ in range(1000):
+                          remaining = deadline - time.monotonic()
+                          if remaining <= 0:
+                              raise subprocess.TimeoutExpired(command, 10 * 60)
+                          with result_file.open("w") as output:
+                              timings.append(run(command, min(120, remaining), stdout=output))
+                          if result_file.read_text().strip() != "6765":
+                              raise RuntimeError("F20 did not return 6,765.")
+                      metrics["elapsed_seconds"] = sum(sorted(timings)[:900]) / 900
+                  metrics["result"] = "success"
+              except subprocess.TimeoutExpired:
+                  metrics["result"] = "skipped"
+                  print(f"::notice::{mode} / {flag} exceeded its time limit. Configuration skipped.")
+              except (OSError, subprocess.CalledProcessError, RuntimeError) as error:
+                  print(f"::error::{mode} / {flag}: {error}")
+              finally:
+                  results[f"{mode}/{flag}"] = metrics["result"]
+                  metrics_file.write_text(json.dumps(metrics))
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              if phase == "build":
                   output.write(f"result={metrics['result']}\n")
-          if metrics["result"] == "failure":
+              else:
+                  output.write(f"results={json.dumps(results)}\n")
+          if "failure" in results.values():
               raise SystemExit(1)
           PY
-
-      - &record-benchmark-pass
-        name: Record passing benchmark
-        if: steps.benchmark.outputs.result == 'success'
-        run: echo 'F20 returned 6,765.'
 
       - name: Upload baseline binary
         if: steps.benchmark.outputs.result == 'success'
@@ -348,11 +371,11 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-      - name: Upload baseline metrics
+      - name: Upload baseline build metrics
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: test-metrics-baseline-baseline
+          name: build-metrics-baseline-baseline
           path: ${{ runner.temp }}/test-metrics-baseline-baseline.json
           if-no-files-found: ignore
           retention-days: 1
@@ -430,18 +453,26 @@ jobs:
 
           printf 'RUSTFLAGS=%s\n' "${rustflags[*]}" >> "$GITHUB_ENV"
 
-      - name: Build and smoke-test with self-built Rust
+      - name: Build with self-built Rust
         id: benchmark
         timeout-minutes: 55
         working-directory: benchmark
         env:
+          PHASE: build
           RUST_TOOLCHAIN: self-built
           MODE: ${{ matrix.mode }}
           FLAG: ${{ matrix.flag }}
         shell: bash
-        run: *build-and-test
+        run: *supervise-benchmark
 
-      - *record-benchmark-pass
+      - name: Upload obfuscated binary
+        if: steps.benchmark.outputs.result == 'success'
+        uses: actions/upload-artifact@v6
+        with:
+          name: nu-build-${{ matrix.mode }}-${{ matrix.flag }}
+          path: benchmark/target/debug/nu
+          if-no-files-found: error
+          retention-days: 1
 
       - name: Compare binary size
         if: steps.benchmark.outputs.result == 'success'
@@ -467,12 +498,73 @@ jobs:
               ]))
           PY
 
-      - name: Upload benchmark metrics
+      - name: Upload build metrics
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: test-metrics-${{ matrix.mode }}-${{ matrix.flag }}
+          name: build-metrics-${{ matrix.mode }}-${{ matrix.flag }}
           path: ${{ runner.temp }}/test-metrics-${{ matrix.mode }}-${{ matrix.flag }}.json
+          if-no-files-found: ignore
+          retention-days: 1
+
+  benchmark:
+    name: Benchmark completed builds
+    if: ${{ always() && needs.prepare.result == 'success' && needs.build-toolchain.result == 'success' }}
+    needs:
+      - prepare
+      - build-toolchain
+      - build-baseline
+      - test-obfuscation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    outputs:
+      results: ${{ steps.benchmark.outputs.results }}
+    steps:
+      - name: Download baseline binary
+        if: needs.build-baseline.outputs.result == 'success'
+        uses: actions/download-artifact@v7
+        with:
+          name: size-baseline
+          path: performance-binaries/baseline
+
+      - name: Download obfuscated binaries
+        uses: actions/download-artifact@v7
+        with:
+          pattern: nu-build-*
+          path: performance-binaries
+
+      - name: Download build metrics
+        uses: actions/download-artifact@v7
+        continue-on-error: true
+        with:
+          pattern: build-metrics-*
+          path: ${{ runner.temp }}
+          merge-multiple: true
+
+      - name: Restore executable permissions
+        shell: bash
+        run: |
+          set -euo pipefail
+          for binary in performance-binaries/*/nu; do
+            if [[ -f "$binary" ]]; then
+              chmod +x "$binary"
+            fi
+          done
+
+      - name: Run Fibonacci benchmarks sequentially
+        id: benchmark
+        timeout-minutes: 170
+        env:
+          PHASE: benchmark
+        shell: bash
+        run: *supervise-benchmark
+
+      - name: Upload final benchmark metrics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: test-metrics-benchmark
+          path: ${{ runner.temp }}/test-metrics-*.json
           if-no-files-found: ignore
           retention-days: 1
 
@@ -483,6 +575,7 @@ jobs:
       - prepare
       - build-toolchain
       - test-obfuscation
+      - benchmark
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -501,6 +594,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TEST_REVISION: ${{ needs.prepare.outputs.test-revision }}
+          BENCHMARK_RESULTS: ${{ needs.benchmark.outputs.results }}
         shell: bash
         run: |
           set -euo pipefail
@@ -514,6 +608,7 @@ jobs:
           from pathlib import Path
 
           jobs = {job["name"]: job for job in map(json.loads, Path("test-jobs.jsonl").read_text().splitlines())}
+          benchmark_results = json.loads(os.environ.get("BENCHMARK_RESULTS") or "{}")
           flags = ("indbr", "icall", "indgv", "cse", "fla", "cie", "cfe")
           configurations = [("baseline", "baseline")] + [(mode, flag) for mode in ("single", "all-except") for flag in flags] + [("all", "all")]
           rows = []
@@ -521,10 +616,9 @@ jobs:
           for mode, flag in configurations:
               baseline = mode == "baseline"
               job = jobs.get("Build baseline" if baseline else f"Test · {mode} · {flag}", {})
-              step_name = "Build and smoke-test with standard Rust" if baseline else "Build and smoke-test with self-built Rust"
+              step_name = "Build with standard Rust" if baseline else "Build with self-built Rust"
               test = next((step for step in job.get("steps", []) if step["name"] == step_name), {})
-              recorded = next((step for step in job.get("steps", []) if step["name"] == "Record passing benchmark"), {})
-              result = recorded.get("conclusion", "skipped")
+              result = benchmark_results.get(f"{mode}/{flag}", "skipped")
               if result == "skipped" and test.get("conclusion", "skipped") != "success":
                   result = test.get("conclusion", "skipped")
               if result == "success" and not baseline:
