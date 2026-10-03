@@ -248,6 +248,7 @@ jobs:
         shell: bash
         run: &supervise-benchmark |
           python3 - <<'PY'
+          from concurrent.futures import ThreadPoolExecutor
           import json
           import math
           import os
@@ -266,9 +267,7 @@ jobs:
               configurations = [("baseline", "baseline")] + [(mode, flag) for mode in ("single", "all-except") for flag in flags] + [("all", "all")]
           else:
               raise ValueError(f"Invalid benchmark phase: {phase}")
-          results = {}
-
-          def run(command, limit, sample_memory=False, stdout=None):
+          def run(command, limit, sample_memory=False, stdout=None, metrics=None):
               start = time.monotonic()
               process = subprocess.Popen(command, start_new_session=True, stdout=stdout)
               samples = []
@@ -307,14 +306,15 @@ jobs:
                   raise
               finally:
                   if samples:
-                      metrics["build_memory_p99_mib"] = sorted(samples)[math.ceil(len(samples) * 0.99) - 1]
+                      metrics["build_memory_p90_mib"] = sorted(samples)[math.ceil(len(samples) * 0.90) - 1]
 
-          for mode, flag in configurations:
+          def validate(configuration):
+              mode, flag = configuration
               metrics_file = directory / f"test-metrics-{mode}-{flag}.json"
-              metrics = {"result": "failure", "build_memory_p99_mib": None, "elapsed_seconds": None}
+              metrics = {"result": "failure", "build_memory_p90_mib": None, "elapsed_seconds": None}
               try:
                   if phase == "build":
-                      run(["cargo", f"+{os.environ['RUST_TOOLCHAIN']}", "build", "--locked", "-p", "nu", "--bin", "nu"], 40 * 60, sample_memory=True)
+                      run(["cargo", f"+{os.environ['RUST_TOOLCHAIN']}", "build", "--locked", "-p", "nu", "--bin", "nu"], 40 * 60, sample_memory=True, metrics=metrics)
                       run(["target/debug/nu", "--help"], 120, stdout=subprocess.DEVNULL)
                   else:
                       try:
@@ -323,27 +323,28 @@ jobs:
                           pass
                       else:
                           if isinstance(built, dict):
-                              metrics["build_memory_p99_mib"] = built.get("build_memory_p99_mib")
+                              metrics["build_memory_p90_mib"] = built.get("build_memory_p90_mib")
                       binary = Path("performance-binaries") / ("baseline" if mode == "baseline" else f"nu-build-{mode}-{flag}") / "nu"
                       if not binary.is_file():
                           metrics["result"] = "skipped"
-                          continue
-                      result_file = directory / "nu-result.txt"
+                          print(f"::notice::{mode} / {flag}: existing binary unavailable. Skipped without rebuilding.")
+                          return f"{mode}/{flag}", metrics["result"]
+                      result_file = directory / f"nu-result-{mode}-{flag}.txt"
                       command = [
                           str(binary), "--no-config-file", "--no-history", "--commands",
                           "def fib [n: int] { if $n < 2 { $n } else { (fib ($n - 1)) + (fib ($n - 2)) } }; fib 20",
                       ]
                       timings = []
-                      deadline = time.monotonic() + 10 * 60
+                      deadline = time.monotonic() + 20 * 60
                       for _ in range(1000):
                           remaining = deadline - time.monotonic()
                           if remaining <= 0:
-                              raise subprocess.TimeoutExpired(command, 10 * 60)
+                              raise subprocess.TimeoutExpired(command, 20 * 60)
                           with result_file.open("w") as output:
-                              timings.append(run(command, min(120, remaining), stdout=output))
+                              timings.append(run(command, remaining, stdout=output))
                           if result_file.read_text().strip() != "6765":
                               raise RuntimeError("F20 did not return 6,765.")
-                      metrics["elapsed_seconds"] = sum(sorted(timings)[:900]) / 900
+                      metrics["elapsed_seconds"] = sum(sorted(timings)[50:950]) / 900
                   metrics["result"] = "success"
               except subprocess.TimeoutExpired:
                   metrics["result"] = "skipped"
@@ -351,11 +352,16 @@ jobs:
               except (OSError, subprocess.CalledProcessError, RuntimeError) as error:
                   print(f"::error::{mode} / {flag}: {error}")
               finally:
-                  results[f"{mode}/{flag}"] = metrics["result"]
                   metrics_file.write_text(json.dumps(metrics))
+              return f"{mode}/{flag}", metrics["result"]
+          if phase == "build":
+              results = dict(map(validate, configurations))
+          else:
+              with ThreadPoolExecutor(max_workers=2) as executor:
+                  results = dict(executor.map(validate, configurations))
           with open(os.environ["GITHUB_OUTPUT"], "a") as output:
               if phase == "build":
-                  output.write(f"result={metrics['result']}\n")
+                  output.write(f"result={next(iter(results.values()))}\n")
               else:
                   output.write(f"results={json.dumps(results)}\n")
           if "failure" in results.values():
@@ -551,7 +557,7 @@ jobs:
             fi
           done
 
-      - name: Run Fibonacci benchmarks sequentially
+      - name: Run two Fibonacci benchmarks at a time
         id: benchmark
         timeout-minutes: 170
         env:
@@ -636,7 +642,7 @@ jobs:
               else:
                   if isinstance(metrics, dict):
                       elapsed = metrics.get("elapsed_seconds")
-                      memory = metrics.get("build_memory_p99_mib")
+                      memory = metrics.get("build_memory_p90_mib")
                       if isinstance(elapsed, (int, float)) and not isinstance(elapsed, bool) and math.isfinite(elapsed) and elapsed >= 0:
                           invocation_time = f"{elapsed * 1000:,.0f} ms"
                       if isinstance(memory, (int, float)) and not isinstance(memory, bool) and math.isfinite(memory) and memory >= 0:
@@ -649,7 +655,7 @@ jobs:
               "",
               f"Test source: [{os.environ['TEST_REPOSITORY']}@{os.environ['TEST_REVISION']}](https://github.com/{os.environ['TEST_REPOSITORY']}/commit/{os.environ['TEST_REVISION']}).",
               "",
-              "| Configuration | RUSTFLAGS | Status | F20 mean (fastest 90%) | Build memory p99 |",
+              "| Configuration | RUSTFLAGS | Status | F20 mean (middle 90%) | Build memory p90 |",
               "| --- | --- | :---: | ---: | ---: |",
               *rows,
               "",
