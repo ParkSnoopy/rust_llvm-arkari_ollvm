@@ -217,12 +217,13 @@ jobs:
           retention-days: 1
 
   build-baseline:
-    name: Build size baseline
+    name: Build baseline
     needs: prepare
     runs-on: ubuntu-24.04
     env:
       RUST_VERSION: ${{ needs.prepare.outputs.rust-version }}
       RUSTC_BOOTSTRAP: 1
+      RUSTFLAGS: ''
     steps:
       - name: Checkout test project
         uses: actions/checkout@v6
@@ -233,8 +234,24 @@ jobs:
       - name: Install matching standard Rust
         run: rustup toolchain install "$RUST_VERSION" --profile minimal
 
-      - name: Build with standard Rust
-        run: cargo +"$RUST_VERSION" build --locked -p nu --bin nu
+      - name: Build and smoke-test with standard Rust
+        timeout-minutes: 120
+        env:
+          RUST_TOOLCHAIN: ${{ env.RUST_VERSION }}
+          MODE: baseline
+          FLAG: baseline
+        shell: bash
+        run: &build-and-test |
+          set -euo pipefail
+          cargo +"$RUST_TOOLCHAIN" build --locked -p nu --bin nu
+          target/debug/nu --help >/dev/null
+          TIMEFORMAT='%3R'
+          {
+            time timeout 120s target/debug/nu --no-config-file --no-history \
+              --commands 'def fib [n: int] { if $n < 2 { $n } else { (fib ($n - 1)) + (fib ($n - 2)) } }; fib 20' \
+              > "$RUNNER_TEMP/nu-result.txt"
+          } 2> "$RUNNER_TEMP/test-time-$MODE-$FLAG.txt"
+          test "$(< "$RUNNER_TEMP/nu-result.txt")" = 6765
 
       - name: Upload baseline binary
         uses: actions/upload-artifact@v6
@@ -242,6 +259,15 @@ jobs:
           name: size-baseline
           path: target/debug/nu
           if-no-files-found: error
+          retention-days: 1
+
+      - name: Upload baseline invocation time
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: test-time-baseline-baseline
+          path: ${{ runner.temp }}/test-time-baseline-baseline.txt
+          if-no-files-found: ignore
           retention-days: 1
 
   test-obfuscation:
@@ -320,39 +346,34 @@ jobs:
         timeout-minutes: 120
         working-directory: benchmark
         env:
+          RUST_TOOLCHAIN: self-built
           MODE: ${{ matrix.mode }}
           FLAG: ${{ matrix.flag }}
         shell: bash
-        run: |
-          set -euo pipefail
-          cargo +self-built build --locked -p nu --bin nu
-          target/debug/nu --help >/dev/null
-          TIMEFORMAT='%3R'
-          {
-            time timeout 120s target/debug/nu --no-config-file --no-history \
-              --commands 'def fib [n: int] { if $n < 2 { $n } else { (fib ($n - 1)) + (fib ($n - 2)) } }; fib 20' \
-              > "$RUNNER_TEMP/nu-result.txt"
-          } 2> "$RUNNER_TEMP/test-time-$MODE-$FLAG.txt"
-          test "$(< "$RUNNER_TEMP/nu-result.txt")" = 6765
+        run: *build-and-test
 
       - name: Compare binary size
         env:
           CONFIGURATION: ${{ matrix.mode }} / ${{ matrix.flag }}
         shell: bash
         run: |
-          set -euo pipefail
-          baseline_size=$(stat -c '%s' baseline/nu)
-          self_built_size=$(stat -c '%s' benchmark/target/debug/nu)
-          difference=$((self_built_size - baseline_size))
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
 
-          {
-            echo "### Binary size · $CONFIGURATION"
-            echo
-            echo '| Standard Rust | Self-built Rust | Difference |'
-            echo '| ---: | ---: | ---: |'
-            printf '| %s bytes | %s bytes | %+d bytes |\n' \
-              "$baseline_size" "$self_built_size" "$difference"
-          } >> "$GITHUB_STEP_SUMMARY"
+          baseline_size = Path("baseline/nu").stat().st_size
+          self_built_size = Path("benchmark/target/debug/nu").stat().st_size
+          difference = self_built_size - baseline_size
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
+              summary.write("\n".join([
+                  f"### Binary size · {os.environ['CONFIGURATION']}",
+                  "",
+                  "| Standard Rust | Self-built Rust | Difference |",
+                  "| ---: | ---: | ---: |",
+                  f"| {baseline_size / 1024:,.2f} KiB | {self_built_size / 1024:,.2f} KiB | {difference / 1024:+,.2f} KiB |",
+                  "",
+              ]))
+          PY
 
       - name: Upload invocation time
         if: always()
@@ -401,18 +422,20 @@ jobs:
 
           jobs = {job["name"]: job for job in map(json.loads, Path("test-jobs.jsonl").read_text().splitlines())}
           flags = ("indbr", "icall", "indgv", "cse", "fla", "cie", "cfe")
-          configurations = [(mode, flag) for mode in ("single", "all-except") for flag in flags] + [("all", "all")]
+          configurations = [("baseline", "baseline")] + [(mode, flag) for mode in ("single", "all-except") for flag in flags] + [("all", "all")]
           rows = []
           passed = 0
           for mode, flag in configurations:
-              job = jobs.get(f"Test · {mode} · {flag}", {})
-              test = next((step for step in job.get("steps", []) if step["name"] == "Build and smoke-test with self-built Rust"), {})
+              baseline = mode == "baseline"
+              job = jobs.get("Build baseline" if baseline else f"Test · {mode} · {flag}", {})
+              step_name = "Build and smoke-test with standard Rust" if baseline else "Build and smoke-test with self-built Rust"
+              test = next((step for step in job.get("steps", []) if step["name"] == step_name), {})
               result = test.get("conclusion", "skipped")
-              if result == "success":
+              if result == "success" and not baseline:
                   passed += 1
               status = "✅" if result == "success" else "❌"
               enabled = [name for name in flags if mode == "all" or (mode == "single" and name == flag) or (mode == "all-except" and name != flag)]
-              rustflags = " ".join(["-Cllvm-args=--irobf"] + [f"-Cllvm-args=--irobf-{name}" for name in enabled])
+              rustflags = "—" if baseline else " ".join(["-Cllvm-args=--irobf"] + [f"-Cllvm-args=--irobf-{name}" for name in enabled])
               time_file = Path("test-times") / f"test-time-{mode}-{flag}.txt"
               invocation_time = "—"
               try:
@@ -421,16 +444,18 @@ jobs:
                   pass
               else:
                   if math.isfinite(elapsed) and elapsed >= 0:
-                      invocation_time = f"{elapsed * 1000:.0f} ms"
-              rows.append(f"| {mode} / {flag} | `{rustflags}` | {status} | {invocation_time} |")
+                      invocation_time = f"{elapsed * 1000:,.0f} ms"
+              configuration = "baseline" if baseline else f"{mode} / {flag}"
+              rows.append(f"| {configuration} | `{rustflags}` | {status} | {invocation_time} |")
 
           report = "\n".join([
               "## Obfuscation test results",
               "",
-              "Set RUSTFLAGS to the arguments in a passing row. Failed rows are not verified for use.",
+              "Set RUSTFLAGS to the arguments in a passing obfuscation row. The baseline uses standard Rust without obfuscation flags.",
+              "Failed rows are not verified for use. Compare each obfuscated invocation time with the baseline row.",
               "Tests cover the Linux archive. The Windows archive was built but was not smoke-tested.",
               "The test builds Nushell's nu binary with default features and the dev profile, then compares its executable size with a matching baseline.",
-              "Every configuration computes only F20 with naive recursion and no cache, then checks that the result is 6765.",
+              "The baseline and every obfuscated configuration compute only F20 with naive recursion and no cache. Each result must equal 6,765.",
               "The Fibonacci invocation has a 120-second limit and runs without user configuration or history.",
               "Time is in milliseconds and measures one F20 invocation, including executable startup, but excludes compilation.",
               "A dash means invocation time is unavailable. Timing differences alone do not prove that obfuscation occurred.",
