@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  TEST_REPOSITORY: ParkSnoopy/eve-route-optimizer
+  TEST_REPOSITORY: nushell/nushell
 
 jobs:
   prepare:
@@ -33,13 +33,13 @@ jobs:
       - name: Resolve Rust and test revisions
         id: versions
         env:
+          GH_TOKEN: ${{ github.token }}
           LLVM_VERSION: ${{ steps.llvm-version.outputs.full-no-suffix }}
         shell: bash
         run: |
           set -euo pipefail
 
-          rust_version=$(git ls-remote --tags --refs --sort='-version:refname' \
-            https://github.com/rust-lang/rust.git '[0-9]*' | awk -F/ 'NR == 1 { print $3 }')
+          rust_version=$(gh release view --repo rust-lang/rust --json tagName --jq .tagName)
           test_revision=$(git ls-remote "https://github.com/$TEST_REPOSITORY.git" HEAD | cut -f1)
 
           [[ "$rust_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
@@ -86,6 +86,22 @@ jobs:
           set -euo pipefail
           git clone --depth 1 --branch "$RUST_VERSION" \
             https://github.com/rust-lang/rust.git rust
+
+      - name: Remove Rust features dropped by LLVM 23
+        working-directory: rust
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -q '"amx-tf32"' compiler/rustc_target/src/target_features.rs; then
+            curl -fsSL --retry 3 https://github.com/rust-lang/rust/commit/1a56799fef3e4746385da26590928c54a39520ca.patch -o amx-tf32-compiler.patch
+            curl -fsSL --retry 3 https://github.com/rust-lang/rust/commit/f7a6c996c5618a071ce07f7b29599dced5b52c50.patch -o amx-tf32-stdarch.patch
+            sha256sum -c <<'EOF'
+          dcdd0ba275bd4ce7521f613ac7fbca901303ee0fd3e8515c13dfa207c20820c2  amx-tf32-compiler.patch
+          3ad63bcfff0eb086c59d1be5b178ef7e3e0806be646aea2fbb5429eba9abc236  amx-tf32-stdarch.patch
+          EOF
+            git apply --check amx-tf32-compiler.patch amx-tf32-stdarch.patch
+            git apply amx-tf32-compiler.patch amx-tf32-stdarch.patch
+          fi
 
       - name: Install Linux build dependencies
         if: runner.os == 'Linux'
@@ -201,12 +217,16 @@ jobs:
           retention-days: 1
 
   build-baseline:
-    name: Build size baseline
+    name: Build baseline
     needs: prepare
     runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    outputs:
+      result: ${{ steps.benchmark.outputs.result }}
     env:
       RUST_VERSION: ${{ needs.prepare.outputs.rust-version }}
       RUSTC_BOOTSTRAP: 1
+      RUSTFLAGS: ''
     steps:
       - name: Checkout test project
         uses: actions/checkout@v6
@@ -218,24 +238,163 @@ jobs:
         run: rustup toolchain install "$RUST_VERSION" --profile minimal
 
       - name: Build with standard Rust
-        run: cargo +"$RUST_VERSION" build --release
+        id: benchmark
+        timeout-minutes: 55
+        env:
+          PHASE: build
+          RUST_TOOLCHAIN: ${{ env.RUST_VERSION }}
+          MODE: baseline
+          FLAG: baseline
+        shell: bash
+        run: &supervise-benchmark |
+          python3 - <<'PY'
+          from concurrent.futures import ThreadPoolExecutor
+          import json
+          import math
+          import os
+          from pathlib import Path
+          import signal
+          import subprocess
+          import time
+
+          directory = Path(os.environ["RUNNER_TEMP"])
+          page_size = os.sysconf("SC_PAGE_SIZE")
+          phase = os.environ["PHASE"]
+          if phase == "build":
+              configurations = [(os.environ["MODE"], os.environ["FLAG"])]
+          elif phase == "benchmark":
+              flags = ("indbr", "icall", "indgv", "cse", "fla", "cie", "cfe")
+              configurations = [("baseline", "baseline")] + [(mode, flag) for mode in ("single", "all-except") for flag in flags] + [("all", "all")]
+          else:
+              raise ValueError(f"Invalid benchmark phase: {phase}")
+          def run(command, limit, sample_memory=False, stdout=None, metrics=None):
+              start = time.monotonic()
+              process = subprocess.Popen(command, start_new_session=True, stdout=stdout)
+              samples = []
+              try:
+                  while process.poll() is None:
+                      if sample_memory:
+                          rss = 0
+                          for stat in Path("/proc").glob("[0-9]*/stat"):
+                              try:
+                                  if int(stat.read_text().rsplit(")", 1)[1].split()[2]) == process.pid:
+                                      rss += int(stat.with_name("statm").read_text().split()[1]) * page_size
+                              except (OSError, ProcessLookupError):
+                                  continue
+                          samples.append(rss / 1024 ** 2)
+                      remaining = limit - (time.monotonic() - start)
+                      if remaining <= 0:
+                          raise subprocess.TimeoutExpired(command, limit)
+                      try:
+                          process.wait(timeout=min(1 if sample_memory else 0.01, remaining))
+                      except subprocess.TimeoutExpired:
+                          continue
+                  if process.returncode:
+                      raise subprocess.CalledProcessError(process.returncode, command)
+                  return time.monotonic() - start
+              except subprocess.TimeoutExpired:
+                  try:
+                      os.killpg(process.pid, signal.SIGTERM)
+                  except ProcessLookupError:
+                      pass
+                  time.sleep(1)
+                  try:
+                      os.killpg(process.pid, signal.SIGKILL)
+                  except ProcessLookupError:
+                      pass
+                  process.wait()
+                  raise
+              finally:
+                  if samples:
+                      metrics["build_memory_p90_mib"] = sorted(samples)[math.ceil(len(samples) * 0.90) - 1]
+
+          def validate(configuration):
+              mode, flag = configuration
+              metrics_file = directory / f"test-metrics-{mode}-{flag}.json"
+              metrics = {"result": "failure", "build_memory_p90_mib": None, "elapsed_seconds": None}
+              try:
+                  if phase == "build":
+                      run(["cargo", f"+{os.environ['RUST_TOOLCHAIN']}", "build", "--locked", "-p", "nu", "--bin", "nu"], 40 * 60, sample_memory=True, metrics=metrics)
+                      run(["target/debug/nu", "--help"], 120, stdout=subprocess.DEVNULL)
+                  else:
+                      try:
+                          built = json.loads(metrics_file.read_text())
+                      except (OSError, ValueError):
+                          pass
+                      else:
+                          if isinstance(built, dict):
+                              metrics["build_memory_p90_mib"] = built.get("build_memory_p90_mib")
+                      binary = Path("performance-binaries") / ("baseline" if mode == "baseline" else f"nu-build-{mode}-{flag}") / "nu"
+                      if not binary.is_file():
+                          metrics["result"] = "skipped"
+                          print(f"::notice::{mode} / {flag}: existing binary unavailable. Skipped without rebuilding.")
+                          return f"{mode}/{flag}", metrics["result"]
+                      result_file = directory / f"nu-result-{mode}-{flag}.txt"
+                      command = [
+                          str(binary), "--no-config-file", "--no-history", "--commands",
+                          "def fib [n: int] { if $n < 2 { $n } else { (fib ($n - 1)) + (fib ($n - 2)) } }; fib 20",
+                      ]
+                      timings = []
+                      deadline = time.monotonic() + 20 * 60
+                      for _ in range(1000):
+                          remaining = deadline - time.monotonic()
+                          if remaining <= 0:
+                              raise subprocess.TimeoutExpired(command, 20 * 60)
+                          with result_file.open("w") as output:
+                              timings.append(run(command, remaining, stdout=output))
+                          if result_file.read_text().strip() != "6765":
+                              raise RuntimeError("F20 did not return 6,765.")
+                      metrics["elapsed_seconds"] = sum(sorted(timings)[50:950]) / 900
+                  metrics["result"] = "success"
+              except subprocess.TimeoutExpired:
+                  metrics["result"] = "skipped"
+                  print(f"::notice::{mode} / {flag} exceeded its time limit. Configuration skipped.")
+              except (OSError, subprocess.CalledProcessError, RuntimeError) as error:
+                  print(f"::error::{mode} / {flag}: {error}")
+              finally:
+                  metrics_file.write_text(json.dumps(metrics))
+              return f"{mode}/{flag}", metrics["result"]
+          if phase == "build":
+              results = dict(map(validate, configurations))
+          else:
+              with ThreadPoolExecutor(max_workers=2) as executor:
+                  results = dict(executor.map(validate, configurations))
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              if phase == "build":
+                  output.write(f"result={next(iter(results.values()))}\n")
+              else:
+                  output.write(f"results={json.dumps(results)}\n")
+          if "failure" in results.values():
+              raise SystemExit(1)
+          PY
 
       - name: Upload baseline binary
+        if: steps.benchmark.outputs.result == 'success'
         uses: actions/upload-artifact@v6
         with:
           name: size-baseline
-          path: target/release/route-optimizer
+          path: target/debug/nu
           if-no-files-found: error
+          retention-days: 1
+
+      - name: Upload baseline build metrics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: build-metrics-baseline-baseline
+          path: ${{ runner.temp }}/test-metrics-baseline-baseline.json
+          if-no-files-found: ignore
           retention-days: 1
 
   test-obfuscation:
     name: Test · ${{ matrix.mode }} · ${{ matrix.flag }}
+    if: needs.build-baseline.outputs.result == 'success'
     needs:
       - prepare
       - build-toolchain
       - build-baseline
     runs-on: ubuntu-24.04
-    timeout-minutes: 120
+    timeout-minutes: 60
     env:
       RUSTC_BOOTSTRAP: 1
     strategy:
@@ -300,44 +459,218 @@ jobs:
 
           printf 'RUSTFLAGS=%s\n' "${rustflags[*]}" >> "$GITHUB_ENV"
 
-      - name: Build and smoke-test with self-built Rust
+      - name: Build with self-built Rust
+        id: benchmark
+        timeout-minutes: 55
         working-directory: benchmark
+        env:
+          PHASE: build
+          RUST_TOOLCHAIN: self-built
+          MODE: ${{ matrix.mode }}
+          FLAG: ${{ matrix.flag }}
         shell: bash
-        run: |
-          set -euo pipefail
-          cargo +self-built build --release
-          target/release/route-optimizer --help >/dev/null
+        run: *supervise-benchmark
+
+      - name: Upload obfuscated binary
+        if: steps.benchmark.outputs.result == 'success'
+        uses: actions/upload-artifact@v6
+        with:
+          name: nu-build-${{ matrix.mode }}-${{ matrix.flag }}
+          path: benchmark/target/debug/nu
+          if-no-files-found: error
+          retention-days: 1
 
       - name: Compare binary size
+        if: steps.benchmark.outputs.result == 'success'
         env:
           CONFIGURATION: ${{ matrix.mode }} / ${{ matrix.flag }}
         shell: bash
         run: |
-          set -euo pipefail
-          baseline_size=$(stat -c '%s' baseline/route-optimizer)
-          self_built_size=$(stat -c '%s' benchmark/target/release/route-optimizer)
-          difference=$((self_built_size - baseline_size))
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
 
-          {
-            echo "### Binary size · $CONFIGURATION"
-            echo
-            echo '| Standard Rust | Self-built Rust | Difference |'
-            echo '| ---: | ---: | ---: |'
-            printf '| %s bytes | %s bytes | %+d bytes |\n' \
-              "$baseline_size" "$self_built_size" "$difference"
-          } >> "$GITHUB_STEP_SUMMARY"
+          baseline_size = Path("baseline/nu").stat().st_size
+          self_built_size = Path("benchmark/target/debug/nu").stat().st_size
+          difference = self_built_size - baseline_size
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
+              summary.write("\n".join([
+                  f"### Binary size · {os.environ['CONFIGURATION']}",
+                  "",
+                  "| Standard Rust | Self-built Rust | Difference |",
+                  "| ---: | ---: | ---: |",
+                  f"| {baseline_size / 1024:,.2f} KiB | {self_built_size / 1024:,.2f} KiB | {difference / 1024:+,.2f} KiB |",
+                  "",
+              ]))
+          PY
+
+      - name: Upload build metrics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: build-metrics-${{ matrix.mode }}-${{ matrix.flag }}
+          path: ${{ runner.temp }}/test-metrics-${{ matrix.mode }}-${{ matrix.flag }}.json
+          if-no-files-found: ignore
+          retention-days: 1
+
+  benchmark:
+    name: Benchmark completed builds
+    if: ${{ always() && needs.prepare.result == 'success' && needs.build-toolchain.result == 'success' }}
+    needs:
+      - prepare
+      - build-toolchain
+      - build-baseline
+      - test-obfuscation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    outputs:
+      results: ${{ steps.benchmark.outputs.results }}
+    steps:
+      - name: Download baseline binary
+        if: needs.build-baseline.outputs.result == 'success'
+        uses: actions/download-artifact@v7
+        with:
+          name: size-baseline
+          path: performance-binaries/baseline
+
+      - name: Download obfuscated binaries
+        uses: actions/download-artifact@v7
+        with:
+          pattern: nu-build-*
+          path: performance-binaries
+
+      - name: Download build metrics
+        uses: actions/download-artifact@v7
+        continue-on-error: true
+        with:
+          pattern: build-metrics-*
+          path: ${{ runner.temp }}
+          merge-multiple: true
+
+      - name: Restore executable permissions
+        shell: bash
+        run: |
+          set -euo pipefail
+          for binary in performance-binaries/*/nu; do
+            if [[ -f "$binary" ]]; then
+              chmod +x "$binary"
+            fi
+          done
+
+      - name: Run two Fibonacci benchmarks at a time
+        id: benchmark
+        timeout-minutes: 170
+        env:
+          PHASE: benchmark
+        shell: bash
+        run: *supervise-benchmark
+
+      - name: Upload final benchmark metrics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: test-metrics-benchmark
+          path: ${{ runner.temp }}/test-metrics-*.json
+          if-no-files-found: ignore
+          retention-days: 1
 
   release:
     name: Create release
+    if: ${{ always() && needs.prepare.result == 'success' && needs.build-toolchain.result == 'success' }}
     needs:
       - prepare
       - build-toolchain
       - test-obfuscation
+      - benchmark
     runs-on: ubuntu-24.04
     permissions:
       contents: write
+      actions: read
     steps:
+      - name: Download benchmark metrics
+        uses: actions/download-artifact@v7
+        continue-on-error: true
+        with:
+          pattern: test-metrics-*
+          path: test-metrics
+          merge-multiple: true
+
+      - name: Generate test results and check publication eligibility
+        id: results
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TEST_REVISION: ${{ needs.prepare.outputs.test-revision }}
+          BENCHMARK_RESULTS: ${{ needs.benchmark.outputs.results }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api --paginate --jq '.jobs[] | @json' \
+            "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs?per_page=100" \
+            > test-jobs.jsonl
+          python3 - <<'PY'
+          import json
+          import math
+          import os
+          from pathlib import Path
+
+          jobs = {job["name"]: job for job in map(json.loads, Path("test-jobs.jsonl").read_text().splitlines())}
+          benchmark_results = json.loads(os.environ.get("BENCHMARK_RESULTS") or "{}")
+          flags = ("indbr", "icall", "indgv", "cse", "fla", "cie", "cfe")
+          configurations = [("baseline", "baseline")] + [(mode, flag) for mode in ("single", "all-except") for flag in flags] + [("all", "all")]
+          rows = []
+          passed = 0
+          for mode, flag in configurations:
+              baseline = mode == "baseline"
+              job = jobs.get("Build baseline" if baseline else f"Test · {mode} · {flag}", {})
+              step_name = "Build with standard Rust" if baseline else "Build with self-built Rust"
+              test = next((step for step in job.get("steps", []) if step["name"] == step_name), {})
+              result = benchmark_results.get(f"{mode}/{flag}", "skipped")
+              if result == "skipped" and test.get("conclusion", "skipped") != "success":
+                  result = test.get("conclusion", "skipped")
+              if result == "success" and not baseline:
+                  passed += 1
+              status = "✅" if result == "success" else "Skip" if result == "skipped" else "❌"
+              enabled = [name for name in flags if mode == "all" or (mode == "single" and name == flag) or (mode == "all-except" and name != flag)]
+              rustflags = "—" if baseline else " ".join(["-Cllvm-args=--irobf"] + [f"-Cllvm-args=--irobf-{name}" for name in enabled])
+              metrics_file = Path("test-metrics") / f"test-metrics-{mode}-{flag}.json"
+              invocation_time = "—"
+              build_memory = "—"
+              try:
+                  metrics = json.loads(metrics_file.read_text())
+              except (OSError, ValueError):
+                  pass
+              else:
+                  if isinstance(metrics, dict):
+                      elapsed = metrics.get("elapsed_seconds")
+                      memory = metrics.get("build_memory_p90_mib")
+                      if isinstance(elapsed, (int, float)) and not isinstance(elapsed, bool) and math.isfinite(elapsed) and elapsed >= 0:
+                          invocation_time = f"{elapsed * 1000:,.0f} ms"
+                      if isinstance(memory, (int, float)) and not isinstance(memory, bool) and math.isfinite(memory) and memory >= 0:
+                          build_memory = f"{memory:,.2f} MiB"
+              configuration = "baseline" if baseline else f"{mode} / {flag}"
+              rows.append(f"| {configuration} | `{rustflags}` | {status} | {invocation_time} | {build_memory} |")
+
+          report = "\n".join([
+              "## Obfuscation test results",
+              "",
+              f"Test source: [{os.environ['TEST_REPOSITORY']}@{os.environ['TEST_REVISION']}](https://github.com/{os.environ['TEST_REPOSITORY']}/commit/{os.environ['TEST_REVISION']}).",
+              "",
+              "| Configuration | RUSTFLAGS | Status | F20 mean (middle 90%) | Build memory p90 |",
+              "| --- | --- | :---: | ---: | ---: |",
+              *rows,
+              "",
+          ])
+          Path("release-notes.md").write_text(report)
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
+              summary.write(report)
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write(f"publish={'true' if passed else 'false'}\n")
+          if not passed:
+              print("::notice::No obfuscated benchmark passed. Publication skipped.")
+          PY
+
       - name: Download Rust stage1 archives
+        if: steps.results.outputs.publish == 'true'
         uses: actions/download-artifact@v7
         with:
           pattern: x86_64-*
@@ -345,6 +678,7 @@ jobs:
           merge-multiple: true
 
       - name: Publish latest release
+        if: steps.results.outputs.publish == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ needs.prepare.outputs.release-tag }}
@@ -352,8 +686,25 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          gh release create "$RELEASE_TAG" release-assets/*.zip \
-            --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" \
-            --title "$RELEASE_TITLE" \
-            --latest
+          if gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" \
+            --silent 2> "$RUNNER_TEMP/release-error.txt"; then
+            gh release upload "$RELEASE_TAG" release-assets/*.zip \
+              --repo "$GITHUB_REPOSITORY" --clobber
+            gh release edit "$RELEASE_TAG" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$RELEASE_TITLE" \
+              --notes-file release-notes.md \
+              --draft=false --prerelease=false --latest
+          elif grep -q '(HTTP 404)' "$RUNNER_TEMP/release-error.txt"; then
+            gh release create "$RELEASE_TAG" release-assets/*.zip \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "$RELEASE_TITLE" \
+              --notes-file release-notes.md \
+              --draft=false --prerelease=false --latest
+          else
+            cat "$RUNNER_TEMP/release-error.txt" >&2
+            exit 1
+          fi
+          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+            --json url,tagName,name,isDraft,isPrerelease,assets
