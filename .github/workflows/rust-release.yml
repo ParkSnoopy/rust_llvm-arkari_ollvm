@@ -421,7 +421,7 @@ jobs:
                   pass
               else:
                   if math.isfinite(elapsed) and elapsed >= 0:
-                      invocation_time = f"{elapsed:.3f} s"
+                      invocation_time = f"{elapsed * 1000:.0f} ms"
               rows.append(f"| {mode} / {flag} | `{rustflags}` | {status} | {invocation_time} |")
 
           report = "\n".join([
@@ -431,7 +431,7 @@ jobs:
               "Tests cover the Linux archive. The Windows archive was built but was not smoke-tested.",
               "The test builds Nushell's nu binary with default features and the dev profile, then compares its executable size with a matching baseline.",
               "Every configuration runs `1..10000 | where {|n| $n mod 2 == 0 } | math sum` without user configuration or history and must return `25005000`.",
-              "Time measures one pipeline invocation, including executable startup, but excludes compilation.",
+              "Time is in milliseconds and measures one pipeline invocation, including executable startup, but excludes compilation.",
               "A dash means invocation time is unavailable. Timing differences alone do not prove that obfuscation occurred.",
               "Each build and smoke test has a 20-minute limit. A failed test does not block release if another test passes.",
               f"Test source: [{os.environ['TEST_REPOSITORY']}@{os.environ['TEST_REVISION']}](https://github.com/{os.environ['TEST_REPOSITORY']}/commit/{os.environ['TEST_REVISION']}).",
