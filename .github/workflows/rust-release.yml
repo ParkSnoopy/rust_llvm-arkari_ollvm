@@ -410,11 +410,7 @@ jobs:
               result = test.get("conclusion", "skipped")
               if result == "success":
                   passed += 1
-                  status, note = "✅", "Build, CLI startup, and deterministic pipeline passed."
-              elif result == "skipped":
-                  status, note = "❌", "Test did not run."
-              else:
-                  status, note = "❌", "Test failed or exceeded the 20-minute limit."
+              status = "✅" if result == "success" else "❌"
               enabled = [name for name in flags if mode == "all" or (mode == "single" and name == flag) or (mode == "all-except" and name != flag)]
               rustflags = " ".join(["-Cllvm-args=--irobf"] + [f"-Cllvm-args=--irobf-{name}" for name in enabled])
               time_file = Path("test-times") / f"test-time-{mode}-{flag}.txt"
@@ -426,7 +422,7 @@ jobs:
               else:
                   if math.isfinite(elapsed) and elapsed >= 0:
                       invocation_time = f"{elapsed:.3f} s"
-              rows.append(f"| {mode} / {flag} | `{rustflags}` | {status} | {invocation_time} | {note} |")
+              rows.append(f"| {mode} / {flag} | `{rustflags}` | {status} | {invocation_time} |")
 
           report = "\n".join([
               "## Obfuscation test results",
@@ -441,8 +437,8 @@ jobs:
               f"Test source: [{os.environ['TEST_REPOSITORY']}@{os.environ['TEST_REVISION']}](https://github.com/{os.environ['TEST_REPOSITORY']}/commit/{os.environ['TEST_REVISION']}).",
               f"[Workflow run](https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}/attempts/{os.environ['GITHUB_RUN_ATTEMPT']}).",
               "",
-              "| Configuration | RUSTFLAGS | Status | Time | Note |",
-              "| --- | --- | :---: | ---: | --- |",
+              "| Configuration | RUSTFLAGS | Status | Time |",
+              "| --- | --- | :---: | ---: |",
               *rows,
               "",
           ])
