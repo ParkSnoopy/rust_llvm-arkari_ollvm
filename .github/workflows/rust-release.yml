@@ -329,11 +329,11 @@ jobs:
           target/debug/nu --help >/dev/null
           TIMEFORMAT='%3R'
           {
-            time timeout 30s target/debug/nu --no-config-file --no-history \
-              --commands '1..10000 | where {|n| $n mod 2 == 0 } | math sum' \
+            time timeout 120s target/debug/nu --no-config-file --no-history \
+              --commands 'def fib [n: int] { if $n < 2 { $n } else { (fib ($n - 1)) + (fib ($n - 2)) } }; fib 20' \
               > "$RUNNER_TEMP/nu-result.txt"
           } 2> "$RUNNER_TEMP/test-time-$MODE-$FLAG.txt"
-          test "$(< "$RUNNER_TEMP/nu-result.txt")" = 25005000
+          test "$(< "$RUNNER_TEMP/nu-result.txt")" = 6765
 
       - name: Compare binary size
         env:
@@ -430,8 +430,9 @@ jobs:
               "Set RUSTFLAGS to the arguments in a passing row. Failed rows are not verified for use.",
               "Tests cover the Linux archive. The Windows archive was built but was not smoke-tested.",
               "The test builds Nushell's nu binary with default features and the dev profile, then compares its executable size with a matching baseline.",
-              "Every configuration runs `1..10000 | where {|n| $n mod 2 == 0 } | math sum` without user configuration or history and must return `25005000`.",
-              "Time is in milliseconds and measures one pipeline invocation, including executable startup, but excludes compilation.",
+              "Every configuration computes only F20 with naive recursion and no cache, then checks that the result is 6765.",
+              "The Fibonacci invocation has a 120-second limit and runs without user configuration or history.",
+              "Time is in milliseconds and measures one F20 invocation, including executable startup, but excludes compilation.",
               "A dash means invocation time is unavailable. Timing differences alone do not prove that obfuscation occurred.",
               "Each build and smoke test has a 20-minute limit. A failed test does not block release if another test passes.",
               f"Test source: [{os.environ['TEST_REPOSITORY']}@{os.environ['TEST_REVISION']}](https://github.com/{os.environ['TEST_REPOSITORY']}/commit/{os.environ['TEST_REVISION']}).",
@@ -464,9 +465,25 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          gh release create "$RELEASE_TAG" release-assets/*.zip \
-            --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" \
-            --title "$RELEASE_TITLE" \
-            --notes-file release-notes.md \
-            --latest
+          if gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" \
+            --silent 2> "$RUNNER_TEMP/release-error.txt"; then
+            gh release upload "$RELEASE_TAG" release-assets/*.zip \
+              --repo "$GITHUB_REPOSITORY" --clobber
+            gh release edit "$RELEASE_TAG" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$RELEASE_TITLE" \
+              --notes-file release-notes.md \
+              --draft=false --prerelease=false --latest
+          elif grep -q '(HTTP 404)' "$RUNNER_TEMP/release-error.txt"; then
+            gh release create "$RELEASE_TAG" release-assets/*.zip \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "$RELEASE_TITLE" \
+              --notes-file release-notes.md \
+              --draft=false --prerelease=false --latest
+          else
+            cat "$RUNNER_TEMP/release-error.txt" >&2
+            exit 1
+          fi
+          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+            --json url,tagName,name,isDraft,isPrerelease,assets
