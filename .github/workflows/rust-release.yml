@@ -251,7 +251,7 @@ jobs:
       - build-toolchain
       - build-baseline
     runs-on: ubuntu-24.04
-    timeout-minutes: 120
+    timeout-minutes: 30
     env:
       RUSTC_BOOTSTRAP: 1
     strategy:
@@ -317,6 +317,7 @@ jobs:
           printf 'RUSTFLAGS=%s\n' "${rustflags[*]}" >> "$GITHUB_ENV"
 
       - name: Build and smoke-test with self-built Rust
+        timeout-minutes: 20
         working-directory: benchmark
         shell: bash
         run: |
@@ -345,6 +346,7 @@ jobs:
 
   release:
     name: Create release
+    if: ${{ always() && needs.prepare.result == 'success' && needs.build-toolchain.result == 'success' }}
     needs:
       - prepare
       - build-toolchain
@@ -352,7 +354,64 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: write
+      actions: read
     steps:
+      - name: Generate test results and require one passing test
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TEST_REVISION: ${{ needs.prepare.outputs.test-revision }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api --paginate --jq '.jobs[] | @json' \
+            "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs?per_page=100" \
+            > test-jobs.jsonl
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          jobs = {job["name"]: job for job in map(json.loads, Path("test-jobs.jsonl").read_text().splitlines())}
+          flags = ("indbr", "icall", "indgv", "cse", "fla", "cie", "cfe")
+          configurations = [(mode, flag) for mode in ("single", "all-except") for flag in flags] + [("all", "all")]
+          rows = []
+          passed = 0
+          for mode, flag in configurations:
+              job = jobs.get(f"Test · {mode} · {flag}", {})
+              test = next((step for step in job.get("steps", []) if step["name"] == "Build and smoke-test with self-built Rust"), {})
+              result = test.get("conclusion", "skipped")
+              if result == "success":
+                  passed += 1
+                  status, note = "✅", "Build and smoke test passed."
+              elif result == "skipped":
+                  status, note = "❌", "Test did not run."
+              else:
+                  status, note = "❌", "Test failed or exceeded the 20-minute limit."
+              enabled = [name for name in flags if mode == "all" or (mode == "single" and name == flag) or (mode == "all-except" and name != flag)]
+              rustflags = " ".join(["-Cllvm-args=--irobf"] + [f"-Cllvm-args=--irobf-{name}" for name in enabled])
+              rows.append(f"| {mode} / {flag} | `{rustflags}` | {status} | {note} |")
+
+          report = "\n".join([
+              "## Obfuscation test results",
+              "",
+              "Set RUSTFLAGS to the arguments in a passing row. Failed rows are not verified for use.",
+              "Tests cover the Linux archive. The Windows archive was built but was not smoke-tested.",
+              "Each build and smoke test has a 20-minute limit. A failed test does not block release if another test passes.",
+              f"Test source: [{os.environ['TEST_REPOSITORY']}@{os.environ['TEST_REVISION']}](https://github.com/{os.environ['TEST_REPOSITORY']}/commit/{os.environ['TEST_REVISION']}).",
+              f"[Workflow run](https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}/attempts/{os.environ['GITHUB_RUN_ATTEMPT']}).",
+              "",
+              "| Configuration | RUSTFLAGS | Status | Note |",
+              "| --- | --- | :---: | --- |",
+              *rows,
+              "",
+          ])
+          Path("release-notes.md").write_text(report)
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
+              summary.write(report)
+          if not passed:
+              raise SystemExit("No obfuscation build and smoke test passed. Release blocked.")
+          PY
+
       - name: Download Rust stage1 archives
         uses: actions/download-artifact@v7
         with:
@@ -372,4 +431,5 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --title "$RELEASE_TITLE" \
+            --notes-file release-notes.md \
             --latest
