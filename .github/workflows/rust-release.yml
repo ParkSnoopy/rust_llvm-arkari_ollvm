@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  TEST_REPOSITORY: rustls/rustls
+  TEST_REPOSITORY: nushell/nushell
 
 jobs:
   prepare:
@@ -234,13 +234,13 @@ jobs:
         run: rustup toolchain install "$RUST_VERSION" --profile minimal
 
       - name: Build with standard Rust
-        run: cargo +"$RUST_VERSION" build --locked -p rustls-examples --bin tls-client-mio
+        run: cargo +"$RUST_VERSION" build --locked -p nu --bin nu
 
       - name: Upload baseline binary
         uses: actions/upload-artifact@v6
         with:
           name: size-baseline
-          path: target/debug/tls-client-mio
+          path: target/debug/nu
           if-no-files-found: error
           retention-days: 1
 
@@ -325,26 +325,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cargo +self-built build --locked -p rustls-examples --bin tls-client-mio
-          target/debug/tls-client-mio --help >/dev/null
-          listen_address=$(python3 -c 'import socket; address = socket.getaddrinfo("localhost", 8443, type=socket.SOCK_STREAM)[0][4][0]; print(f"[{address}]:8443" if ":" in address else f"{address}:8443")')
-          openssl s_server -accept "$listen_address" -www \
-            -cert test-ca/ecdsa-p521/end.cert \
-            -cert_chain test-ca/ecdsa-p521/inter.cert \
-            -key test-ca/ecdsa-p521/end.key \
-            > "$RUNNER_TEMP/tls-server.log" 2>&1 &
-          server_pid=$!
-          trap 'kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true' EXIT
-          curl -fsSL --cacert test-ca/ecdsa-p521/ca.cert \
-            --retry 5 --retry-connrefused --retry-delay 1 \
-            --retry-max-time 10 --max-time 5 https://localhost:8443/ >/dev/null
+          cargo +self-built build --locked -p nu --bin nu
+          target/debug/nu --help >/dev/null
           TIMEFORMAT='%3R'
           {
-            time timeout 30s target/debug/tls-client-mio --protover 1.3 \
-              --cafile test-ca/ecdsa-p521/ca.cert --port 8443 --http localhost \
-              > "$RUNNER_TEMP/tls-response.txt"
+            time timeout 30s target/debug/nu --no-config-file --no-history \
+              --commands '1..10000 | where {|n| $n mod 2 == 0 } | math sum' \
+              > "$RUNNER_TEMP/nu-result.txt"
           } 2> "$RUNNER_TEMP/test-time-$MODE-$FLAG.txt"
-          grep -q '^HTTP/1\.[01] 200' "$RUNNER_TEMP/tls-response.txt"
+          test "$(< "$RUNNER_TEMP/nu-result.txt")" = 25005000
 
       - name: Compare binary size
         env:
@@ -352,8 +341,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          baseline_size=$(stat -c '%s' baseline/tls-client-mio)
-          self_built_size=$(stat -c '%s' benchmark/target/debug/tls-client-mio)
+          baseline_size=$(stat -c '%s' baseline/nu)
+          self_built_size=$(stat -c '%s' benchmark/target/debug/nu)
           difference=$((self_built_size - baseline_size))
 
           {
@@ -421,7 +410,7 @@ jobs:
               result = test.get("conclusion", "skipped")
               if result == "success":
                   passed += 1
-                  status, note = "✅", "Build, CLI startup, and local TLS 1.3 request passed."
+                  status, note = "✅", "Build, CLI startup, and deterministic pipeline passed."
               elif result == "skipped":
                   status, note = "❌", "Test did not run."
               else:
@@ -444,9 +433,9 @@ jobs:
               "",
               "Set RUSTFLAGS to the arguments in a passing row. Failed rows are not verified for use.",
               "Tests cover the Linux archive. The Windows archive was built but was not smoke-tested.",
-              "The test builds rustls-examples/tls-client-mio with the dev profile and compares its executable size with a matching baseline.",
-              "Rust flags apply to Rust code, not to the separately built AWS-LC native cryptography.",
-              "Time measures one local TLS 1.3 HTTP request, including executable startup, but excludes compilation and server setup.",
+              "The test builds Nushell's nu binary with default features and the dev profile, then compares its executable size with a matching baseline.",
+              "Every configuration runs `1..10000 | where {|n| $n mod 2 == 0 } | math sum` without user configuration or history and must return `25005000`.",
+              "Time measures one pipeline invocation, including executable startup, but excludes compilation.",
               "A dash means invocation time is unavailable. Timing differences alone do not prove that obfuscation occurred.",
               "Each build and smoke test has a 20-minute limit. A failed test does not block release if another test passes.",
               f"Test source: [{os.environ['TEST_REPOSITORY']}@{os.environ['TEST_REVISION']}](https://github.com/{os.environ['TEST_REPOSITORY']}/commit/{os.environ['TEST_REVISION']}).",
