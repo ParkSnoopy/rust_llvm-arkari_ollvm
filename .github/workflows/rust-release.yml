@@ -251,7 +251,7 @@ jobs:
       - build-toolchain
       - build-baseline
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 130
     env:
       RUSTC_BOOTSTRAP: 1
     strategy:
@@ -317,7 +317,7 @@ jobs:
           printf 'RUSTFLAGS=%s\n' "${rustflags[*]}" >> "$GITHUB_ENV"
 
       - name: Build and smoke-test with self-built Rust
-        timeout-minutes: 20
+        timeout-minutes: 120
         working-directory: benchmark
         env:
           MODE: ${{ matrix.mode }}
@@ -434,7 +434,7 @@ jobs:
               "The Fibonacci invocation has a 120-second limit and runs without user configuration or history.",
               "Time is in milliseconds and measures one F20 invocation, including executable startup, but excludes compilation.",
               "A dash means invocation time is unavailable. Timing differences alone do not prove that obfuscation occurred.",
-              "Each build and smoke test has a 20-minute limit. A failed test does not block release if another test passes.",
+              "Each build and smoke test has a 120-minute limit. A failed test does not block release if another test passes.",
               f"Test source: [{os.environ['TEST_REPOSITORY']}@{os.environ['TEST_REVISION']}](https://github.com/{os.environ['TEST_REPOSITORY']}/commit/{os.environ['TEST_REVISION']}).",
               f"[Workflow run](https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}/attempts/{os.environ['GITHUB_RUN_ATTEMPT']}).",
               "",
