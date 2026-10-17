@@ -134,6 +134,7 @@ bool Flattening::flatten(Function *f) {
 
   auto bbEndOfEntry = insertBlock->splitBasicBlock(splitPos, "first");
   origBB.insert(origBB.begin(), bbEndOfEntry);
+  insertBlock->getTerminator()->eraseFromParent();
 
   DenseSet<uint64_t>                    UsedCases;
   DenseMap<BasicBlock *, ConstantInt *> CaseVal;
