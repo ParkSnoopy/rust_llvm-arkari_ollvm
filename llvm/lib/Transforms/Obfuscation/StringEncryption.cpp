@@ -128,7 +128,7 @@ char StringEncryption::ID = 0;
 bool StringEncryption::runOnModule(Module &M) {
   SmallPtrSet<GlobalVariable *, 16> ConstantStringUsers;
 
-  // collect all c strings
+  // Collect constant strings, including length-delimited Rust byte arrays.
 
   LLVMContext &Ctx = M.getContext();
   ConstantInt *Zero = ConstantInt::get(Type::getInt32Ty(Ctx), 0);
@@ -141,7 +141,7 @@ bool StringEncryption::runOnModule(Module &M) {
     if (Init == nullptr)
       continue;
     if (ConstantDataSequential *CDS = dyn_cast<ConstantDataSequential>(Init)) {
-      if (CDS->isCString()) {
+      if (CDS->isString()) {
         CSPEntry *Entry = new CSPEntry();
         Entry->IsUTF16 = false;
         StringRef Data = CDS->getRawDataValues();

@@ -172,13 +172,14 @@ struct ObfuscationPassManager : public ModulePass {
 
     add(llvm::createConstantIntEncryptionPass(Options.get()));
 
-    add(llvm::createIndirectGlobalVariablePass(Options.get()));
-
     add(llvm::createConstantFPEncryptionPass(Options.get()));
 
     if (EnableIRStringEncryption || Options->cseOpt()->isEnabled()) {
       add(llvm::createStringEncryptionPass(Options.get()));
     }
+
+    // Encrypt strings before their uses are hidden behind global indirection.
+    add(llvm::createIndirectGlobalVariablePass(Options.get()));
 
     add(llvm::createIndirectCallPass(Options.get()));
     add(llvm::createFlatteningPass(pointerSize, Options.get()));

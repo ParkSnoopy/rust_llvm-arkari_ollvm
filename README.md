@@ -38,7 +38,7 @@ gitGraph
 - `--irobf-indbr` : Indirect jumps with encrypted jump targets  
 - `--irobf-icall` : Indirect function calls with encrypted target function addresses  
 - `--irobf-indgv` : Indirect global variable references with encrypted variable addresses  
-- `--irobf-cse` : C-string encryption  
+- `--irobf-cse` : C/Rust string encryption  
 - `--irobf-fla` : Control-flow flattening (procedure-related)  
 - `--irobf-cie` : Integer constant encryption  
 - `--irobf-cfe` : Floating-point constant encryption  

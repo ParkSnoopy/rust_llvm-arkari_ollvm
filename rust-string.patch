@@ -1,0 +1,69 @@
+diff --git a/README.md b/README.md
+index 18e2ef51d..b1ed2bca1 100644
+--- a/README.md
++++ b/README.md
+@@ -38,7 +38,7 @@ gitGraph
+ - `--irobf-indbr` : Indirect jumps with encrypted jump targets  
+ - `--irobf-icall` : Indirect function calls with encrypted target function addresses  
+ - `--irobf-indgv` : Indirect global variable references with encrypted variable addresses  
+-- `--irobf-cse` : C-string encryption  
++- `--irobf-cse` : C/Rust string encryption  
+ - `--irobf-fla` : Control-flow flattening (procedure-related)  
+ - `--irobf-cie` : Integer constant encryption  
+ - `--irobf-cfe` : Floating-point constant encryption  
+diff --git a/llvm/lib/Transforms/Obfuscation/Flattening.cpp b/llvm/lib/Transforms/Obfuscation/Flattening.cpp
+index 1e8d4b6ff..23fd59381 100644
+--- a/llvm/lib/Transforms/Obfuscation/Flattening.cpp
++++ b/llvm/lib/Transforms/Obfuscation/Flattening.cpp
+@@ -134,6 +134,7 @@ bool Flattening::flatten(Function *f) {
+ 
+   auto bbEndOfEntry = insertBlock->splitBasicBlock(splitPos, "first");
+   origBB.insert(origBB.begin(), bbEndOfEntry);
++  insertBlock->getTerminator()->eraseFromParent();
+ 
+   DenseSet<uint64_t>                    UsedCases;
+   DenseMap<BasicBlock *, ConstantInt *> CaseVal;
+diff --git a/llvm/lib/Transforms/Obfuscation/ObfuscationPassManager.cpp b/llvm/lib/Transforms/Obfuscation/ObfuscationPassManager.cpp
+index 9ed01fce6..77286d59a 100644
+--- a/llvm/lib/Transforms/Obfuscation/ObfuscationPassManager.cpp
++++ b/llvm/lib/Transforms/Obfuscation/ObfuscationPassManager.cpp
+@@ -172,14 +172,15 @@ struct ObfuscationPassManager : public ModulePass {
+ 
+     add(llvm::createConstantIntEncryptionPass(Options.get()));
+ 
+-    add(llvm::createIndirectGlobalVariablePass(Options.get()));
+-
+     add(llvm::createConstantFPEncryptionPass(Options.get()));
+ 
+     if (EnableIRStringEncryption || Options->cseOpt()->isEnabled()) {
+       add(llvm::createStringEncryptionPass(Options.get()));
+     }
+ 
++    // Encrypt strings before their uses are hidden behind global indirection.
++    add(llvm::createIndirectGlobalVariablePass(Options.get()));
++
+     add(llvm::createIndirectCallPass(Options.get()));
+     add(llvm::createFlatteningPass(pointerSize, Options.get()));
+     add(llvm::createIndirectBranchPass(Options.get()));
+diff --git a/llvm/lib/Transforms/Obfuscation/StringEncryption.cpp b/llvm/lib/Transforms/Obfuscation/StringEncryption.cpp
+index 0a8d1ded0..61bd3f39f 100644
+--- a/llvm/lib/Transforms/Obfuscation/StringEncryption.cpp
++++ b/llvm/lib/Transforms/Obfuscation/StringEncryption.cpp
+@@ -128,7 +128,7 @@ char StringEncryption::ID = 0;
+ bool StringEncryption::runOnModule(Module &M) {
+   SmallPtrSet<GlobalVariable *, 16> ConstantStringUsers;
+ 
+-  // collect all c strings
++  // Collect constant strings, including length-delimited Rust byte arrays.
+ 
+   LLVMContext &Ctx = M.getContext();
+   ConstantInt *Zero = ConstantInt::get(Type::getInt32Ty(Ctx), 0);
+@@ -141,7 +141,7 @@ bool StringEncryption::runOnModule(Module &M) {
+     if (Init == nullptr)
+       continue;
+     if (ConstantDataSequential *CDS = dyn_cast<ConstantDataSequential>(Init)) {
+-      if (CDS->isCString()) {
++      if (CDS->isString()) {
+         CSPEntry *Entry = new CSPEntry();
+         Entry->IsUTF16 = false;
+         StringRef Data = CDS->getRawDataValues();
