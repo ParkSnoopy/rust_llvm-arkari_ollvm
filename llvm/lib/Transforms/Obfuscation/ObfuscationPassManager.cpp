@@ -154,6 +154,7 @@ struct ObfuscationPassManager : public ModulePass {
 
   bool runOnModule(Module &M) override {
 
+    bool Changed = rewriteRustFingerprintStrings(M);
     if (EnableIndirectBr || EnableIndirectCall || EnableIndirectGV ||
         EnableIRFlattening || EnableIRStringEncryption ||
         EnableIRConstantIntEncryption || EnableIRConstantFPEncryption ||
@@ -162,7 +163,7 @@ struct ObfuscationPassManager : public ModulePass {
     }
 
     if (!EnableIRObfuscation) {
-      return false;
+      return Changed;
     }
 
     const auto Options(getOptions());
@@ -188,7 +189,7 @@ struct ObfuscationPassManager : public ModulePass {
     if (EnableRttiEraser || Options->rttiOpt()->isEnabled()) {
       add(llvm::createMsRttiEraserPass(Options.get()));
     }
-    bool Changed = run(M);
+    Changed |= run(M);
 
     return Changed;
   }
