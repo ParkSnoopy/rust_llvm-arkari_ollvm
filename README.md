@@ -39,9 +39,16 @@ gitGraph
 - `--irobf-icall` : Indirect function calls with encrypted target function addresses  
 - `--irobf-indgv` : Indirect global variable references with encrypted variable addresses  
 - `--irobf-cse` : C/Rust string encryption  
+- `--irobf-rust-strings` : Opt-in replacement of selected Rust string fingerprints before optimization and encryption (`core` → `base`, `alloc` → `arena`, `std` → `sys`, path component `rustc` → `build`)  
 - `--irobf-fla` : Control-flow flattening (procedure-related)  
 - `--irobf-cie` : Integer constant encryption  
 - `--irobf-cfe` : Floating-point constant encryption  
+
+Replacement changes matching root namespace and source-path text in local UTF-8 byte-array constants, preserving byte lengths and embedded NULs.  
+It does not rename symbols, rewrite public/mutable/sectioned constants, touch URL-containing arrays, or infer whether matching text is used as an application protocol value.  
+Enable `--irobf-cse` separately to encrypt the replacements during compilation/pre-link processing.  
+Omitting `--irobf-rust-strings` preserves original string contents after decryption.  
+Precompiled libraries are not rewritten: standard-library coverage requires rebuilding them with the new compiler and these flags, without passing them to the unmodified stage0 compiler.  
 
 ### Linux:  
 1. Link the toolchain  

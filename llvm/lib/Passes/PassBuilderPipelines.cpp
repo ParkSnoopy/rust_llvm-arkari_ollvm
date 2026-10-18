@@ -417,6 +417,7 @@ void PassBuilder::invokeOptimizerLastEPCallbacks(ModulePassManager &MPM,
 }
 void PassBuilder::invokeFullLinkTimeOptimizationEarlyEPCallbacks(
     ModulePassManager &MPM, OptimizationLevel Level) {
+  MPM.addPass(RustStringRewritePass());
   for (auto &C : FullLinkTimeOptimizationEarlyEPCallbacks)
     C(MPM, Level);
 }
@@ -427,6 +428,7 @@ void PassBuilder::invokeFullLinkTimeOptimizationLastEPCallbacks(
 }
 void PassBuilder::invokePipelineStartEPCallbacks(ModulePassManager &MPM,
                                                  OptimizationLevel Level) {
+  MPM.addPass(RustStringRewritePass());
   for (auto &C : PipelineStartEPCallbacks)
     C(MPM, Level);
 }

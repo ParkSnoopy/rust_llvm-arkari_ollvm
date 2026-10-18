@@ -8,10 +8,16 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/ReplaceConstant.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/RandomNumberGenerator.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringSwitch.h"
 #include <set>
 #include <algorithm>
 
@@ -20,6 +26,55 @@
 using namespace llvm;
 
 namespace {
+static cl::opt<bool> RewriteRustStrings(
+    "irobf-rust-strings", cl::init(false), cl::NotHidden,
+    cl::desc("Replace selected Rust string fingerprints before encryption."));
+
+static std::string rewriteRustString(StringRef Text) {
+  std::string Result = Text.str();
+  for (size_t Begin = 0, End = 0; Begin < Text.size(); Begin = End) {
+    // Treat non-ASCII bytes as identifier bytes, not new token boundaries.
+    while (End < Text.size() && (isAlnum(Text[End]) || Text[End] == '_' ||
+                                 static_cast<unsigned char>(Text[End]) >= 0x80))
+      ++End;
+    if (Begin == End) {
+      ++End;
+      continue;
+    }
+    StringRef Word = Text.slice(Begin, End);
+    StringRef Replacement = StringSwitch<StringRef>(Word)
+                                .Case("core", "base")
+                                .Case("alloc", "arena")
+                                .Case("std", "sys")
+                                .Case("rustc", "build")
+                                .Default("");
+    if (Replacement.empty())
+      continue;
+    StringRef Prefix = Text.take_front(Begin);
+    StringRef Suffix = Text.drop_front(End);
+    bool AtRoot = Begin == 0 || Text[Begin - 1] == '\0' ||
+                  StringRef(" \t\r\n<([,=&\"'").contains(Text[Begin - 1]);
+    bool PathSeparator = Suffix.starts_with("/") || Suffix.starts_with("\\");
+    bool Namespace = AtRoot && Suffix.starts_with("::");
+    bool SourcePath =
+        (AtRoot && PathSeparator) ||
+        ((Prefix == "library/" || Prefix.ends_with("/library/")) &&
+         Suffix.starts_with("/src/")) ||
+        ((Prefix == "library\\" || Prefix.ends_with("\\library\\")) &&
+         Suffix.starts_with("\\src\\"));
+    if (Word == "rustc") {
+      Namespace = false;
+      SourcePath = PathSeparator &&
+                   (AtRoot || Prefix.ends_with("/") || Prefix.ends_with("\\"));
+    }
+    if (Namespace || SourcePath) {
+      assert(Word.size() == Replacement.size() && "replacement changes length");
+      std::copy(Replacement.begin(), Replacement.end(), Result.begin() + Begin);
+    }
+  }
+  return Result;
+}
+
 struct StringEncryption : public ModulePass {
   static char ID;
 
@@ -124,6 +179,37 @@ struct StringEncryption : public ModulePass {
 } // anonymous namespace
 
 char StringEncryption::ID = 0;
+
+bool llvm::rewriteRustFingerprintStrings(Module &M) {
+  if (!RewriteRustStrings)
+    return false;
+  bool Changed = false;
+  for (GlobalVariable &GV : M.globals()) {
+    // Rewrite private constant data, not names or metadata sections.
+    if (!GV.isConstant() || !GV.hasInitializer() || !GV.hasLocalLinkage() ||
+        GV.isThreadLocal() || GV.hasSection() ||
+        GV.getName().starts_with("llvm."))
+      continue;
+    auto *Data = dyn_cast<ConstantDataArray>(GV.getInitializer());
+    if (!Data || !Data->isString())
+      continue;
+    StringRef Text = Data->getAsString();
+    // Keep endpoints and invalid UTF-8 unchanged.
+    if (Text.contains("://"))
+      continue;
+    const auto *Begin = reinterpret_cast<const UTF8 *>(Text.data());
+    const auto *End = Begin + Text.size();
+    if (!isLegalUTF8String(&Begin, End))
+      continue;
+    std::string Rewritten = rewriteRustString(Text);
+    if (Rewritten == Text)
+      continue;
+    GV.setInitializer(ConstantDataArray::getString(M.getContext(), Rewritten,
+                                                   /*AddNull=*/false));
+    Changed = true;
+  }
+  return Changed;
+}
 
 bool StringEncryption::runOnModule(Module &M) {
   SmallPtrSet<GlobalVariable *, 16> ConstantStringUsers;
@@ -626,9 +712,15 @@ bool StringEncryption::processConstantStringUse(Function *F) {
     return false;
   }
   LowerConstantExpr(*F);
+  // Rust can return a constant {pointer, length} containing a string reference.
+  SmallVector<Constant *, 16> Strings;
+  for (auto &Entry : CSPEntryMap)
+    Strings.push_back(Entry.first);
+  for (auto &User : CSUserMap)
+    Strings.push_back(User.first);
+  bool Changed = convertUsersOfConstantsToInstructions(Strings, F);
   SmallPtrSet<GlobalVariable *, 16> DecryptedGV;
   // if GV has multiple use in a block, decrypt only at the first use
-  bool Changed = false;
   for (BasicBlock &BB : *F) {
     DecryptedGV.clear();
     for (Instruction &Inst : BB) {
@@ -760,6 +852,29 @@ bool StringEncryption::processConstantStringUse(Function *F) {
           }
         }
       }
+    }
+  }
+  if (Changed) {
+    // Decryption writes global buffers, including through otherwise pure calls.
+    SmallPtrSet<User *, 16> Visited;
+    SmallVector<User *, 16> Worklist{F};
+    while (!Worklist.empty()) {
+      User *U = Worklist.pop_back_val();
+      if (!Visited.insert(U).second)
+        continue;
+      if (auto *Caller = dyn_cast<Function>(U)) {
+        Caller->setMemoryEffects(MemoryEffects::unknown());
+        Caller->removeFnAttr(Attribute::Speculatable);
+      } else if (auto *Call = dyn_cast<CallBase>(U)) {
+        Call->setMemoryEffects(MemoryEffects::unknown());
+        Call->removeFnAttr(Attribute::Speculatable);
+        Worklist.push_back(Call->getFunction());
+        continue;
+      } else if (!isa<Constant>(U)) {
+        continue;
+      }
+      for (User *Next : U->users())
+        Worklist.push_back(Next);
     }
   }
   return Changed;
