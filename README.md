@@ -73,15 +73,22 @@ set RUSTFLAGS=-Cllvm-args=--irobf -Cllvm-args=--irobf-indbr -Cllvm-args=--irobf-
 cargo +<toolchain name> build --release
 set RUSTFLAGS=
 ```
+### via [`cargo-rrea`](https://github.com/ParkSnoopy/cargo-rrea):
+> [!WARNING]
+> Windows not tested natively
+```bash
+cargo install cargo-rrea --locked
+cargo rrea build --release
+```
+> Install will download and bundle `rustc` inside `cargo-rrea` subcommend (this will download the latest release `stage1` artifact from release)  
+> Build will output obfuscated `elf/exe` and `.so/.dll` under `target/release/dist/`  
 
 ## 🚧 Issue  
 
 ### 💥 Incompatibility  
 Maybe some obfuscation flag can cause incompatibility with the crate used in the project. <br>
-- Using the `--irobf-cie` flag with the `nu-plugin-engine` crate compile failed. (out of memory)  
 - Using the `--irobf-fla` flag with the `windows-rs` crate compile failed.  
 - Using the `--irobf-fla` flag with the `rand` crate compile failed. (exit code: 0xc0000005, STATUS_ACCESS_VIOLATION)  
-- Using the `--irobf-fla` flag with the `clap` crate compile failed. (exit code: 0xc0000005, STATUS_ACCESS_VIOLATION) (seems like `anstream` `clap_lex` `proc-macro2` `windows-sys` ...and more is not compatible)  
 
 <br>  
 <br>  
