@@ -518,14 +518,9 @@ private:
       } else if (TheLine->Last->is(TT_CompoundRequirementLBrace)) {
         ShouldMerge = Style.AllowShortCompoundRequirementOnASingleLine;
       } else if (TheLine->Last->isOneOf(TT_ClassLBrace, TT_StructLBrace,
-                                        TT_UnionLBrace)) {
+                                        TT_UnionLBrace) ||
+                 (TheLine->Last->is(TT_RecordLBrace) && Style.isJava())) {
         return tryMergeRecord(I, E, Limit);
-      } else if (TheLine->Last->is(TT_RecordLBrace) && Style.isJava()) {
-        // Java `interface` and `record` have no dedicated `BraceWrapping.After`
-        // option and are not governed by `AllowShortRecordOnASingleLine`.
-        ShouldMerge = !Style.BraceWrapping.AfterClass ||
-                      (NextLine.First->is(tok::r_brace) &&
-                       !Style.BraceWrapping.SplitEmptyRecord);
       } else if (TheLine->InPPDirective ||
                  TheLine->First->isNoneOf(tok::kw_class, tok::kw_enum,
                                           tok::kw_struct, tok::kw_union)) {

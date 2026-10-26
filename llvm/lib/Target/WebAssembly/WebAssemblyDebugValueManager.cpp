@@ -15,9 +15,7 @@
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssembly.h"
 #include "WebAssemblyMachineFunctionInfo.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 
@@ -37,35 +35,26 @@ WebAssemblyDebugValueManager::WebAssemblyDebugValueManager(MachineInstr *Def)
 
   // Collect all the uses of this def.
   MachineRegisterInfo &MRI = Def->getMF()->getRegInfo();
-  MachineBasicBlock *MBB = Def->getParent();
-  unsigned RemainingUses = 0;
-  for (MachineInstr &MI : MRI.use_instructions(CurrentReg))
-    if (MI.isDebugValue() && MI.getParent() == MBB)
-      ++RemainingUses;
-  if (RemainingUses == 0)
+  SmallVector<MachineInstr *, 2> Candidates;
+  for (MachineInstr &MI : MRI.use_instructions(CurrentReg)) {
+    if (MI.isDebugValue() && MI.getParent() == Def->getParent())
+      Candidates.push_back(&MI);
+  }
+  if (Candidates.empty())
     return;
 
-  // Scan forward to collect DBG_VALUEs in block order.
-  // Scan backward at the same pace to account for earlier uses and stop once
-  // all possible matches have been found.
-  // Only the forward scan collects DBG_VALUEs.
-  MachineBasicBlock::iterator Down = std::next(Def->getIterator()),
-                              DownEnd = MBB->end(), Up = Def->getIterator(),
-                              UpBegin = MBB->begin();
-  while (RemainingUses > 0 && Down != DownEnd) {
-    if (Down->isDebugValue()) {
-      if (Down->hasDebugOperandForReg(CurrentReg)) {
-        DbgValues.push_back(&*Down);
-        --RemainingUses;
-      }
-    } else if (Down->definesRegister(CurrentReg, /*TRI=*/nullptr)) {
+  // To preserve the order of DBG_VALUEs and correctly handle non-SSA cases,
+  // we scan the BB as far as needed to find all candidates.
+  for (MachineBasicBlock::iterator MI = std::next(Def->getIterator()),
+                                   ME = Def->getParent()->end();
+       MI != ME; ++MI) {
+    // If another definition appears, stop
+    if (MI->definesRegister(CurrentReg, /*TRI=*/nullptr))
       break;
-    }
-    ++Down;
-    if (Up != UpBegin) {
-      --Up;
-      if (Up->isDebugValue() && Up->hasDebugOperandForReg(CurrentReg))
-        --RemainingUses;
+    if (MI->isDebugValue() && MI->hasDebugOperandForReg(CurrentReg)) {
+      DbgValues.push_back(&*MI);
+      if (DbgValues.size() == Candidates.size())
+        break;
     }
   }
 }
@@ -90,67 +79,58 @@ WebAssemblyDebugValueManager::getSinkableDebugValues(
     MachineInstr *Insert) const {
   if (DbgValues.empty())
     return {};
-
-  // If Def and Insert are in different BBs, we only handle a simple case in
-  // which Insert's BB is a successor of Def's BB.
-  if (Def->getParent() != Insert->getParent() &&
-      !Def->getParent()->isSuccessor(Insert->getParent()))
-    return {};
-
-  SmallDenseSet<DebugVariable, 4> OurVars;
-  for (MachineInstr *DV : DbgValues)
-    OurVars.insert(DebugVariable(DV->getDebugVariable(),
-                                 DV->getDebugExpression(),
-                                 DV->getDebugLoc()->getInlinedAt()));
-
-  SmallDenseMap<DebugVariable, SmallVector<MachineInstr *, 2>>
-      SeenDbgVarToDbgValues;
-  auto RecordDbgValue = [&](MachineInstr &MI) {
-    if (!MI.isDebugValue())
-      return;
-    DebugVariable Var(MI.getDebugVariable(), MI.getDebugExpression(),
-                      MI.getDebugLoc()->getInlinedAt());
-    if (OurVars.contains(Var) && !llvm::is_contained(DbgValues, &MI))
-      SeenDbgVarToDbgValues[Var].push_back(&MI);
-  };
+  // DBG_VALUEs between Def and Insert
+  SmallVector<MachineInstr *, 8> DbgValuesInBetween;
 
   if (Def->getParent() == Insert->getParent()) {
-    // Search both ways to quickly determine whether Insert follows Def.
-    // Only the forward scan collects DBG_VALUEs.
-    MachineBasicBlock::iterator Down = std::next(Def->getIterator()),
-                                DownEnd = Def->getParent()->end(),
-                                Up = Def->getIterator(),
-                                UpBegin = Def->getParent()->begin();
+    // When Def and Insert are within the same BB, check if Insert comes after
+    // Def, because we only support sinking.
     bool DefFirst = false;
-    while (Down != DownEnd || Up != UpBegin) {
-      if (Down != DownEnd) {
-        if (&*Down == Insert) {
-          DefFirst = true;
-          break;
-        }
-        RecordDbgValue(*Down);
-        ++Down;
+    for (MachineBasicBlock::iterator MI = std::next(Def->getIterator()),
+                                     ME = Def->getParent()->end();
+         MI != ME; ++MI) {
+      if (&*MI == Insert) {
+        DefFirst = true;
+        break;
       }
-      if (Up != UpBegin) {
-        --Up;
-        if (&*Up == Insert)
-          break;
-      }
+      if (MI->isDebugValue())
+        DbgValuesInBetween.push_back(&*MI);
     }
     if (!DefFirst) // Not a sink
       return {};
 
   } else { // Def and Insert are in different BBs
+    // If Def and Insert are in different BBs, we only handle a simple case in
+    // which Insert's BB is a successor of Def's BB.
+    if (!Def->getParent()->isSuccessor(Insert->getParent()))
+      return {};
+
     // Gather DBG_VALUEs between 'Def~Def BB's end' and
     // 'Insert BB's begin~Insert'
     for (MachineBasicBlock::iterator MI = std::next(Def->getIterator()),
                                      ME = Def->getParent()->end();
-         MI != ME; ++MI)
-      RecordDbgValue(*MI);
+         MI != ME; ++MI) {
+      if (MI->isDebugValue())
+        DbgValuesInBetween.push_back(&*MI);
+    }
     for (MachineBasicBlock::iterator MI = Insert->getParent()->begin(),
                                      ME = Insert->getIterator();
-         MI != ME; ++MI)
-      RecordDbgValue(*MI);
+         MI != ME; ++MI) {
+      if (MI->isDebugValue())
+        DbgValuesInBetween.push_back(&*MI);
+    }
+  }
+
+  // Gather DebugVariables that are seen between Def and Insert, excluding our
+  // own DBG_VALUEs in DbgValues.
+  SmallDenseMap<DebugVariable, SmallVector<MachineInstr *, 2>>
+      SeenDbgVarToDbgValues;
+  for (auto *DV : DbgValuesInBetween) {
+    if (!llvm::is_contained(DbgValues, DV)) {
+      DebugVariable Var(DV->getDebugVariable(), DV->getDebugExpression(),
+                        DV->getDebugLoc()->getInlinedAt());
+      SeenDbgVarToDbgValues[Var].push_back(DV);
+    }
   }
 
   // Gather sinkable DBG_VALUEs. We should not sink a DBG_VALUE if there is

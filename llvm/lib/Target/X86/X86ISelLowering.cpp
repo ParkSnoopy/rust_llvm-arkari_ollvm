@@ -9888,31 +9888,30 @@ static SDValue LowerAVXCONCAT_VECTORS(SDValue Op, const SDLoc &dl,
   assert((ResVT.is256BitVector() || ResVT.is512BitVector()) &&
          "Value type must be 256-/512-bit wide");
 
-  SmallVector<SDValue, 4> Ops(Op->ops());
-  unsigned NumSubElems = Ops[0].getSimpleValueType().getVectorNumElements();
   unsigned NumOperands = Op.getNumOperands();
-
   unsigned NumFreezeUndef = 0;
   unsigned NumZero = 0;
   unsigned NumNonZero = 0;
   unsigned NonZeros = 0;
   SmallSet<SDValue, 4> Undefs;
-  for (auto [I, SubVec] : enumerate(Ops)) {
+  for (unsigned i = 0; i != NumOperands; ++i) {
+    SDValue SubVec = Op.getOperand(i);
     if (SubVec.isUndef())
       continue;
     if (ISD::isFreezeUndef(SubVec.getNode())) {
-      // If the freeze(undef) has multiple uses then we must fold to zero.
-      if (SubVec.hasOneUse()) {
-        ++NumFreezeUndef;
-      } else {
-        ++NumZero;
-        Undefs.insert(SubVec);
-      }
-    } else if (ISD::isBuildVectorAllZeros(SubVec.getNode())) {
+        // If the freeze(undef) has multiple uses then we must fold to zero.
+        if (SubVec.hasOneUse()) {
+          ++NumFreezeUndef;
+        } else {
+          ++NumZero;
+          Undefs.insert(SubVec);
+        }
+    }
+    else if (ISD::isBuildVectorAllZeros(SubVec.getNode()))
       ++NumZero;
-    } else {
-      assert(I < sizeof(NonZeros) * CHAR_BIT); // Ensure the shift is in range.
-      NonZeros |= 1 << I;
+    else {
+      assert(i < sizeof(NonZeros) * CHAR_BIT); // Ensure the shift is in range.
+      NonZeros |= 1 << i;
       ++NumNonZero;
     }
   }
@@ -9920,10 +9919,11 @@ static SDValue LowerAVXCONCAT_VECTORS(SDValue Op, const SDLoc &dl,
   // If we have more than 2 non-zeros, build each half separately.
   if (NumNonZero > 2) {
     MVT HalfVT = ResVT.getHalfNumVectorElementsVT();
+    ArrayRef<SDUse> Ops = Op->ops();
     SDValue Lo = DAG.getNode(ISD::CONCAT_VECTORS, dl, HalfVT,
-                             ArrayRef<SDValue>(Ops).slice(0, NumOperands / 2));
+                             Ops.slice(0, NumOperands/2));
     SDValue Hi = DAG.getNode(ISD::CONCAT_VECTORS, dl, HalfVT,
-                             ArrayRef<SDValue>(Ops).slice(NumOperands / 2));
+                             Ops.slice(NumOperands/2));
     return DAG.getNode(ISD::CONCAT_VECTORS, dl, ResVT, Lo, Hi);
   }
 
@@ -9937,12 +9937,14 @@ static SDValue LowerAVXCONCAT_VECTORS(SDValue Op, const SDLoc &dl,
     DAG.ReplaceAllUsesWith(
         U, getZeroVector(U.getSimpleValueType(), Subtarget, DAG, dl));
 
-  for (auto [I, SubVec] : enumerate(Ops)) {
-    if ((NonZeros & (1 << I)) == 0)
+  MVT SubVT = Op.getOperand(0).getSimpleValueType();
+  unsigned NumSubElems = SubVT.getVectorNumElements();
+  for (unsigned i = 0; i != NumOperands; ++i) {
+    if ((NonZeros & (1 << i)) == 0)
       continue;
 
-    Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, ResVT, Vec, SubVec,
-                      DAG.getVectorIdxConstant(I * NumSubElems, dl));
+    Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, ResVT, Vec, Op.getOperand(i),
+                      DAG.getVectorIdxConstant(i * NumSubElems, dl));
   }
 
   return Vec;

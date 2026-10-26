@@ -3441,8 +3441,7 @@ LValue ItaniumCXXABI::EmitThreadLocalVarDeclLValue(CodeGenFunction &CGF,
   llvm::Value *Val = CGF.CGM.GetAddrOfGlobalVar(VD);
   llvm::Function *Wrapper = getOrCreateThreadLocalWrapper(VD, Val);
 
-  llvm::CallInst *CallVal =
-      CGF.Builder.CreateCall(Wrapper, {}, CGF.getBundlesForFunclet(Wrapper));
+  llvm::CallInst *CallVal = CGF.Builder.CreateCall(Wrapper);
   CallVal->setCallingConv(Wrapper->getCallingConv());
 
   LValue LV;

@@ -174,7 +174,7 @@ class C1USMEStreamingSchedWrite<SchedWrite StreamingWrite,
                                 SchedWrite SMEWrite>
     : SchedWriteVariant<[
         SchedVar<SMEMCStreamingSchedPred, [StreamingWrite]>,
-        SchedVar<NoSchedPred,             [SMEWrite]>,
+        SchedVar<SMESchedPred,            [SMEWrite]>,
       ]>;
 
 // Detailed CME scheduling derived from the SME2 software optimization guide.
