@@ -1,25 +1,25 @@
 # Rust LLVM + Arkari obfuscation module
-Merge [rust-lang/llvm-project](https://github.com/rust-lang/llvm-project) and [komimoe/Arkari](https://github.com/komimoe/Arkari)
+Merge [rust-lang/llvm-project](https://github.com/rust-lang/llvm-project) and [Fork with Rust-specific patch komimoe/Arkari](https://github.com/ParkSnoopy/Arkari)
 
 <br>  
 
 ```mermaid
 gitGraph
     branch llvm/llvm-project
-    commit id: "tag: llvmorg-23.1.0"
+    commit id: "tag: llvmorg-23.1.1"
     checkout main
     branch rust-lang/llvm-project
     commit id: "branch: rustc/23.1-2026-07-22"
     checkout llvm/llvm-project
-    merge rust-lang/llvm-project id: "diff: llvmorg-23.1.0 ... rustc/23.1-2026-07-22 (branch up to date)"
+    merge rust-lang/llvm-project id: "diff: llvmorg-23.1.1 ... rustc/23.1-2026-07-22"
     checkout llvm/llvm-project
     checkout main
     branch KomiMoe/Arkari
     commit id: "branch: llvm-23.x"
     checkout llvm/llvm-project
-    merge KomiMoe/Arkari id: "diff: llvmorg-23.1.0 ... llvm-23.x"
+    merge KomiMoe/Arkari id: "diff: llvmorg-23.1.1 ... llvm-23.x"
     checkout main
-    commit id: "base: llvmorg-23.1.0"
+    commit id: "base: llvmorg-23.1.1"
     merge llvm/llvm-project
     commit id: "some fix"
 ```
@@ -107,8 +107,8 @@ cmake -S llvm -B build -DCMAKE_INSTALL_PREFIX="./Release" -DLLVM_ENABLE_PROJECTS
 ```
 
 ## Used Version
-- [repo `rust-lang/llvm-project` branch `rustc/23.1-2026-07-22`](https://github.com/rust-lang/llvm-project/commit/ea7d852a70e8bdfaf601d6626a760f9771b2c4b4)
-- [repo `komimoe/Arkari` branch `llvm-23.x`](https://github.com/komimoe/Arkari/commit/5200fe2df127f52b6a9d34b9dde0c8dfe01c1b3b)
+- [repo `rust-lang/llvm-project` branch `rustc/23.1-2026-07-22`](https://github.com/rust-lang/llvm-project/commit/21cd7726af6f743cd33557fb5311babac83fab05)
+- [repo `ParkSnoopy/Arkari` branch `dev`](https://github.com/ParkSnoopy/Arkari/commit/e9520dde7663b47253dc00cf93dd278866eff6ae)
 
 ## Used Config
 `config.toml` for building `rust-lang/rust`
