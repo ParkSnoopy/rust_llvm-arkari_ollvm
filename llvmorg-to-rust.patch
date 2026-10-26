@@ -1,0 +1,3332 @@
+From 05e24047c8ff9c72fcb6f2a31fe18d8f46e30ef3 Mon Sep 17 00:00:00 2001
+From: ParkSnoopy <117149837+ParkSnoopy@users.noreply.github.com>
+Date: Mon, 26 Oct 2026 15:44:03 +0800
+Subject: [PATCH] merge commit `rust-lang/llvm-project/rustc/23.1-2026-07-22`
+ commit `21cd7726af6f743cd33557fb5311babac83fab05`
+
+---
+ .../readability/TrailingCommaCheck.cpp        |   3 +-
+ .../readability/trailing-comma-cxx20.cpp      | 119 ----------
+ .../checkers/readability/trailing-comma.c     |  51 ----
+ clang/cmake/caches/Release.cmake              |  10 +-
+ clang/docs/ReleaseNotes.md                    |   5 -
+ clang/lib/CodeGen/ItaniumCXXABI.cpp           |   3 +-
+ clang/lib/Driver/ToolChains/Gnu.cpp           |  18 --
+ clang/lib/Format/UnwrappedLineFormatter.cpp   |   9 +-
+ clang/lib/Format/UnwrappedLineParser.cpp      |  21 +-
+ clang/lib/Interpreter/Interpreter.cpp         |  17 +-
+ clang/lib/Sema/SemaConcept.cpp                |   6 -
+ clang/lib/Sema/SemaCoroutine.cpp              |  33 +--
+ clang/lib/Sema/SemaDecl.cpp                   |   2 +-
+ clang/lib/Sema/SemaDeclCXX.cpp                |  11 -
+ .../dllexport-ctor-closure-nested.cpp         |  11 -
+ clang/test/CodeGenCXX/wasm-eh.cpp             |  32 +--
+ .../PCH/dllexport-default-arg-closure.cpp     |   9 -
+ clang/test/SemaCXX/cxx2c-fold-exprs.cpp       |  30 ---
+ clang/test/SemaCXX/default-arg-closures.cpp   |   9 -
+ clang/test/SemaCXX/dllexport.cpp              |  14 --
+ .../warn-unused-parameters-coroutine.cpp      |  44 ----
+ clang/tools/clang-format/git-clang-format     |  46 ++--
+ clang/unittests/Format/FormatTestJava.cpp     |   7 -
+ clang/unittests/Format/TokenAnnotatorTest.cpp |  12 -
+ flang-rt/lib/runtime/environment.cpp          |   4 +-
+ flang-rt/unittests/Runtime/Exceptions.cpp     |   6 +-
+ .../include/llvm-libc-macros/float16-macros.h |   2 +-
+ libc/test/src/sys/socket/linux/CMakeLists.txt |   1 -
+ .../src/sys/socket/linux/sockatmark_test.cpp  |  19 +-
+ lldb/bindings/interface/SBFrameExtensions.i   |  11 +-
+ lldb/include/lldb/API/SBFrame.h               |  17 +-
+ lldb/source/API/SBEnvironment.cpp             |  15 +-
+ lldb/source/API/SBFrame.cpp                   |  57 +----
+ .../AddressOf/TestFrameVarDILAddressOf.py     |   4 +-
+ .../TestFrameVarDILArraySubscript.py          |  13 +-
+ .../MemberOf/TestFrameVarDILMemberOf.py       |   8 +-
+ .../TestFrameVarDILPointerDereference.py      |   4 +-
+ .../Arithmetic/TestFrameVarDILArithmetic.py   |   6 +-
+ .../var-dil/expr/Casts/TestFrameVarDILCast.py |   4 +-
+ .../functionalities/var_path/TestVarPath.py   |  71 ------
+ .../API/functionalities/var_path/main.cpp     |  33 ---
+ .../Handler/EvaluateRequestHandler.cpp        |   4 +-
+ lldb/tools/lldb-dap/SourceBreakpoint.cpp      |   4 +-
+ lldb/unittests/API/CMakeLists.txt             |   1 -
+ llvm/CMakeLists.txt                           |  10 +-
+ .../CodeGen/GlobalISel/LegalizerHelper.cpp    |   2 +-
+ .../SelectionDAG/LegalizeVectorTypes.cpp      |  17 +-
+ .../CodeGen/SelectionDAG/TargetLowering.cpp   |  10 +-
+ .../Parallel/DependencyTracker.cpp            | 219 +++++-------------
+ .../DWARFLinker/Parallel/DependencyTracker.h  | 135 ++---------
+ .../JITLink/CompactUnwindSupport.h            |   7 +-
+ .../lib/Target/AArch64/AArch64SchedC1Ultra.td |   2 +-
+ .../LoongArch/LoongArchFloat32InstrInfo.td    |   3 -
+ .../LoongArch/LoongArchLASXInstrInfo.td       |  28 +--
+ .../Target/Mips/AsmParser/MipsAsmParser.cpp   |  10 +-
+ llvm/lib/Target/Mips/MipsISelDAGToDAG.cpp     |  49 ----
+ llvm/lib/Target/Mips/MipsISelDAGToDAG.h       |   2 -
+ llvm/lib/Target/Mips/MipsISelLowering.cpp     |  20 +-
+ .../Target/Sparc/AsmParser/SparcAsmParser.cpp |   1 -
+ llvm/lib/Target/Sparc/SparcAsmPrinter.cpp     |  12 -
+ .../WebAssemblyDebugValueManager.cpp          | 128 +++++-----
+ llvm/lib/Target/X86/X86ISelLowering.cpp       |  44 ++--
+ llvm/lib/Transforms/Utils/SCCPSolver.cpp      |   2 +-
+ .../Transforms/Vectorize/SLPVectorizer.cpp    |  97 ++++----
+ .../Transforms/Vectorize/VectorCombine.cpp    |   1 -
+ llvm/test/CodeGen/Mips/cmov.ll                |   6 -
+ .../CodeGen/Mips/llvm-ir/select-globaladdr.ll |   7 +-
+ llvm/test/CodeGen/X86/intrinsic-cttz-elts.ll  | 162 -------------
+ .../X86/vector-shuffle-combining-avx512f.ll   |  43 ----
+ .../AArch64/long-non-power-of-2.ll            |   6 +-
+ .../X86/deleted-instructions-clear.ll         |  10 +-
+ .../multi-parent-instr-copyable-regular.ll    |  14 +-
+ .../VectorCombine/RISCV/fold-vp-load.ll       |  14 --
+ 73 files changed, 315 insertions(+), 1552 deletions(-)
+
+diff --git a/clang-tools-extra/clang-tidy/readability/TrailingCommaCheck.cpp b/clang-tools-extra/clang-tidy/readability/TrailingCommaCheck.cpp
+index cb1a33ba0..4dd881cf3 100644
+--- a/clang-tools-extra/clang-tidy/readability/TrailingCommaCheck.cpp
++++ b/clang-tools-extra/clang-tidy/readability/TrailingCommaCheck.cpp
+@@ -84,8 +84,7 @@ void TrailingCommaCheck::registerMatchers(MatchFinder *Finder) {
+           .bind("enum"),
+       this);
+ 
+-  Finder->addMatcher(initListExpr(unless(isEmptyInitList()), unless(isMacro()),
+-                                  unless(isImplicit()))
++  Finder->addMatcher(initListExpr(unless(isEmptyInitList()), unless(isMacro()))
+                          .bind("initlist"),
+                      this);
+ }
+diff --git a/clang-tools-extra/test/clang-tidy/checkers/readability/trailing-comma-cxx20.cpp b/clang-tools-extra/test/clang-tidy/checkers/readability/trailing-comma-cxx20.cpp
+index db5a3fbeb..b2f6ed072 100644
+--- a/clang-tools-extra/test/clang-tidy/checkers/readability/trailing-comma-cxx20.cpp
++++ b/clang-tools-extra/test/clang-tidy/checkers/readability/trailing-comma-cxx20.cpp
+@@ -87,122 +87,3 @@ void with_array() {
+     .count = 3,
+   };
+ }
+-
+-struct AnonUnion {
+-  int x;
+-  union { struct { int a; int b; }; };
+-};
+-
+-void anonymous_union_members() {
+-  AnonUnion w1 = {
+-    .x = 1,
+-    .a = 2,
+-    .b = 3,
+-  };
+-
+-  AnonUnion w2 = {
+-    .x = 1,
+-    .a = 2,
+-    .b = 3
+-  };
+-  // CHECK-MESSAGES: :[[@LINE-2]]:11: warning: initializer list should have a trailing comma
+-  // CHECK-FIXES: AnonUnion w2 = {
+-  // CHECK-FIXES-NEXT:     .x = 1,
+-  // CHECK-FIXES-NEXT:     .a = 2,
+-  // CHECK-FIXES-NEXT:     .b = 3,
+-  // CHECK-FIXES-NEXT:   };
+-}
+-
+-struct Inner { int v; };
+-struct Nested { Inner x; Inner y; };
+-
+-void nested_designator() {
+-  Nested n1 = {
+-    .x = {.v = 1},
+-    .y.v = 2,
+-  };
+-
+-  Nested n2 = {
+-    .x = {.v = 1},
+-    .y.v = 2
+-  };
+-  // CHECK-MESSAGES: :[[@LINE-2]]:13: warning: initializer list should have a trailing comma
+-  // CHECK-FIXES: Nested n2 = {
+-  // CHECK-FIXES-NEXT:     .x = {.v = 1},
+-  // CHECK-FIXES-NEXT:     .y.v = 2,
+-  // CHECK-FIXES-NEXT:   };
+-
+-  Nested n3 = {
+-    .x = {.v = 1},
+-    .y = {.v = 2,},
+-  };
+-  // CHECK-MESSAGES: :[[@LINE-2]]:17: warning: initializer list should not have a trailing comma
+-  // CHECK-FIXES: Nested n3 = {
+-  // CHECK-FIXES-NEXT:     .x = {.v = 1},
+-  // CHECK-FIXES-NEXT:     .y = {.v = 2},
+-  // CHECK-FIXES-NEXT:   };
+-}
+-
+-struct AnonStruct {
+-  int x;
+-  struct { int p; int q; };
+-};
+-
+-void anonymous_struct_members() {
+-  AnonStruct as1 = {
+-    .x = 1,
+-    .p = 2,
+-    .q = 3,
+-  };
+-
+-  AnonStruct as2 = { .x = 1, .p = 2, .q = 3, };
+-  // CHECK-MESSAGES: :[[@LINE-1]]:44: warning: initializer list should not have a trailing comma
+-  // CHECK-FIXES: AnonStruct as2 = { .x = 1, .p = 2, .q = 3 };
+-}
+-
+-struct Deep { int c; };
+-struct Mid { Deep b; };
+-struct Top { Mid a; };
+-
+-void multi_level_designator() {
+-  Top t1 = {
+-    .a.b.c = 1,
+-  };
+-
+-  Top t2 = {
+-    .a.b.c = 1
+-  };
+-  // CHECK-MESSAGES: :[[@LINE-2]]:15: warning: initializer list should have a trailing comma
+-  // CHECK-FIXES: Top t2 = {
+-  // CHECK-FIXES-NEXT:     .a.b.c = 1,
+-  // CHECK-FIXES-NEXT:   };
+-}
+-
+-struct TwoFields { int v; int w; };
+-struct Holder { TwoFields y; };
+-
+-void repeated_subobject_designator() {
+-  Holder h1 = {
+-    .y.v = 1,
+-    .y.w = 2,
+-  };
+-}
+-
+-struct WithArrayField { int vals[3]; int n; };
+-
+-void array_designator() {
+-  WithArrayField wa1 = {
+-    .vals[0] = 1,
+-    .n = 1,
+-  };
+-
+-  WithArrayField wa2 = {
+-    .vals[0] = 1,
+-    .n = 1
+-  };
+-  // CHECK-MESSAGES: :[[@LINE-2]]:11: warning: initializer list should have a trailing comma
+-  // CHECK-FIXES: WithArrayField wa2 = {
+-  // CHECK-FIXES-NEXT:     .vals[0] = 1,
+-  // CHECK-FIXES-NEXT:     .n = 1,
+-  // CHECK-FIXES-NEXT:   };
+-}
+diff --git a/clang-tools-extra/test/clang-tidy/checkers/readability/trailing-comma.c b/clang-tools-extra/test/clang-tidy/checkers/readability/trailing-comma.c
+index 9498fead9..bdf9912e5 100644
+--- a/clang-tools-extra/test/clang-tidy/checkers/readability/trailing-comma.c
++++ b/clang-tools-extra/test/clang-tidy/checkers/readability/trailing-comma.c
+@@ -115,54 +115,3 @@ struct Point singleDesig4 = {
+ // CHECK-FIXES: struct Point singleDesig4 = {
+ // CHECK-FIXES-NEXT:   .x = 10,
+ // CHECK-FIXES-NEXT: };
+-
+-struct AnonUnion {
+-  int x;
+-  union { struct { int a; int b; }; };
+-};
+-
+-struct AnonUnion au1 = {
+-  .x = 1,
+-  .a = 2,
+-  .b = 3,
+-};
+-
+-struct AnonUnion au2 = {
+-  .x = 1,
+-  .a = 2,
+-  .b = 3
+-};
+-// CHECK-MESSAGES: :[[@LINE-2]]:9: warning: initializer list should have a trailing comma
+-// CHECK-FIXES: struct AnonUnion au2 = {
+-// CHECK-FIXES-NEXT:   .x = 1,
+-// CHECK-FIXES-NEXT:   .a = 2,
+-// CHECK-FIXES-NEXT:   .b = 3,
+-// CHECK-FIXES-NEXT: };
+-
+-struct Inner { int v; };
+-struct Outer { struct Inner x; struct Inner y; };
+-
+-struct Outer nd1 = {
+-  .x = {.v = 1},
+-  .y.v = 2,
+-};
+-
+-struct Outer nd2 = {
+-  .x = {.v = 1},
+-  .y.v = 2
+-};
+-// CHECK-MESSAGES: :[[@LINE-2]]:11: warning: initializer list should have a trailing comma
+-// CHECK-FIXES: struct Outer nd2 = {
+-// CHECK-FIXES-NEXT:   .x = {.v = 1},
+-// CHECK-FIXES-NEXT:   .y.v = 2,
+-// CHECK-FIXES-NEXT: };
+-
+-struct Outer nd3 = {
+-  .x = {.v = 1},
+-  .y = {.v = 2,},
+-};
+-// CHECK-MESSAGES: :[[@LINE-2]]:15: warning: initializer list should not have a trailing comma
+-// CHECK-FIXES: struct Outer nd3 = {
+-// CHECK-FIXES-NEXT:   .x = {.v = 1},
+-// CHECK-FIXES-NEXT:   .y = {.v = 2},
+-// CHECK-FIXES-NEXT: };
+diff --git a/clang/cmake/caches/Release.cmake b/clang/cmake/caches/Release.cmake
+index b0bc3ebfe..5bea5fa58 100644
+--- a/clang/cmake/caches/Release.cmake
++++ b/clang/cmake/caches/Release.cmake
+@@ -30,19 +30,13 @@ endfunction()
+ #
+ # cmake -D LLVM_RELEASE_ENABLE_PGO=ON -C Release.cmake
+ 
+-set (DEFAULT_PROJECTS "clang;lld;lldb;clang-tools-extra;polly;mlir")
++set (DEFAULT_PROJECTS "clang;lld;lldb;clang-tools-extra;polly;mlir;flang")
+ # bolt only supports ELF, so only enable it for Linux.
+ if (${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
+   list(APPEND DEFAULT_PROJECTS "bolt")
+ endif()
+ 
+-set (DEFAULT_RUNTIMES "compiler-rt;libcxx;openmp")
+-# Don't build flang on Darwin due to:
+-# https://github.com/llvm/llvm-project/issues/160546
+-if (NOT ${CMAKE_HOST_SYSTEM_NAME} MATCHES "Darwin")
+-  list(APPEND DEFAULT_PROJECTS "flang")
+-  list(APPEND DEFAULT_RUNTIMES "flang-rt")
+-endif()
++set (DEFAULT_RUNTIMES "compiler-rt;libcxx;openmp;flang-rt")
+ 
+ if (NOT WIN32)
+   list(APPEND DEFAULT_RUNTIMES "libcxxabi" "libunwind")
+diff --git a/clang/docs/ReleaseNotes.md b/clang/docs/ReleaseNotes.md
+index 6928e8ab4..75096c92f 100644
+--- a/clang/docs/ReleaseNotes.md
++++ b/clang/docs/ReleaseNotes.md
+@@ -593,11 +593,6 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
+ 
+ ### Improvements to Clang's diagnostics
+ 
+-- Fixed `-Wunused-parameter` to diagnose coroutine parameters that are only
+-  considered during allocation function lookup or promise object
+-  initialization, while not diagnosing parameters passed to the selected
+-  allocation function or promise constructor. (#GH217501)
+-
+ - Fixed bug in `-Wdocumentation` so that it correctly handles explicit
+   function template instantiations (#64087).
+ 
+diff --git a/clang/lib/CodeGen/ItaniumCXXABI.cpp b/clang/lib/CodeGen/ItaniumCXXABI.cpp
+index 2f43eb6e1..b17478cb7 100644
+--- a/clang/lib/CodeGen/ItaniumCXXABI.cpp
++++ b/clang/lib/CodeGen/ItaniumCXXABI.cpp
+@@ -3441,8 +3441,7 @@ LValue ItaniumCXXABI::EmitThreadLocalVarDeclLValue(CodeGenFunction &CGF,
+   llvm::Value *Val = CGF.CGM.GetAddrOfGlobalVar(VD);
+   llvm::Function *Wrapper = getOrCreateThreadLocalWrapper(VD, Val);
+ 
+-  llvm::CallInst *CallVal =
+-      CGF.Builder.CreateCall(Wrapper, {}, CGF.getBundlesForFunclet(Wrapper));
++  llvm::CallInst *CallVal = CGF.Builder.CreateCall(Wrapper);
+   CallVal->setCallingConv(Wrapper->getCallingConv());
+ 
+   LValue LV;
+diff --git a/clang/lib/Driver/ToolChains/Gnu.cpp b/clang/lib/Driver/ToolChains/Gnu.cpp
+index 2fad9327d..24076d881 100644
+--- a/clang/lib/Driver/ToolChains/Gnu.cpp
++++ b/clang/lib/Driver/ToolChains/Gnu.cpp
+@@ -533,24 +533,6 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
+       if (!Args.hasArg(options::OPT_nolibc))
+         CmdArgs.push_back("-lc");
+ 
+-      // musl does not provide __stack_chk_fail_local, but GCC emits calls
+-      // to it in PIC/PIE code on some targets (32-bit x86, PowerPC). musl
+-      // distributions ship the symbol in libssp_nonshared.a and make GCC
+-      // link it when stack protection is on; match that if the library
+-      // exists.
+-      if (ToolChain.getTriple().isMusl()) {
+-        bool WantsSSP = ToolChain.GetDefaultStackProtectorLevel(
+-                            /*KernelOrKext=*/false) != LangOptions::SSPOff;
+-        if (Arg *A = Args.getLastArg(options::OPT_fno_stack_protector,
+-                                     options::OPT_fstack_protector,
+-                                     options::OPT_fstack_protector_all,
+-                                     options::OPT_fstack_protector_strong))
+-          WantsSSP = !A->getOption().matches(options::OPT_fno_stack_protector);
+-        if (WantsSSP &&
+-            ToolChain.GetFilePath("libssp_nonshared.a") != "libssp_nonshared.a")
+-          CmdArgs.push_back("-lssp_nonshared");
+-      }
+-
+       // Add IAMCU specific libs, if needed.
+       if (IsIAMCU)
+         CmdArgs.push_back("-lgloss");
+diff --git a/clang/lib/Format/UnwrappedLineFormatter.cpp b/clang/lib/Format/UnwrappedLineFormatter.cpp
+index 9c3105590..b783876b6 100644
+--- a/clang/lib/Format/UnwrappedLineFormatter.cpp
++++ b/clang/lib/Format/UnwrappedLineFormatter.cpp
+@@ -518,14 +518,9 @@ private:
+       } else if (TheLine->Last->is(TT_CompoundRequirementLBrace)) {
+         ShouldMerge = Style.AllowShortCompoundRequirementOnASingleLine;
+       } else if (TheLine->Last->isOneOf(TT_ClassLBrace, TT_StructLBrace,
+-                                        TT_UnionLBrace)) {
++                                        TT_UnionLBrace) ||
++                 (TheLine->Last->is(TT_RecordLBrace) && Style.isJava())) {
+         return tryMergeRecord(I, E, Limit);
+-      } else if (TheLine->Last->is(TT_RecordLBrace) && Style.isJava()) {
+-        // Java `interface` and `record` have no dedicated `BraceWrapping.After`
+-        // option and are not governed by `AllowShortRecordOnASingleLine`.
+-        ShouldMerge = !Style.BraceWrapping.AfterClass ||
+-                      (NextLine.First->is(tok::r_brace) &&
+-                       !Style.BraceWrapping.SplitEmptyRecord);
+       } else if (TheLine->InPPDirective ||
+                  TheLine->First->isNoneOf(tok::kw_class, tok::kw_enum,
+                                           tok::kw_struct, tok::kw_union)) {
+diff --git a/clang/lib/Format/UnwrappedLineParser.cpp b/clang/lib/Format/UnwrappedLineParser.cpp
+index 5aada4883..c9913e062 100644
+--- a/clang/lib/Format/UnwrappedLineParser.cpp
++++ b/clang/lib/Format/UnwrappedLineParser.cpp
+@@ -2663,8 +2663,7 @@ bool UnwrappedLineParser::parseBracedList(bool IsAngleBracket, bool IsEnum) {
+ /// Parses a pair of parentheses (and everything between them).
+ /// \param StarAndAmpTokenType If different than TT_Unknown sets this type for
+ /// all (double) ampersands and stars. This applies for all nested scopes as
+-/// well, this is disabled within a (potential) template argument <>, and thus
+-/// also if we find only a <.
++/// well.
+ ///
+ /// Returns whether there is a `=` token between the parentheses.
+ bool UnwrappedLineParser::parseParens(TokenType StarAndAmpTokenType,
+@@ -2675,7 +2674,6 @@ bool UnwrappedLineParser::parseParens(TokenType StarAndAmpTokenType,
+   bool SeenComma = false;
+   bool SeenEqual = false;
+   bool MightBeFoldExpr = false;
+-  unsigned ExcessLess = 0;
+   nextToken();
+   const bool MightBeStmtExpr = FormatTok->is(tok::l_brace);
+   if (!InMacroCall && Prev && Prev->is(TT_FunctionLikeMacro))
+@@ -2683,10 +2681,8 @@ bool UnwrappedLineParser::parseParens(TokenType StarAndAmpTokenType,
+   do {
+     switch (FormatTok->Tok.getKind()) {
+     case tok::l_paren:
+-      if (parseParens(ExcessLess == 0 ? StarAndAmpTokenType : TT_Unknown,
+-                      InMacroCall)) {
++      if (parseParens(StarAndAmpTokenType, InMacroCall))
+         SeenEqual = true;
+-      }
+       if (Style.isJava() && FormatTok->is(tok::l_brace))
+         parseChildBlock();
+       break;
+@@ -2803,21 +2799,10 @@ bool UnwrappedLineParser::parseParens(TokenType StarAndAmpTokenType,
+     case tok::kw_requires:
+       parseRequiresExpression();
+       break;
+-    case tok::less:
+-      // We have here no clue whether this is a less, or a template opener, opt
+-      // out of the predefined StarAndAmpTokenType.
+-      ++ExcessLess;
+-      nextToken();
+-      break;
+-    case tok::greater:
+-      if (ExcessLess > 0)
+-        --ExcessLess;
+-      nextToken();
+-      break;
+     case tok::star:
+     case tok::amp:
+     case tok::ampamp:
+-      if (StarAndAmpTokenType != TT_Unknown && ExcessLess == 0)
++      if (StarAndAmpTokenType != TT_Unknown)
+         FormatTok->setFinalizedType(StarAndAmpTokenType);
+       [[fallthrough]];
+     default:
+diff --git a/clang/lib/Interpreter/Interpreter.cpp b/clang/lib/Interpreter/Interpreter.cpp
+index ef1ca3153..0536fdcd5 100644
+--- a/clang/lib/Interpreter/Interpreter.cpp
++++ b/clang/lib/Interpreter/Interpreter.cpp
+@@ -206,15 +206,6 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
+   return std::move(Clang);
+ }
+ 
+-static llvm::Error ExecuteIncrementalAction(CompilerInstance &CI,
+-                                            IncrementalAction &Act) {
+-  if (!CI.ExecuteAction(Act) || CI.getDiagnostics().hasErrorOccurred()) {
+-    return llvm::createStringError(llvm::errc::not_supported,
+-                                   "Failed to execute incremental action");
+-  }
+-  return llvm::Error::success();
+-}
+-
+ } // anonymous namespace
+ 
+ namespace clang {
+@@ -358,10 +349,7 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
+   if (ErrOut)
+     return;
+ 
+-  if (llvm::Error E = ExecuteIncrementalAction(*CI, *Act)) {
+-    ErrOut = joinErrors(std::move(ErrOut), std::move(E));
+-    return;
+-  }
++  CI->ExecuteAction(*Act);
+ 
+   IncrParser =
+       std::make_unique<IncrementalParser>(*CI, Act.get(), ErrOut, PTUs);
+@@ -502,8 +490,7 @@ Interpreter::createWithCUDA(std::unique_ptr<CompilerInstance> CI,
+ 
+   Interp->DeviceAct = std::move(DeviceAct);
+ 
+-  if (llvm::Error E = ExecuteIncrementalAction(*DCI, *Interp->DeviceAct))
+-    return std::move(E);
++  DCI->ExecuteAction(*Interp->DeviceAct);
+ 
+   Interp->DeviceCI = std::move(DCI);
+ 
+diff --git a/clang/lib/Sema/SemaConcept.cpp b/clang/lib/Sema/SemaConcept.cpp
+index da0b97005..476910a9d 100644
+--- a/clang/lib/Sema/SemaConcept.cpp
++++ b/clang/lib/Sema/SemaConcept.cpp
+@@ -267,12 +267,6 @@ public:
+     return Result;
+   }
+ 
+-  QualType TransformPackIndexingType(TypeLocBuilder &TLB,
+-                                     PackIndexingTypeLoc TL) {
+-    llvm::SaveAndRestore _1(RemoveNonPackExpansionPacks, false);
+-    return inherited::TransformPackIndexingType(TLB, TL);
+-  }
+-
+   bool AlreadyTransformed(QualType T) {
+     if (T.isNull())
+       return true;
+diff --git a/clang/lib/Sema/SemaCoroutine.cpp b/clang/lib/Sema/SemaCoroutine.cpp
+index 4b99e4454..7f9b1d642 100644
+--- a/clang/lib/Sema/SemaCoroutine.cpp
++++ b/clang/lib/Sema/SemaCoroutine.cpp
+@@ -462,12 +462,6 @@ static ExprResult buildPromiseCall(Sema &S, VarDecl *Promise,
+   return buildMemberCall(S, PromiseRef.get(), Loc, Name, Args);
+ }
+ 
+-static void markCoroutineParametersReferenced(FunctionDecl &FD) {
+-  for (auto *PD : FD.parameters())
+-    if (!PD->getType()->isDependentType())
+-      PD->setReferenced();
+-}
+-
+ VarDecl *Sema::buildCoroutinePromise(SourceLocation Loc) {
+   assert(isa<FunctionDecl>(CurContext) && "not in a function scope");
+   auto *FD = cast<FunctionDecl>(CurContext);
+@@ -561,10 +555,6 @@ VarDecl *Sema::buildCoroutinePromise(SourceLocation Loc) {
+         VD->setInit(MaybeCreateExprWithCleanups(Result.get()));
+         VD->setInitStyle(VarDecl::CallInit);
+         CheckCompleteVariableDeclaration(VD);
+-        // The constructor is selected with the coroutine parameter copies as
+-        // arguments. Mark the original parameters as referenced for
+-        // -Wunused-parameter.
+-        markCoroutineParametersReferenced(*FD);
+       }
+     } else
+       ActOnUninitializedDecl(VD);
+@@ -1395,14 +1385,9 @@ static bool collectPlacementArgs(Sema &S, FunctionDecl &FD, SourceLocation Loc,
+ 
+     // Build a reference to the parameter.
+     auto PDLoc = PD->getLocation();
+-    // Preserve the referenced state for unused parameter diagnostics.
+-    bool DeclReferenced = PD->isReferenced();
+     ExprResult PDRefExpr =
+         S.BuildDeclRefExpr(PD, PD->getOriginalType().getNonReferenceType(),
+                            ExprValueKind::VK_LValue, PDLoc);
+-
+-    PD->setReferenced(DeclReferenced);
+-
+     if (PDRefExpr.isInvalid())
+       return false;
+ 
+@@ -1458,8 +1443,6 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
+ 
+   FunctionDecl *OperatorNew = nullptr;
+   SmallVector<Expr *, 1> PlacementArgs;
+-  // Track whether PlacementArgs still refer to the coroutine parameters.
+-  bool PlacementArgsFromCoroutine = false;
+   DeclarationName NewName =
+       S.getASTContext().DeclarationNames.getCXXOperatorName(OO_New);
+ 
+@@ -1508,11 +1491,8 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
+   // We don't expect to call to global operator new with (size, p0, …, pn).
+   // So if we choose to lookup the allocation function in global scope, we
+   // shouldn't lookup placement arguments.
+-  if (PromiseContainsNew) {
+-    if (!collectPlacementArgs(S, FD, Loc, PlacementArgs))
+-      return false;
+-    PlacementArgsFromCoroutine = true;
+-  }
++  if (PromiseContainsNew && !collectPlacementArgs(S, FD, Loc, PlacementArgs))
++    return false;
+ 
+   LookupAllocationFunction();
+ 
+@@ -1578,7 +1558,6 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
+     if (!StdNoThrow)
+       return false;
+     PlacementArgs = {StdNoThrow};
+-    PlacementArgsFromCoroutine = false;
+     OperatorNew = nullptr;
+     LookupAllocationFunction(AllocationFunctionScope::Global);
+   }
+@@ -1665,14 +1644,8 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
+       isAlignedAllocation(IAP.PassAlignment))
+     NewArgs.push_back(FrameAlignment);
+ 
+-  // getNumParams() does not include an ellipsis, but a variadic allocation
+-  // function still receives the coroutine parameters as placement arguments.
+-  if (OperatorNew->isVariadic() ||
+-      OperatorNew->getNumParams() > NewArgs.size()) {
++  if (OperatorNew->getNumParams() > NewArgs.size())
+     llvm::append_range(NewArgs, PlacementArgs);
+-    if (PlacementArgsFromCoroutine)
+-      markCoroutineParametersReferenced(FD);
+-  }
+ 
+   ExprResult NewExpr =
+       S.BuildCallExpr(S.getCurScope(), NewRef.get(), Loc, NewArgs, Loc);
+diff --git a/clang/lib/Sema/SemaDecl.cpp b/clang/lib/Sema/SemaDecl.cpp
+index 6a25a799a..27fe259af 100644
+--- a/clang/lib/Sema/SemaDecl.cpp
++++ b/clang/lib/Sema/SemaDecl.cpp
+@@ -18387,7 +18387,7 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
+   }
+ 
+   if (getLangOpts().CPlusPlus && Name && DC && StdNamespace &&
+-      DC->getRedeclContext()->Equals(getStdNamespace())) {
++      DC->Equals(getStdNamespace())) {
+     if (Name->isStr("bad_alloc")) {
+       // This is a declaration of or a reference to "std::bad_alloc".
+       isStdBadAlloc = true;
+diff --git a/clang/lib/Sema/SemaDeclCXX.cpp b/clang/lib/Sema/SemaDeclCXX.cpp
+index b0669c602..685412d68 100644
+--- a/clang/lib/Sema/SemaDeclCXX.cpp
++++ b/clang/lib/Sema/SemaDeclCXX.cpp
+@@ -6383,19 +6383,8 @@ static void checkForMultipleExportedDefaultConstructors(Sema &S,
+   if (!S.Context.getTargetInfo().getCXXABI().isMicrosoft())
+     return;
+ 
+-  if (Class->isInvalidDecl())
+-    return;
+-
+   CXXConstructorDecl *LastExportedDefaultCtor = nullptr;
+   for (Decl *Member : Class->decls()) {
+-    // Nested classes finish delayed default argument parsing with the outermost
+-    // class, so check each nested definition here.
+-    if (auto *NestedClass = dyn_cast<CXXRecordDecl>(Member)) {
+-      if (NestedClass->isThisDeclarationADefinition())
+-        checkForMultipleExportedDefaultConstructors(S, NestedClass);
+-      continue;
+-    }
+-
+     // Look for exported default constructors.
+     auto *CD = dyn_cast<CXXConstructorDecl>(Member);
+     if (!CD || !CD->isDefaultConstructor())
+diff --git a/clang/test/CodeGenCXX/dllexport-ctor-closure-nested.cpp b/clang/test/CodeGenCXX/dllexport-ctor-closure-nested.cpp
+index e949bc826..36dab8600 100644
+--- a/clang/test/CodeGenCXX/dllexport-ctor-closure-nested.cpp
++++ b/clang/test/CodeGenCXX/dllexport-ctor-closure-nested.cpp
+@@ -18,14 +18,3 @@ struct __declspec(dllexport) CtorClosureOuter {
+ 
+ // CHECK-LABEL: $"??1HasImplicitDtor1@@QAE@XZ" = comdat any
+ // CHECK-LABEL: define weak_odr dso_local dllexport x86_thiscallcc void @"??_FCtorClosureInner@CtorClosureOuter@@QAEXXZ"({{.*}}) {{#[0-9]+}} comdat
+-
+-// Member-level dllexport on a nested default constructor needs constructor
+-// closure default arguments before the enclosing class is emitted.
+-struct MemberExportedCtorClosureOuter {
+-  struct MemberExportedCtorClosureInner {
+-    __declspec(dllexport) MemberExportedCtorClosureInner(
+-        const HasImplicitDtor1 &v = {}) {}
+-  };
+-};
+-
+-// CHECK-LABEL: define weak_odr dso_local dllexport x86_thiscallcc void @"??_FMemberExportedCtorClosureInner@MemberExportedCtorClosureOuter@@QAEXXZ"({{.*}}) {{#[0-9]+}} comdat
+diff --git a/clang/test/CodeGenCXX/wasm-eh.cpp b/clang/test/CodeGenCXX/wasm-eh.cpp
+index 0b87107e4..f243f37ec 100644
+--- a/clang/test/CodeGenCXX/wasm-eh.cpp
++++ b/clang/test/CodeGenCXX/wasm-eh.cpp
+@@ -41,7 +41,7 @@ void multiple_catches_wo_catch_all() {
+ // CHECK-NEXT:   %[[EXN:.*]] = call ptr @llvm.wasm.get.exception(token %[[CATCHPAD]])
+ // CHECK-NEXT:   store ptr %[[EXN]], ptr %exn.slot
+ // CHECK-NEXT:   %[[SELECTOR:.*]] = call i32 @llvm.wasm.get.ehselector(token %[[CATCHPAD]])
+-// CHECK-NEXT:   %[[TYPEID:.*]] = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIi) {{.*}}
++// CHECK-NEXT:   %[[TYPEID:.*]] = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIi) #7
+ // CHECK-NEXT:   %[[MATCHES:.*]] = icmp eq i32 %[[SELECTOR]], %[[TYPEID]]
+ // CHECK-NEXT:   br i1 %[[MATCHES]], label %[[CATCH_INT_BB:.*]], label %[[CATCH_FALLTHROUGH_BB:.*]]
+ 
+@@ -58,7 +58,7 @@ void multiple_catches_wo_catch_all() {
+ // CHECK-NEXT:   br label %[[TRY_CONT_BB:.*]]
+ 
+ // CHECK: [[CATCH_FALLTHROUGH_BB]]
+-// CHECK-NEXT:   %[[TYPEID:.*]] = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTId) {{.*}}
++// CHECK-NEXT:   %[[TYPEID:.*]] = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTId) #7
+ // CHECK-NEXT:   %[[MATCHES:.*]] = icmp eq i32 %[[SELECTOR]], %[[TYPEID]]
+ // CHECK-NEXT:   br i1 %[[MATCHES]], label %[[CATCH_FLOAT_BB:.*]], label %[[RETHROW_BB:.*]]
+ 
+@@ -388,34 +388,6 @@ void noexcept_throw() noexcept {
+   throw 3;
+ }
+ 
+-int get_val() { return 42; }
+-thread_local int tls = get_val();
+-
+-// CHECK-LABEL: @_Z26tls_wrapper_within_funcletv()
+-// CHECK:   %[[CATCHSWITCH:.*]] = catchswitch within none [label %[[CATCHSTART_BB:.*]]] unwind to caller
+-
+-// CHECK: [[CATCHSTART_BB]]:
+-// CHECK-NEXT:   %[[CATCHPAD:.*]] = catchpad within %[[CATCHSWITCH]] [ptr null]
+-// CHECK-NEXT:   %[[EXN:.*]] = call ptr @llvm.wasm.get.exception(token %[[CATCHPAD]])
+-// CHECK-NEXT:   store ptr %[[EXN]], ptr %exn.slot
+-// CHECK-NEXT:   {{.*}} call i32 @llvm.wasm.get.ehselector(token %[[CATCHPAD]])
+-// CHECK-NEXT:   br label %[[CATCH_ALL_BB:.*]]
+-
+-// CHECK: [[CATCH_ALL_BB]]:
+-// CHECK-NEXT:   %[[EXN_LOAD:.*]] = load ptr, ptr %exn.slot
+-// CHECK-NEXT:   call ptr @__cxa_begin_catch(ptr %[[EXN_LOAD]]) {{.*}} [ "funclet"(token %[[CATCHPAD]]) ]
+-// CHECK-NEXT:   call {{.*}} @_ZTW3tls() [ "funclet"(token %[[CATCHPAD]]) ]
+-
+-// Thread-local wrapper calls within a funclet should have a catchpad/cleanuppad
+-// funclet bundle argument.
+-int tls_wrapper_within_funclet() {
+-  try {
+-    throw 1;
+-  } catch (...) {
+-    return tls;
+-  }
+-}
+-
+ // CATCH-LABEL: define void @_Z14noexcept_throwv()
+ // CHECK: %{{.*}} = cleanuppad within none []
+ // CHECK-NEXT:  call void @_ZSt9terminatev()
+diff --git a/clang/test/PCH/dllexport-default-arg-closure.cpp b/clang/test/PCH/dllexport-default-arg-closure.cpp
+index b56d166e8..b5ac7815b 100644
+--- a/clang/test/PCH/dllexport-default-arg-closure.cpp
++++ b/clang/test/PCH/dllexport-default-arg-closure.cpp
+@@ -20,15 +20,6 @@ struct __declspec(dllexport) Foo {
+ // CHECK: define weak_odr dso_local dllexport void @"??_FFoo@@QEAAXXZ"(ptr{{.*}})
+ // CHECK:   call noundef ptr @"??0Foo@@QEAA@W4E@0@@Z"(ptr {{.*}}, i32 noundef 0)
+ 
+-struct PCHMemberExportOuter {
+-  struct Inner {
+-    enum E { E0 } e;
+-    __declspec(dllexport) Inner(E e = E0) : e(e) {}
+-  };
+-};
+-
+-// CHECK: define weak_odr dso_local dllexport void @"??_FInner@PCHMemberExportOuter@@QEAAXXZ"(ptr{{.*}})
+-
+ #else
+ 
+ 
+diff --git a/clang/test/SemaCXX/cxx2c-fold-exprs.cpp b/clang/test/SemaCXX/cxx2c-fold-exprs.cpp
+index 87a3b3118..031202291 100644
+--- a/clang/test/SemaCXX/cxx2c-fold-exprs.cpp
++++ b/clang/test/SemaCXX/cxx2c-fold-exprs.cpp
+@@ -598,33 +598,3 @@ static_assert(MutabilityAlias<Constant::alias>);
+ static_assert(MutabilityAlias<Mutable::alias>);
+ 
+ }
+-
+-namespace GH218035 {
+-
+-template <class T, class UnusedParam>
+-concept same_as_impl = sizeof(T) == 8;
+-template <typename... P>
+-void f()
+-  requires(same_as_impl<P...[0], P> && ...)
+-{}
+-void g() { f<long long, float>(); }
+-
+-}
+-
+-namespace GH218548 {
+-
+-template <class T>
+-concept same_as_impl = sizeof(T) == 2;
+-template <typename... P>
+-void f() requires(same_as_impl<P...[sizeof(P)]> && ...) // #GH218548_f
+-{}
+-void g() {
+-  f<char, short, short>();
+-
+-  f<char, int, short>();
+-  // expected-error@-1 {{no matching function}}
+-  // expected-note@#GH218548_f {{constraints not satisfied}}
+-  // expected-note@#GH218548_f {{invalid index}}
+-}
+-
+-}
+diff --git a/clang/test/SemaCXX/default-arg-closures.cpp b/clang/test/SemaCXX/default-arg-closures.cpp
+index 86c44f0ea..676bd4861 100644
+--- a/clang/test/SemaCXX/default-arg-closures.cpp
++++ b/clang/test/SemaCXX/default-arg-closures.cpp
+@@ -25,15 +25,6 @@ struct DependentDefaultCopyArg {
+ struct HasMember {
+   enum { member = 0 };
+ };
+-
+-template <typename T>
+-struct NestedDependentDefaultCtorArg {
+-  struct Inner {
+-    __declspec(dllexport) Inner(int n = T::member) {}
+-  };
+-};
+-NestedDependentDefaultCtorArg<HasMember>::Inner ValidNestedDependentArg;
+-
+ void UseDependentArg() { throw DependentDefaultCopyArg<HasMember>(); }
+ 
+ void ErrorInDependentArg() {
+diff --git a/clang/test/SemaCXX/dllexport.cpp b/clang/test/SemaCXX/dllexport.cpp
+index 70e7f1398..d625b1555 100644
+--- a/clang/test/SemaCXX/dllexport.cpp
++++ b/clang/test/SemaCXX/dllexport.cpp
+@@ -746,20 +746,6 @@ struct ClassTemplateWithMultipleDefaultCtors {
+   __declspec(dllexport) ClassTemplateWithMultipleDefaultCtors(int = 30, ...) {} // ms-note{{declared here}}
+ };
+ 
+-struct ClassWithNestedMultipleDefaultCtors {
+-  struct Nested {
+-    __declspec(dllexport) Nested(int = 40) {}      // ms-error{{'__declspec(dllexport)' cannot be applied to more than one default constructor}}
+-    __declspec(dllexport) Nested(int = 30, ...) {} // ms-note{{declared here}}
+-  };
+-};
+-
+-struct ClassWithNestedObviousMultipleDefaultCtors {
+-  struct Nested {
+-    __declspec(dllexport) Nested() {}    // ms-error{{'__declspec(dllexport)' cannot be applied to more than one default constructor}}
+-    __declspec(dllexport) Nested(...) {} // ms-note{{declared here}}
+-  };
+-};
+-
+ template <typename T> struct HasDefaults {
+   HasDefaults(int x = sizeof(T)) {} // ms-error {{invalid application of 'sizeof'}}
+ };
+diff --git a/clang/test/SemaCXX/warn-unused-parameters-coroutine.cpp b/clang/test/SemaCXX/warn-unused-parameters-coroutine.cpp
+index ef0c767db..fee379d86 100644
+--- a/clang/test/SemaCXX/warn-unused-parameters-coroutine.cpp
++++ b/clang/test/SemaCXX/warn-unused-parameters-coroutine.cpp
+@@ -8,12 +8,8 @@ struct awaitable {
+   void await_suspend(std::coroutine_handle<>) noexcept;
+ };
+ 
+-struct promise_arg {};
+-
+ struct task : awaitable {
+   struct promise_type {
+-    promise_type();
+-    promise_type(promise_arg);
+     task get_return_object() noexcept;
+     awaitable initial_suspend() noexcept;
+     awaitable final_suspend() noexcept;
+@@ -22,50 +18,10 @@ struct task : awaitable {
+   };
+ };
+ 
+-struct allocation_arg {};
+-
+-struct task_with_new {
+-  struct promise_type {
+-    void *operator new(decltype(sizeof(0)));
+-    void *operator new(decltype(sizeof(0)), allocation_arg);
+-    task_with_new get_return_object();
+-    awaitable initial_suspend();
+-    awaitable final_suspend() noexcept;
+-    void unhandled_exception();
+-    void return_void();
+-  };
+-};
+-
+-struct task_with_variadic_new {
+-  struct promise_type {
+-    void *operator new(decltype(sizeof(0)), ...);
+-    task_with_variadic_new get_return_object();
+-    awaitable initial_suspend();
+-    awaitable final_suspend() noexcept;
+-    void unhandled_exception();
+-    void return_void();
+-  };
+-};
+-
+ task foo(int a) { // expected-warning{{unused parameter 'a'}}
+   co_return;
+ }
+ 
+-task promise_constructor_uses_parameter(promise_arg a) { co_return; }
+-
+-task_with_new class_specific_new_fallback(
+-    int a) { // expected-warning{{unused parameter 'a'}}
+-  co_return;
+-}
+-
+-task_with_new placement_allocation_uses_parameter(allocation_arg a) {
+-  co_return;
+-}
+-
+-task_with_variadic_new variadic_allocation_uses_parameter(int a) {
+-  co_return;
+-}
+-
+ task bar(int a, int b) { // expected-warning{{unused parameter 'b'}}
+   a = a + 1;
+   co_return;
+diff --git a/clang/tools/clang-format/git-clang-format b/clang/tools/clang-format/git-clang-format
+index d9b2d501c..d79b57e7f 100755
+--- a/clang/tools/clang-format/git-clang-format
++++ b/clang/tools/clang-format/git-clang-format
+@@ -202,11 +202,6 @@ def main():
+         default=0,
+         help="print extra information",
+     )
+-    p.add_argument(
+-        "--whole-file",
+-        action="store_true",
+-        help="format whole file instead of only modified lines",
+-    )
+     p.add_argument(
+         "--diff_from_common_commit",
+         action="store_true",
+@@ -236,8 +231,8 @@ def main():
+     # When no commits are given explicitly and the pre-commit CI framework's
+     # environment variables are set, use them to define the diff range.
+     if not opts.args and not dash_dash:
+-        from_ref = os.environ.get("PRE_COMMIT_FROM_REF")
+-        to_ref = os.environ.get("PRE_COMMIT_TO_REF")
++        from_ref = os.environ.get('PRE_COMMIT_FROM_REF')
++        to_ref = os.environ.get('PRE_COMMIT_TO_REF')
+         if from_ref and to_ref:
+             opts.args = [from_ref, to_ref]
+             if not opts.diff and not opts.diffstat:
+@@ -261,7 +256,7 @@ def main():
+         opts.binary = os.path.abspath(opts.binary)
+ 
+     changed_lines = compute_diff_and_extract_lines(
+-        commits, files, opts.staged, opts.whole_file, opts.diff_from_common_commit
++        commits, files, opts.staged, opts.diff_from_common_commit
+     )
+     if opts.verbose >= 1:
+         ignored_files = set(changed_lines)
+@@ -415,12 +410,10 @@ def get_object_type(value):
+     return convert_string(stdout.strip())
+ 
+ 
+-def compute_diff_and_extract_lines(
+-    commits, files, staged, whole_file, diff_common_commit
+-):
++def compute_diff_and_extract_lines(commits, files, staged, diff_common_commit):
+     """Calls compute_diff() followed by extract_lines()."""
+     diff_process = compute_diff(commits, files, staged, diff_common_commit)
+-    changed_lines = extract_lines(diff_process.stdout, whole_file)
++    changed_lines = extract_lines(diff_process.stdout)
+     diff_process.stdout.close()
+     diff_process.wait()
+     if diff_process.returncode != 0:
+@@ -453,7 +446,7 @@ def compute_diff(commits, files, staged, diff_common_commit):
+     return p
+ 
+ 
+-def extract_lines(patch_file, whole_file):
++def extract_lines(patch_file):
+     """Extract the changed lines in `patch_file`.
+ 
+     The return value is a dictionary mapping filename to a list of (start_line,
+@@ -468,24 +461,17 @@ def extract_lines(patch_file, whole_file):
+         match = re.search(r"^\+\+\+\ [^/]+/(.*)", line)
+         if match:
+             filename = match.group(1).rstrip("\r\n\t")
+-            if whole_file:
+-                # Initialize the key for filename but ensure ranges is an empty
+-                # list. This will prevent any filtering in clang_format_to_blob().
+-                matches[filename] = []
+-                continue
+-        if not whole_file:
+-            match = re.search(r"^@@ -[0-9,]+ \+(\d+)(,(\d+))?", line)
+-            if match:
+-                start_line = int(match.group(1))
++        match = re.search(r"^@@ -[0-9,]+ \+(\d+)(,(\d+))?", line)
++        if match:
++            start_line = int(match.group(1))
++            line_count = 1
++            if match.group(3):
++                line_count = int(match.group(3))
++            if line_count == 0:
+                 line_count = 1
+-                if match.group(3):
+-                    line_count = int(match.group(3))
+-                # A hunk that adds no lines is a pure deletion. start_line
+-                # refers to the preceding line (0 when the deletion is at the
+-                # start of a file), which the deletion left alone.
+-                if line_count == 0:
+-                    continue
+-                matches.setdefault(filename, []).append(Range(start_line, line_count))
++            if start_line == 0:
++                continue
++            matches.setdefault(filename, []).append(Range(start_line, line_count))
+     return matches
+ 
+ 
+diff --git a/clang/unittests/Format/FormatTestJava.cpp b/clang/unittests/Format/FormatTestJava.cpp
+index a11fce963..fa51e0421 100644
+--- a/clang/unittests/Format/FormatTestJava.cpp
++++ b/clang/unittests/Format/FormatTestJava.cpp
+@@ -869,13 +869,6 @@ TEST_F(FormatTestJava, BreakAfterRecord) {
+                "public record Foo(int i) {}", Style);
+ }
+ 
+-TEST_F(FormatTestJava, EmptyRecordBodyOnASingleLine) {
+-  auto Style = getGoogleStyle(FormatStyle::LK_Java);
+-  verifyFormat("public interface Marker {}", Style);
+-  verifyFormat("public record Marker() {}", Style);
+-  verifyFormat("public class Marker {}", Style);
+-}
+-
+ } // namespace
+ } // namespace test
+ } // namespace format
+diff --git a/clang/unittests/Format/TokenAnnotatorTest.cpp b/clang/unittests/Format/TokenAnnotatorTest.cpp
+index 5ff095781..8ef7e7387 100644
+--- a/clang/unittests/Format/TokenAnnotatorTest.cpp
++++ b/clang/unittests/Format/TokenAnnotatorTest.cpp
+@@ -1579,18 +1579,6 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresClausesAndConcepts) {
+   ASSERT_EQ(Tokens.size(), 18u) << Tokens;
+   EXPECT_TOKEN(Tokens[7], tok::kw_requires, TT_RequiresClause);
+   EXPECT_TOKEN(Tokens[12], tok::l_brace, TT_FunctionLBrace);
+-
+-  Tokens = annotate("template <typename T>\n"
+-                    "  requires(is_convertible_v<const T&, Foo>)"
+-                    "void foo(T) {}");
+-  ASSERT_EQ(Tokens.size(), 24u) << Tokens;
+-  EXPECT_TOKEN(Tokens[11], tok::amp, TT_PointerOrReference);
+-
+-  Tokens = annotate("template <typename T>\n"
+-                    "  requires(is_convertible_v<(const T&), Foo>)"
+-                    "void foo(T) {}");
+-  ASSERT_EQ(Tokens.size(), 26u) << Tokens;
+-  EXPECT_TOKEN(Tokens[12], tok::amp, TT_PointerOrReference);
+ }
+ 
+ TEST_F(TokenAnnotatorTest, UnderstandsRequiresExpressions) {
+diff --git a/flang-rt/lib/runtime/environment.cpp b/flang-rt/lib/runtime/environment.cpp
+index ea98eb463..4f3f0e46b 100644
+--- a/flang-rt/lib/runtime/environment.cpp
++++ b/flang-rt/lib/runtime/environment.cpp
+@@ -17,12 +17,10 @@
+ 
+ #ifdef _WIN32
+ #include <stdlib.h>
+-#elif defined(__FreeBSD__)
++#elif defined(__FreeBSD__) || RT_GPU_TARGET
+ // FreeBSD has environ in crt rather than libc. Using "extern char** environ"
+ // in the code of a shared library makes it fail to link with -Wl,--no-undefined
+ // See https://reviews.freebsd.org/D30842#840642
+-#include <dlfcn.h>
+-#elif RT_GPU_TARGET
+ // GPU targets do not provide environ.
+ #else
+ extern char **environ;
+diff --git a/flang-rt/unittests/Runtime/Exceptions.cpp b/flang-rt/unittests/Runtime/Exceptions.cpp
+index 467c79003..d6514ea9f 100644
+--- a/flang-rt/unittests/Runtime/Exceptions.cpp
++++ b/flang-rt/unittests/Runtime/Exceptions.cpp
+@@ -30,17 +30,15 @@ namespace {
+ 
+ // Saves and restores the host floating-point environment so tests do not
+ // leak exception flags into each other or into the rest of the suite.
+-// Omit std qualifier on fegetenv, fesetenv: FreeBSD 15.1 defines them as
+-// macros.
+ class FenvScope {
+ public:
+   FenvScope() {
+     FLANG_FP_TRAP_ON
+-    fegetenv(&saved_);
++    std::fegetenv(&saved_);
+   }
+   ~FenvScope() {
+     FLANG_FP_TRAP_ON
+-    fesetenv(&saved_);
++    std::fesetenv(&saved_);
+   }
+ 
+ private:
+diff --git a/libc/include/llvm-libc-macros/float16-macros.h b/libc/include/llvm-libc-macros/float16-macros.h
+index 6c26a6416..528c7f016 100644
+--- a/libc/include/llvm-libc-macros/float16-macros.h
++++ b/libc/include/llvm-libc-macros/float16-macros.h
+@@ -15,7 +15,7 @@
+     (!defined(__GNUC__) || __GNUC__ >= 13 ||                                   \
+      (defined(__clang__) && __clang_major__ >= 12)) &&                         \
+     !defined(__arm__) && !defined(_M_ARM) && !defined(__riscv) &&              \
+-    !defined(_WIN32) && (!defined(__i386__) || defined(__SSE2__))
++    !defined(_WIN32)
+ #define LIBC_TYPES_HAS_FLOAT16
+ 
+ // TODO: This would no longer be required if HdrGen let us guard function
+diff --git a/libc/test/src/sys/socket/linux/CMakeLists.txt b/libc/test/src/sys/socket/linux/CMakeLists.txt
+index f533e53c9..1f28b9960 100644
+--- a/libc/test/src/sys/socket/linux/CMakeLists.txt
++++ b/libc/test/src/sys/socket/linux/CMakeLists.txt
+@@ -161,7 +161,6 @@ add_libc_unittest(
+   DEPENDS
+     libc.hdr.sys_socket_macros
+     libc.src.errno.errno
+-    libc.src.sys.socket.send
+     libc.src.sys.socket.sockatmark
+     libc.src.sys.socket.socketpair
+     libc.src.unistd.close
+diff --git a/libc/test/src/sys/socket/linux/sockatmark_test.cpp b/libc/test/src/sys/socket/linux/sockatmark_test.cpp
+index 25602dcf2..249bd298f 100644
+--- a/libc/test/src/sys/socket/linux/sockatmark_test.cpp
++++ b/libc/test/src/sys/socket/linux/sockatmark_test.cpp
+@@ -11,42 +11,31 @@
+ ///
+ //===----------------------------------------------------------------------===//
+ 
+-#include "hdr/sys_socket_macros.h" // For AF_UNIX and SOCK_STREAM
++#include "hdr/sys_socket_macros.h" // For AF_UNIX and SOCK_DGRAM
+ #include "src/__support/CPP/scope.h"
+-#include "src/sys/socket/send.h"
+ #include "src/sys/socket/sockatmark.h"
+ #include "src/sys/socket/socketpair.h"
+ #include "src/unistd/close.h"
+ #include "src/unistd/pipe.h"
+ #include "test/UnitTest/ErrnoCheckingTest.h"
+ #include "test/UnitTest/ErrnoSetterMatcher.h"
+-#include "test/UnitTest/TestLogger.h"
+ 
+ using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
+ using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
+ using LlvmLibcSockatmarkTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+ using LIBC_NAMESPACE::cpp::scope_exit;
+ 
+-TEST_F(LlvmLibcSockatmarkTest, Socketpair) {
++TEST_F(LlvmLibcSockatmarkTest, SocketpairReturnsFalse) {
+   int sockpair[2] = {-1, -1};
+-  ASSERT_THAT(LIBC_NAMESPACE::socketpair(AF_UNIX, SOCK_STREAM, 0, sockpair),
++  ASSERT_THAT(LIBC_NAMESPACE::socketpair(AF_UNIX, SOCK_DGRAM, 0, sockpair),
+               Succeeds(0));
+   scope_exit close_sockpair([&] {
+     ASSERT_THAT(LIBC_NAMESPACE::close(sockpair[0]), Succeeds(0));
+     ASSERT_THAT(LIBC_NAMESPACE::close(sockpair[1]), Succeeds(0));
+   });
+ 
+-  if (LIBC_NAMESPACE::send(sockpair[0], ".", 1, MSG_OOB) != 1) {
+-    ASSERT_ERRNO_EQ(EOPNOTSUPP);
+-    LIBC_NAMESPACE::testing::tlog << "No kernel support for AF_UNIX OOB\n";
+-    ASSERT_THAT(LIBC_NAMESPACE::sockatmark(sockpair[0]), Fails(ENOTTY));
+-    return;
+-  }
+-
+-  // sockpair[1] has OOB data because we've sent it above. sockpair[0] does not
+-  // because it's empty.
+   ASSERT_THAT(LIBC_NAMESPACE::sockatmark(sockpair[0]), Succeeds(0));
+-  ASSERT_THAT(LIBC_NAMESPACE::sockatmark(sockpair[1]), Succeeds(1));
++  ASSERT_THAT(LIBC_NAMESPACE::sockatmark(sockpair[1]), Succeeds(0));
+ }
+ 
+ TEST_F(LlvmLibcSockatmarkTest, InvalidFdFails) {
+diff --git a/lldb/bindings/interface/SBFrameExtensions.i b/lldb/bindings/interface/SBFrameExtensions.i
+index 64ca132d1..0c79b98b2 100644
+--- a/lldb/bindings/interface/SBFrameExtensions.i
++++ b/lldb/bindings/interface/SBFrameExtensions.i
+@@ -40,17 +40,10 @@ STRING_EXTENSION_OUTSIDE(SBFrame)
+         def get_statics(self):
+             return self.GetVariables(False,False,True,False)
+ 
+-        def var(self, var_expr_path, use_dynamic=None):
++        def var(self, var_expr_path):
+             '''Calls through to lldb.SBFrame.GetValueForVariablePath() and returns
+             a value that represents the variable expression path'''
+-            if use_dynamic is None:
+-                return self.GetValueForVariablePath(var_expr_path)
+-            return self.GetValueForVariablePath(var_expr_path, use_dynamic)
+-        
+-        def var_with_mode(self, var_path: str, mode: int, use_dynamic = None, /):
+-            if use_dynamic is None:
+-                return self.GetValueForVariablePathWithMode(var_path, mode)
+-            return self.GetValueForVariablePathWithMode(var_path, mode, use_dynamic)
++            return self.GetValueForVariablePath(var_expr_path)
+ 
+         def get_registers_access(self):
+             class registers_access(object):
+diff --git a/lldb/include/lldb/API/SBFrame.h b/lldb/include/lldb/API/SBFrame.h
+index 37c85b073..eaf9a4bfe 100644
+--- a/lldb/include/lldb/API/SBFrame.h
++++ b/lldb/include/lldb/API/SBFrame.h
+@@ -182,19 +182,16 @@ public:
+   // expression result and is not a constant object like
+   // SBFrame::EvaluateExpression(...) returns, but a child object of the
+   // variable value.
+-  lldb::SBValue GetValueForVariablePath(const char *var_path,
+-                                        DynamicValueType use_dynamic);
++  lldb::SBValue
++  GetValueForVariablePath(const char *var_expr_cstr,
++                          DynamicValueType use_dynamic,
++                          lldb::DILMode mode = lldb::eDILModeFull);
+ 
+   /// The version that doesn't supply a 'use_dynamic' value will use the
+   /// target's default.
+-  lldb::SBValue GetValueForVariablePath(const char *var_path);
+-
+-  lldb::SBValue GetValueForVariablePathWithMode(const char *var_path,
+-                                                lldb::DILMode mode,
+-                                                DynamicValueType use_dynamic);
+-
+-  lldb::SBValue GetValueForVariablePathWithMode(const char *var_path,
+-                                                lldb::DILMode mode);
++  lldb::SBValue
++  GetValueForVariablePath(const char *var_path,
++                          lldb::DILMode mode = lldb::eDILModeFull);
+ 
+   /// Find variables, register sets, registers, or persistent variables using
+   /// the frame as the scope.
+diff --git a/lldb/source/API/SBEnvironment.cpp b/lldb/source/API/SBEnvironment.cpp
+index 67676aec1..5fafabe02 100644
+--- a/lldb/source/API/SBEnvironment.cpp
++++ b/lldb/source/API/SBEnvironment.cpp
+@@ -75,26 +75,17 @@ const char *SBEnvironment::GetValueAtIndex(size_t index) {
+ bool SBEnvironment::Set(const char *name, const char *value, bool overwrite) {
+   LLDB_INSTRUMENT_VA(this, name, value, overwrite);
+ 
+-  llvm::StringRef name_ref{name};
+-  if (name_ref.trim().empty())
+-    return false;
+-
+-  llvm::StringRef value_ref{value};
+   if (overwrite) {
+-    m_opaque_up->insert_or_assign(name_ref, value_ref.str());
++    m_opaque_up->insert_or_assign(name, std::string(value));
+     return true;
+   }
+-  return m_opaque_up->try_emplace(name_ref, value_ref.str()).second;
++  return m_opaque_up->try_emplace(name, std::string(value)).second;
+ }
+ 
+ bool SBEnvironment::Unset(const char *name) {
+   LLDB_INSTRUMENT_VA(this, name);
+ 
+-  llvm::StringRef name_ref{name};
+-  if (name_ref.trim().empty())
+-    return false;
+-
+-  return m_opaque_up->erase(name_ref);
++  return m_opaque_up->erase(name);
+ }
+ 
+ SBStringList SBEnvironment::GetEntries() {
+diff --git a/lldb/source/API/SBFrame.cpp b/lldb/source/API/SBFrame.cpp
+index 6debaa12d..9158685f7 100644
+--- a/lldb/source/API/SBFrame.cpp
++++ b/lldb/source/API/SBFrame.cpp
+@@ -365,7 +365,8 @@ void SBFrame::Clear() {
+   m_opaque_sp->Clear();
+ }
+ 
+-lldb::SBValue SBFrame::GetValueForVariablePath(const char *var_path) {
++lldb::SBValue SBFrame::GetValueForVariablePath(const char *var_path,
++                                               lldb::DILMode mode) {
+   LLDB_INSTRUMENT_VA(this, var_path);
+ 
+   SBValue sb_value;
+@@ -379,13 +380,14 @@ lldb::SBValue SBFrame::GetValueForVariablePath(const char *var_path) {
+   if (StackFrame *frame = exe_ctx->GetFramePtr()) {
+     lldb::DynamicValueType use_dynamic =
+         frame->CalculateTarget()->GetPreferDynamicValue();
+-    sb_value = GetValueForVariablePath(var_path, use_dynamic);
++    sb_value = GetValueForVariablePath(var_path, use_dynamic, mode);
+   }
+   return sb_value;
+ }
+ 
+ lldb::SBValue SBFrame::GetValueForVariablePath(const char *var_path,
+-                                               DynamicValueType use_dynamic) {
++                                               DynamicValueType use_dynamic,
++                                               lldb::DILMode mode) {
+   LLDB_INSTRUMENT_VA(this, var_path, use_dynamic);
+ 
+   SBValue sb_value;
+@@ -400,55 +402,6 @@ lldb::SBValue SBFrame::GetValueForVariablePath(const char *var_path,
+     return sb_value;
+   }
+ 
+-  if (StackFrame *frame = exe_ctx->GetFramePtr()) {
+-    VariableSP var_sp;
+-    Status error;
+-    ValueObjectSP value_sp(frame->GetValueForVariableExpressionPath(
+-        var_path, eNoDynamicValues,
+-        StackFrame::eExpressionPathOptionCheckPtrVsMember |
+-            StackFrame::eExpressionPathOptionsAllowDirectIVarAccess,
+-        var_sp, error, lldb::eDILModeFull));
+-    sb_value.SetSP(value_sp, use_dynamic);
+-  }
+-  return sb_value;
+-}
+-
+-lldb::SBValue SBFrame::GetValueForVariablePathWithMode(const char *var_path,
+-                                                       lldb::DILMode mode) {
+-  LLDB_INSTRUMENT_VA(this, var_path, mode);
+-
+-  SBValue sb_value;
+-  llvm::Expected<StoppedExecutionContext> exe_ctx =
+-      GetStoppedExecutionContext(m_opaque_sp);
+-  if (!exe_ctx) {
+-    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
+-    return sb_value;
+-  }
+-
+-  if (StackFrame *frame = exe_ctx->GetFramePtr()) {
+-    lldb::DynamicValueType use_dynamic =
+-        frame->CalculateTarget()->GetPreferDynamicValue();
+-    sb_value = GetValueForVariablePathWithMode(var_path, mode, use_dynamic);
+-  }
+-  return sb_value;
+-}
+-
+-lldb::SBValue SBFrame::GetValueForVariablePathWithMode(
+-    const char *var_path, lldb::DILMode mode, DynamicValueType use_dynamic) {
+-  LLDB_INSTRUMENT_VA(this, var_path, mode, use_dynamic);
+-
+-  SBValue sb_value;
+-  if (var_path == nullptr || var_path[0] == '\0') {
+-    return sb_value;
+-  }
+-
+-  llvm::Expected<StoppedExecutionContext> exe_ctx =
+-      GetStoppedExecutionContext(m_opaque_sp);
+-  if (!exe_ctx) {
+-    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
+-    return sb_value;
+-  }
+-
+   if (StackFrame *frame = exe_ctx->GetFramePtr()) {
+     VariableSP var_sp;
+     Status error;
+diff --git a/lldb/test/API/commands/frame/var-dil/basics/AddressOf/TestFrameVarDILAddressOf.py b/lldb/test/API/commands/frame/var-dil/basics/AddressOf/TestFrameVarDILAddressOf.py
+index 4d401dadb..bfe29370b 100644
+--- a/lldb/test/API/commands/frame/var-dil/basics/AddressOf/TestFrameVarDILAddressOf.py
++++ b/lldb/test/API/commands/frame/var-dil/basics/AddressOf/TestFrameVarDILAddressOf.py
+@@ -39,7 +39,7 @@ class TestFrameVarDILGlobalVariableLookup(TestBase):
+ 
+         # Check that '&' is not allowed in simple mode, but allowed in legacy mode
+         frame = thread.GetFrameAtIndex(0)
+-        simple = frame.GetValueForVariablePathWithMode("&x", lldb.eDILModeSimple)
+-        legacy = frame.GetValueForVariablePathWithMode("&x", lldb.eDILModeLegacy)
++        simple = frame.GetValueForVariablePath("&x", lldb.eDILModeSimple)
++        legacy = frame.GetValueForVariablePath("&x", lldb.eDILModeLegacy)
+         self.assertFailure(simple.GetError())
+         self.assertSuccess(legacy.GetError())
+diff --git a/lldb/test/API/commands/frame/var-dil/basics/ArraySubscript/TestFrameVarDILArraySubscript.py b/lldb/test/API/commands/frame/var-dil/basics/ArraySubscript/TestFrameVarDILArraySubscript.py
+index d0477ac84..6f3bbfb97 100644
+--- a/lldb/test/API/commands/frame/var-dil/basics/ArraySubscript/TestFrameVarDILArraySubscript.py
++++ b/lldb/test/API/commands/frame/var-dil/basics/ArraySubscript/TestFrameVarDILArraySubscript.py
+@@ -89,19 +89,10 @@ class TestFrameVarDILArraySubscript(TestBase):
+ 
+         # Check that subscription is not allowed in simple mode, but allowed in legacy mode
+         frame = thread.GetFrameAtIndex(0)
+-        simple = frame.GetValueForVariablePathWithMode(
+-            "int_arr[0]", lldb.eDILModeSimple
+-        )
+-        simple_other = frame.var_with_mode("int_arr[0]", lldb.eDILModeSimple)
+-        legacy = frame.GetValueForVariablePathWithMode(
+-            "int_arr[0]", lldb.eDILModeLegacy
+-        )
+-        legacy_other = frame.var_with_mode("int_arr[0]", lldb.eDILModeLegacy)
+-
++        simple = frame.GetValueForVariablePath("int_arr[0]", lldb.eDILModeSimple)
++        legacy = frame.GetValueForVariablePath("int_arr[0]", lldb.eDILModeLegacy)
+         self.assertFailure(simple.GetError())
+-        self.assertFailure(simple_other.GetError())
+         self.assertSuccess(legacy.GetError())
+-        self.assertSuccess(legacy_other.GetError())
+ 
+     def test_subscript_synthetic(self):
+         self.build()
+diff --git a/lldb/test/API/commands/frame/var-dil/basics/MemberOf/TestFrameVarDILMemberOf.py b/lldb/test/API/commands/frame/var-dil/basics/MemberOf/TestFrameVarDILMemberOf.py
+index 91ec777a5..d37ce0bbc 100644
+--- a/lldb/test/API/commands/frame/var-dil/basics/MemberOf/TestFrameVarDILMemberOf.py
++++ b/lldb/test/API/commands/frame/var-dil/basics/MemberOf/TestFrameVarDILMemberOf.py
+@@ -52,13 +52,13 @@ class TestFrameVarDILMemberOf(TestBase):
+ 
+         # Check that '.' is allowed in both simple and legacy modes
+         frame = thread.GetFrameAtIndex(0)
+-        simple = frame.GetValueForVariablePathWithMode("s.x", lldb.eDILModeSimple)
+-        legacy = frame.GetValueForVariablePathWithMode("s.x", lldb.eDILModeLegacy)
++        simple = frame.GetValueForVariablePath("s.x", lldb.eDILModeSimple)
++        legacy = frame.GetValueForVariablePath("s.x", lldb.eDILModeLegacy)
+         self.assertSuccess(simple.GetError())
+         self.assertSuccess(legacy.GetError())
+ 
+         # Check that '->' is not allowed in simple mode, but allowed in legacy mode
+-        simple = frame.GetValueForVariablePathWithMode("sp->x", lldb.eDILModeSimple)
+-        legacy = frame.GetValueForVariablePathWithMode("sp->x", lldb.eDILModeLegacy)
++        simple = frame.GetValueForVariablePath("sp->x", lldb.eDILModeSimple)
++        legacy = frame.GetValueForVariablePath("sp->x", lldb.eDILModeLegacy)
+         self.assertFailure(simple.GetError())
+         self.assertSuccess(legacy.GetError())
+diff --git a/lldb/test/API/commands/frame/var-dil/basics/PointerDereference/TestFrameVarDILPointerDereference.py b/lldb/test/API/commands/frame/var-dil/basics/PointerDereference/TestFrameVarDILPointerDereference.py
+index 0fd7534e0..e18e18e14 100644
+--- a/lldb/test/API/commands/frame/var-dil/basics/PointerDereference/TestFrameVarDILPointerDereference.py
++++ b/lldb/test/API/commands/frame/var-dil/basics/PointerDereference/TestFrameVarDILPointerDereference.py
+@@ -49,7 +49,7 @@ class TestFrameVarDILPointerDereference(TestBase):
+ 
+         # Check that * is not allowed in simple mode, but allowed in legacy mode
+         frame = thread.GetFrameAtIndex(0)
+-        simple = frame.GetValueForVariablePathWithMode("*p_int0", lldb.eDILModeSimple)
+-        legacy = frame.GetValueForVariablePathWithMode("*p_int0", lldb.eDILModeLegacy)
++        simple = frame.GetValueForVariablePath("*p_int0", lldb.eDILModeSimple)
++        legacy = frame.GetValueForVariablePath("*p_int0", lldb.eDILModeLegacy)
+         self.assertFailure(simple.GetError())
+         self.assertSuccess(legacy.GetError())
+diff --git a/lldb/test/API/commands/frame/var-dil/expr/Arithmetic/TestFrameVarDILArithmetic.py b/lldb/test/API/commands/frame/var-dil/expr/Arithmetic/TestFrameVarDILArithmetic.py
+index 94268ecf4..7729c1ce2 100644
+--- a/lldb/test/API/commands/frame/var-dil/expr/Arithmetic/TestFrameVarDILArithmetic.py
++++ b/lldb/test/API/commands/frame/var-dil/expr/Arithmetic/TestFrameVarDILArithmetic.py
+@@ -169,9 +169,9 @@ class TestFrameVarDILArithmetic(TestBase):
+ 
+         # Check that binary * is allowed only in full mode
+         frame = thread.GetFrameAtIndex(0)
+-        simple = frame.GetValueForVariablePathWithMode("x * 2", lldb.eDILModeSimple)
+-        legacy = frame.GetValueForVariablePathWithMode("x * 2", lldb.eDILModeLegacy)
+-        full = frame.GetValueForVariablePathWithMode("x * 2", lldb.eDILModeFull)
++        simple = frame.GetValueForVariablePath("x * 2", lldb.eDILModeSimple)
++        legacy = frame.GetValueForVariablePath("x * 2", lldb.eDILModeLegacy)
++        full = frame.GetValueForVariablePath("x * 2", lldb.eDILModeFull)
+         self.assertFailure(simple.GetError())
+         self.assertFailure(legacy.GetError())
+         self.assertSuccess(full.GetError())
+diff --git a/lldb/test/API/commands/frame/var-dil/expr/Casts/TestFrameVarDILCast.py b/lldb/test/API/commands/frame/var-dil/expr/Casts/TestFrameVarDILCast.py
+index 385623eab..567981cd6 100644
+--- a/lldb/test/API/commands/frame/var-dil/expr/Casts/TestFrameVarDILCast.py
++++ b/lldb/test/API/commands/frame/var-dil/expr/Casts/TestFrameVarDILCast.py
+@@ -303,8 +303,8 @@ class TestFrameVarDILCast(TestBase):
+ 
+         # Check that casts are not allowed in both simple and legacy modes
+         frame = thread.GetFrameAtIndex(0)
+-        simple = frame.GetValueForVariablePathWithMode("(char)a", lldb.eDILModeSimple)
+-        legacy = frame.GetValueForVariablePathWithMode("(char)a", lldb.eDILModeLegacy)
++        simple = frame.GetValueForVariablePath("(char)a", lldb.eDILModeSimple)
++        legacy = frame.GetValueForVariablePath("(char)a", lldb.eDILModeLegacy)
+         self.assertFailure(simple.GetError())
+         self.assertFailure(legacy.GetError())
+ 
+diff --git a/lldb/test/API/functionalities/var_path/TestVarPath.py b/lldb/test/API/functionalities/var_path/TestVarPath.py
+index 873f659ac..53c45f57f 100644
+--- a/lldb/test/API/functionalities/var_path/TestVarPath.py
++++ b/lldb/test/API/functionalities/var_path/TestVarPath.py
+@@ -100,8 +100,6 @@ class TestVarPath(TestBase):
+         self.verify_point(frame, "pt_ptr[0]", "Point", 3030, 4040)
+         self.verify_point(frame, "pt_ptr[1]", "Point", 5050, 6060)
+         # Test arrays
+-        v_helper = frame.var("points")
+-        self.assertSuccess(v_helper.GetError(), "Make sure we find 'points'")
+         v = frame.GetValueForVariablePath("points")
+         self.assertSuccess(v.GetError(), "Make sure we find 'points'")
+         self.verify_point(frame, "points[0]", "Point", 1010, 2020)
+@@ -123,72 +121,3 @@ class TestVarPath(TestBase):
+             self.assertTrue(
+                 v.GetError().Fail(), "Make sure we don't find 'pt_sp->not_valid_child'"
+             )
+-
+-    @expectedFailureAll(
+-        oslist=["windows"],
+-        bugnumber="https://github.com/llvm/llvm-project/issues/25037",
+-    )
+-    def test_frame_var_use_dynamic(self):
+-        """Test `SBFrame.GetValueForVariablePath` return the current value and variable type."""
+-        self.build()
+-        (_, _, thread, _) = lldbutil.run_to_source_breakpoint(
+-            self, "// Set a breakpoint here", lldb.SBFileSpec("main.cpp")
+-        )
+-        frame: lldb.SBFrame = thread.GetFrameAtIndex(0)
+-
+-        # Verify concrete types.
+-        concrete = [
+-            ("shape", "Shape"),
+-            ("shape_ref", "Shape &"),
+-            ("shape_ptr", "Shape *"),
+-            ("circle", "Circle"),
+-            ("circle_ref", "Circle &"),
+-            ("circle_ptr", "Circle *"),
+-        ]
+-        for name, expected_type in concrete:
+-            for dyn_val in (lldb.eNoDynamicValues, lldb.eDynamicDontRunTarget):
+-                val: lldb.SBValue = frame.GetValueForVariablePath(name, dyn_val)
+-                self.assertSuccess(val.GetError(), f"Make sure we find {name!r}")
+-                self.assertEqual(val.GetTypeName(), expected_type)
+-
+-                # Test the helper.
+-                val: lldb.SBValue = frame.var(name, dyn_val)
+-                self.assertTrue(val.GetError().Success(), f"Make sure we find {name!r}")
+-                self.assertEqual(val.GetTypeName(), expected_type)
+-
+-        # Verify dynamic types.
+-        polymorphic = [
+-            ("circle_as_shape_ref", "Shape &", "Circle &"),
+-            ("circle_as_shape_ptr", "Shape *", "Circle *"),
+-            ("circle_as_drawable_ref", "Drawable &", "Circle &"),
+-            ("circle_as_drawable_ptr", "Drawable *", "Circle *"),
+-        ]
+-        for name, static_type, dynamic_type in polymorphic:
+-            static = frame.GetValueForVariablePath(name, lldb.eNoDynamicValues)
+-            static_helper: lldb.SBValue = frame.var(name, lldb.eNoDynamicValues)
+-            for val in (static, static_helper):
+-                self.assertSuccess(val.GetError(), f"find {name!r} (static)")
+-                self.assertEqual(static_type, val.GetTypeName())
+-                self.assertNotIn("Circle", val.GetTypeName())
+-                self.assertFalse(
+-                    val.GetChildMemberWithName("circle_val").IsValid(),
+-                    f"{name!r} should not expose circle_val under eNoDynamicValues",
+-                )
+-
+-            dynamic = frame.GetValueForVariablePath(name, lldb.eDynamicDontRunTarget)
+-            dynamic_helper: lldb.SBValue = frame.var(name, lldb.eDynamicDontRunTarget)
+-            for val in (dynamic, dynamic_helper):
+-                self.assertSuccess(val.GetError(), f"find {name!r} (dynamic)")
+-                self.assertEqual(
+-                    dynamic_type,
+-                    val.GetTypeName(),
+-                    f"'{name}' should resolve to Circle under eDynamicDontRunTarget",
+-                )
+-                circle_val = val.GetChildMemberWithName("circle_val")
+-                self.assertTrue(
+-                    circle_val.IsValid(),
+-                    f"{name!r} should expose circle_val under eDynamicDontRunTarget",
+-                )
+-
+-                # Verify we can fetch the child from the static type.
+-                self.assertEqual(circle_val.GetValueAsSigned(), 20)
+diff --git a/lldb/test/API/functionalities/var_path/main.cpp b/lldb/test/API/functionalities/var_path/main.cpp
+index daf1d9511..0ea19cfcf 100644
+--- a/lldb/test/API/functionalities/var_path/main.cpp
++++ b/lldb/test/API/functionalities/var_path/main.cpp
+@@ -1,23 +1,5 @@
+ #include <memory>
+ 
+-class Shape {
+-public:
+-  virtual ~Shape() = default;
+-  int shape_val = 10;
+-};
+-
+-class Drawable {
+-public:
+-  virtual ~Drawable() = default;
+-  virtual void draw() = 0;
+-};
+-
+-class Circle : public Shape, public Drawable {
+-public:
+-  int circle_val = 20;
+-  void draw() override {}
+-};
+-
+ struct Point {
+   int x, y;
+ };
+@@ -28,21 +10,6 @@ int main() {
+   Point *pt_ptr = &points[1];
+   Point &pt_ref = pt;
+   std::shared_ptr<Point> pt_sp(new Point{111,222});
+-
+-  Shape shape{};
+-  Shape &shape_ref = shape;
+-  Shape *shape_ptr = &shape;
+-
+-  Circle circle{};
+-  Circle &circle_ref = circle;
+-  Circle *circle_ptr = &circle;
+-
+-  Shape &circle_as_shape_ref = circle;
+-  Shape *circle_as_shape_ptr = &circle;
+-
+-  Drawable &circle_as_drawable_ref = circle;
+-  Drawable *circle_as_drawable_ptr = &circle;
+-
+   return 0; // Set a breakpoint here
+ }
+ 
+diff --git a/lldb/tools/lldb-dap/Handler/EvaluateRequestHandler.cpp b/lldb/tools/lldb-dap/Handler/EvaluateRequestHandler.cpp
+index 878905ed5..7537eca72 100644
+--- a/lldb/tools/lldb-dap/Handler/EvaluateRequestHandler.cpp
++++ b/lldb/tools/lldb-dap/Handler/EvaluateRequestHandler.cpp
+@@ -55,8 +55,8 @@ static lldb::SBValue EvaluateVariableExpression(lldb::SBTarget &target,
+     // Check if it is a variable or an expression path for a variable. i.e.
+     // 'foo->bar' finds the 'bar' variable. It is more reliable than the
+     // expression parser in many cases and it is faster.
+-    value = frame.GetValueForVariablePathWithMode(
+-        expression_cstr, lldb::eDILModeLegacy, lldb::eDynamicDontRunTarget);
++    value = frame.GetValueForVariablePath(
++        expression_cstr, lldb::eDynamicDontRunTarget, lldb::eDILModeLegacy);
+     if (value || !run_as_expression)
+       return value;
+ 
+diff --git a/lldb/tools/lldb-dap/SourceBreakpoint.cpp b/lldb/tools/lldb-dap/SourceBreakpoint.cpp
+index f8dd75a2a..233dbff81 100644
+--- a/lldb/tools/lldb-dap/SourceBreakpoint.cpp
++++ b/lldb/tools/lldb-dap/SourceBreakpoint.cpp
+@@ -397,8 +397,8 @@ bool SourceBreakpoint::BreakpointHitCallback(
+       // evaluation
+       const std::string &expr_str = messagePart.text;
+       const char *expr = expr_str.c_str();
+-      lldb::SBValue value = frame.GetValueForVariablePathWithMode(
+-          expr, lldb::eDILModeLegacy, lldb::eDynamicDontRunTarget);
++      lldb::SBValue value = frame.GetValueForVariablePath(
++          expr, lldb::eDynamicDontRunTarget, lldb::eDILModeLegacy);
+       if (value.GetError().Fail())
+         value = frame.EvaluateExpression(expr);
+       output += VariableDescription(
+diff --git a/lldb/unittests/API/CMakeLists.txt b/lldb/unittests/API/CMakeLists.txt
+index 46ca6635d..b86054fb3 100644
+--- a/lldb/unittests/API/CMakeLists.txt
++++ b/lldb/unittests/API/CMakeLists.txt
+@@ -1,6 +1,5 @@
+ add_lldb_unittest(APITests
+   SBCommandInterpreterTest.cpp
+-  SBEnvironmentTest.cpp
+   SBLineEntryTest.cpp
+   SBMutexTest.cpp
+   SBBreakpointClearConditionTest.cpp
+diff --git a/llvm/CMakeLists.txt b/llvm/CMakeLists.txt
+index 9340cd6c4..7b8f1b3b3 100644
+--- a/llvm/CMakeLists.txt
++++ b/llvm/CMakeLists.txt
+@@ -508,14 +508,8 @@ if(WIN32 AND NOT UNIX)
+   endif()
+   if(CPACK_GENERATOR STREQUAL "WIX")
+     set(CPACK_WIX_PRODUCT_ICON "${CMAKE_CURRENT_SOURCE_DIR}\\\\cmake\\\\nsis_icon.ico")
+-    # -sval: the WIX installer needs admin privileges unless we use this flag.
+-    # -dcl:high: light defaults the cabinet to MSZIP (deflate, 32 KiB window),
+-    # which captures almost no redundancy between the payload's binaries.  high
+-    # selects LZX with a 21-bit (2 MiB) window instead.  That is the strongest
+-    # compression available here: Windows Installer has to be able to read the
+-    # cabinet itself, and CAB supports only MSZIP/LZX/Quantum, so an MSI cannot
+-    # use LZMA the way the NSIS generator does.
+-    set(CPACK_WIX_LIGHT_EXTRA_FLAGS "-sval" "-dcl:high")
++    # The WIX installer needs admin privileges unless we use this flag.
++    set(CPACK_WIX_LIGHT_EXTRA_FLAGS "-sval")
+   endif()
+ endif()
+ include(CPack)
+diff --git a/llvm/lib/CodeGen/GlobalISel/LegalizerHelper.cpp b/llvm/lib/CodeGen/GlobalISel/LegalizerHelper.cpp
+index 94d43578e..41630c70e 100644
+--- a/llvm/lib/CodeGen/GlobalISel/LegalizerHelper.cpp
++++ b/llvm/lib/CodeGen/GlobalISel/LegalizerHelper.cpp
+@@ -1190,7 +1190,7 @@ LegalizerHelper::createFCMPLibcall(MachineInstr &MI,
+         Libcall, {Temp, Type::getInt32Ty(Ctx), 0},
+         {{Cmp->getLHSReg(), OpType, 0}, {Cmp->getRHSReg(), OpType, 1}},
+         LocObserver, &MI);
+-    if (Status != Legalized)
++    if (!Status)
+       return {};
+ 
+     // Compare temp with #0 to get the final result.
+diff --git a/llvm/lib/CodeGen/SelectionDAG/LegalizeVectorTypes.cpp b/llvm/lib/CodeGen/SelectionDAG/LegalizeVectorTypes.cpp
+index c0fab69cb..3817a77f8 100644
+--- a/llvm/lib/CodeGen/SelectionDAG/LegalizeVectorTypes.cpp
++++ b/llvm/lib/CodeGen/SelectionDAG/LegalizeVectorTypes.cpp
+@@ -8738,8 +8738,8 @@ SDValue DAGTypeLegalizer::WidenVecOp_VSELECT(SDNode *N) {
+ SDValue DAGTypeLegalizer::WidenVecOp_CttzElements(SDNode *N) {
+   SDLoc DL(N);
+   SDValue Source = N->getOperand(0);
+-  EVT SourceVT = Source.getValueType();
+-  EVT WideVT = TLI.getTypeToTransformTo(*DAG.getContext(), SourceVT);
++  EVT WideVT =
++      TLI.getTypeToTransformTo(*DAG.getContext(), Source.getValueType());
+ 
+   SDValue WideSource;
+   if (N->getOpcode() == ISD::CTTZ_ELTS_ZERO_POISON) {
+@@ -8748,18 +8748,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_CttzElements(SDNode *N) {
+     // Pad the widened portion with all-ones so the extra lanes appear as
+     // active (non-zero) elements and do not contribute trailing zeros.
+     SDValue AllOnes = DAG.getAllOnesConstant(DL, WideVT);
+-    if (WideVT.isFixedLengthVector() &&
+-        getTypeAction(WideVT) == TargetLowering::TypeSplitVector) {
+-      WideSource = GetWidenedVector(Source);
+-      unsigned WideElts = WideVT.getVectorNumElements();
+-      SmallVector<int> Mask(WideElts);
+-      std::iota(Mask.begin(), Mask.end(), 0);
+-      for (unsigned I = SourceVT.getVectorNumElements(); I != WideElts; ++I)
+-        Mask[I] += WideElts;
+-      WideSource = DAG.getVectorShuffle(WideVT, DL, WideSource, AllOnes, Mask);
+-    } else {
+-      WideSource = DAG.getInsertSubvector(DL, AllOnes, Source, 0);
+-    }
++    WideSource = DAG.getInsertSubvector(DL, AllOnes, Source, 0);
+   }
+ 
+   return DAG.getNode(N->getOpcode(), DL, N->getValueType(0), WideSource,
+diff --git a/llvm/lib/CodeGen/SelectionDAG/TargetLowering.cpp b/llvm/lib/CodeGen/SelectionDAG/TargetLowering.cpp
+index 2ac0f71a9..2ecadac62 100644
+--- a/llvm/lib/CodeGen/SelectionDAG/TargetLowering.cpp
++++ b/llvm/lib/CodeGen/SelectionDAG/TargetLowering.cpp
+@@ -13757,11 +13757,10 @@ SDValue TargetLowering::expandVECTOR_COMPRESS(SDNode *Node,
+ SDValue TargetLowering::expandCttzElts(SDNode *Node, SelectionDAG &DAG) const {
+   SDLoc DL(Node);
+   EVT VT = Node->getValueType(0);
+-  SDValue Op = Node->getOperand(0);
+-  ElementCount EC = Op.getValueType().getVectorElementCount();
+ 
+   bool ZeroIsPoison = Node->getOpcode() == ISD::CTTZ_ELTS_ZERO_POISON;
+-  auto [Mask, StepVec] = getLegalMaskAndStepVector(Op, ZeroIsPoison, DL, DAG);
++  auto [Mask, StepVec] =
++      getLegalMaskAndStepVector(Node->getOperand(0), ZeroIsPoison, DL, DAG);
+ 
+   // No legal step vector: split mask in half and recombine results.
+   // LoNumElts uses the non-poison CTTZ_ELTS so its result is well-defined
+@@ -13769,7 +13768,7 @@ SDValue TargetLowering::expandCttzElts(SDNode *Node, SelectionDAG &DAG) const {
+   // Result: (ResLo != LoNumElts) ? ResLo : (LoNumElts + ResHi)
+   if (!StepVec) {
+     EVT ResVT = Node->getValueType(0);
+-    auto [MaskLo, MaskHi] = DAG.SplitVector(Op, DL);
++    auto [MaskLo, MaskHi] = DAG.SplitVector(Node->getOperand(0), DL);
+     SDValue LoNumElts = DAG.getElementCount(
+         DL, ResVT, MaskLo.getValueType().getVectorElementCount());
+     SDValue ResLo = DAG.getNode(ISD::CTTZ_ELTS, DL, ResVT, MaskLo);
+@@ -13792,7 +13791,8 @@ SDValue TargetLowering::expandCttzElts(SDNode *Node, SelectionDAG &DAG) const {
+   if (getTypeAction(StepVT.getSimpleVT()) == TypePromoteInteger)
+     StepVT = getTypeToTransformTo(*DAG.getContext(), StepVT);
+ 
+-  SDValue VL = DAG.getElementCount(DL, StepVT, EC);
++  SDValue VL =
++      DAG.getElementCount(DL, StepVT, StepVecVT.getVectorElementCount());
+   SDValue SplatVL = DAG.getSplat(StepVecVT, DL, VL);
+   StepVec = DAG.getNode(ISD::SUB, DL, StepVecVT, SplatVL, StepVec);
+   SDValue Zeroes = DAG.getConstant(0, DL, StepVecVT);
+diff --git a/llvm/lib/DWARFLinker/Parallel/DependencyTracker.cpp b/llvm/lib/DWARFLinker/Parallel/DependencyTracker.cpp
+index e2b63f2b2..124e73b1a 100644
+--- a/llvm/lib/DWARFLinker/Parallel/DependencyTracker.cpp
++++ b/llvm/lib/DWARFLinker/Parallel/DependencyTracker.cpp
+@@ -8,7 +8,6 @@
+ 
+ #include "DependencyTracker.h"
+ #include "llvm/Support/FormatVariadic.h"
+-#include "llvm/Support/SaveAndRestore.h"
+ 
+ using namespace llvm;
+ using namespace dwarf_linker;
+@@ -122,15 +121,6 @@ bool DependencyTracker::resolveDependenciesAndMarkLiveness(
+     bool InterCUProcessingStarted, std::atomic<bool> &HasNewInterconnectedCUs) {
+   RootEntriesWorkList.clear();
+ 
+-  // The recorded subtrees are walked after marking, and need to resolve
+-  // references the same way marking did. A unit whose references could not all
+-  // be resolved is reset to its loaded stage and marked again from scratch, so
+-  // no reference recorded under one resolution mode survives into another.
+-  assert((SubtreeDependencyRefs.empty() ||
+-          InterCUProcessingWasStarted == InterCUProcessingStarted) &&
+-         "recorded subtrees would be walked in a different resolution mode");
+-  InterCUProcessingWasStarted = InterCUProcessingStarted;
+-
+   // Search for live root DIEs.
+   CompileUnit::DIEInfo &CUInfo = CU.getDIEInfo(CU.getDebugInfoEntry(0));
+   CUInfo.setPlacement(CompileUnit::PlainDwarf);
+@@ -294,119 +284,39 @@ bool DependencyTracker::markCollectedLiveRootsAsKept(
+   return Res;
+ }
+ 
+-void DependencyTracker::recordSubtreeDependencies(
+-    LiveRootWorklistActionTy Action, const UnitEntryPairTy &RootEntry,
+-    const UnitEntryPairTy &Entry) {
+-  SubtreeDependencyRefs.push_back({Entry, Action, RootEntry});
+-}
+-
+-void DependencyTracker::materializeSubtreeSummaries() {
+-  // Walking a subtree appends the dependencies that belong to a subprogram
+-  // nested inside it, so all walking has to finish before the dependency list
+-  // is traversed.
+-  for (size_t Idx = MaterializedRefs; Idx != SubtreeDependencyRefs.size();
+-       ++Idx) {
+-    // Copied rather than referenced so that the loop does not depend on the
+-    // walk below leaving the vector alone.
+-    const SubtreeDependencyRefTy Ref = SubtreeDependencyRefs[Idx];
+-    SubtreeDependenciesKeyTy Key{Ref.Subtree.CU, Ref.Subtree.DieEntry,
+-                                 Ref.Action};
+-    if (SubtreeSummaries.contains(Key))
+-      continue;
+-
+-    // Collected separately so that growing the map cannot invalidate the sink.
+-    SubtreeDependenciesTy SubtreeDeps;
+-    {
+-      SaveAndRestore<SubtreeDependenciesTy *> CollectInto(CollectedSubtreeDeps,
+-                                                          &SubtreeDeps);
+-
+-      // A walk that only records dependencies neither marks nor follows
+-      // references, so it cannot discover a new interconnection and cannot
+-      // fail.
+-      std::atomic<bool> HasNewInterconnectedCUs = false;
+-      [[maybe_unused]] bool Res = markDIEEntryAsKeptRec(
+-          Ref.Action, Ref.ReferencedBy, Ref.Subtree,
+-          InterCUProcessingWasStarted, HasNewInterconnectedCUs,
+-          TreeWalkKindTy::RecordSubtreeDeps);
+-      assert(Res && !HasNewInterconnectedCUs && "record-deps-only walk failed");
+-    }
+-
+-    SubtreeSummaries[Key] = std::move(SubtreeDeps);
+-  }
+-
+-  MaterializedRefs = SubtreeDependencyRefs.size();
+-}
+-
+-bool DependencyTracker::demoteIfIncomplete(
+-    const UnitEntryPairTy &Root,
+-    const DWARFDebugInfoEntry *ReferencedTypeDieEntry,
+-    const UnitEntryPairTy &ReferencedBy) {
+-  // Completeness must be checked against the actual referenced DIE, not its
+-  // enclosing root. A nested type can be demoted to plain DWARF while its
+-  // root stays in the type table, and a type-table DIE may only reference
+-  // DIEs that are themselves in the type table. Checking the root instead
+-  // leaves such a DIE in the type table, later tripping the type-unit
+-  // reference assertion in DIEAttributeCloner::cloneDieRefAttr.
+-  const DWARFDebugInfoEntry *ReferencedDieEntry =
+-      ReferencedTypeDieEntry ? ReferencedTypeDieEntry : Root.DieEntry;
+-  CompileUnit::DIEInfo &RootInfo = Root.CU->getDIEInfo(ReferencedDieEntry);
+-  CompileUnit::DIEInfo &ReferencedByInfo =
+-      ReferencedBy.CU->getDIEInfo(ReferencedBy.DieEntry);
+-
+-  if (RootInfo.needToPlaceInTypeTable() ||
+-      !ReferencedByInfo.needToPlaceInTypeTable())
+-    return false;
+-
+-  setPlainDwarfPlacementRec(ReferencedBy);
+-
+-  // FIXME: we probably need to update getKeepTypeChildren status for
+-  // parents of ReferencedBy.
+-  return true;
+-}
+-
+-bool DependencyTracker::applySubtreeSummaries() {
+-  bool HasNewDependency = false;
+-  for (const SubtreeDependencyRefTy &Ref : SubtreeDependencyRefs) {
+-    CompileUnit::DIEInfo &ReferencedByInfo =
+-        Ref.ReferencedBy.CU->getDIEInfo(Ref.ReferencedBy.DieEntry);
+-    if (!ReferencedByInfo.needToPlaceInTypeTable())
+-      continue;
+-
+-    SubtreeDependenciesKeyTy Key{Ref.Subtree.CU, Ref.Subtree.DieEntry,
+-                                 Ref.Action};
+-    auto Summary = SubtreeSummaries.find(Key);
+-    assert(Summary != SubtreeSummaries.end() && "subtree was not summarized");
+-
+-    // Demotion takes the root out of the type table, so no further dependency
+-    // of the same subtree can demote it again.
+-    for (const SubtreeDependencyTy &Dep : Summary->second) {
+-      if (demoteIfIncomplete(Dep.Root, Dep.ReferencedTypeDieEntry,
+-                             Ref.ReferencedBy)) {
+-        HasNewDependency = true;
+-        break;
+-      }
+-    }
+-  }
+-
+-  return HasNewDependency;
+-}
+-
+ bool DependencyTracker::updateDependenciesCompleteness() {
+-  materializeSubtreeSummaries();
+-
+   bool HasNewDependency = false;
+   for (LiveRootWorklistItemTy &Root : Dependencies) {
+     assert(Root.hasReferencedByOtherEntry() &&
+            "Root entry without dependency inside the dependencies list");
+ 
+-    if (demoteIfIncomplete(Root.getRootEntry(),
+-                           Root.getReferencedTypeDieEntry(),
+-                           Root.getReferencedByEntry()))
++    UnitEntryPairTy RootEntry = Root.getRootEntry();
++
++    // Completeness must be checked against the actual referenced DIE, not its
++    // enclosing root. A nested type can be demoted to plain DWARF while its
++    // root stays in the type table, and a type-table DIE may only reference
++    // DIEs that are themselves in the type table. Checking the root instead
++    // leaves such a DIE in the type table, later tripping the type-unit
++    // reference assertion in DIEAttributeCloner::cloneDieRefAttr.
++    const DWARFDebugInfoEntry *ReferencedDieEntry =
++        Root.getReferencedTypeDieEntry() ? Root.getReferencedTypeDieEntry()
++                                         : RootEntry.DieEntry;
++    CompileUnit::DIEInfo &RootInfo =
++        RootEntry.CU->getDIEInfo(ReferencedDieEntry);
++
++    UnitEntryPairTy ReferencedByEntry = Root.getReferencedByEntry();
++    CompileUnit::DIEInfo &ReferencedByInfo =
++        ReferencedByEntry.CU->getDIEInfo(ReferencedByEntry.DieEntry);
++
++    if (!RootInfo.needToPlaceInTypeTable() &&
++        ReferencedByInfo.needToPlaceInTypeTable()) {
+       HasNewDependency = true;
+-  }
++      setPlainDwarfPlacementRec(ReferencedByEntry);
+ 
+-  if (applySubtreeSummaries())
+-    HasNewDependency = true;
++      // FIXME: we probably need to update getKeepTypeChildren status for
++      // parents of *Root.ReferencedBy.
++    }
++  }
+ 
+   return HasNewDependency;
+ }
+@@ -593,7 +503,7 @@ getFinalPlacementForEntry(const UnitEntryPairTy &Entry,
+ bool DependencyTracker::markDIEEntryAsKeptRec(
+     LiveRootWorklistActionTy Action, const UnitEntryPairTy &RootEntry,
+     const UnitEntryPairTy &Entry, bool InterCUProcessingStarted,
+-    std::atomic<bool> &HasNewInterconnectedCUs, TreeWalkKindTy Kind) {
++    std::atomic<bool> &HasNewInterconnectedCUs, bool RecordDepsOnly) {
+   if (Entry.DieEntry->getAbbreviationDeclarationPtr() == nullptr)
+     return true;
+ 
+@@ -608,20 +518,24 @@ bool DependencyTracker::markDIEEntryAsKeptRec(
+           Placement == CompileUnit::PlainDwarf) &&
+          "Wrong kind of placement for ODR unavailable entry");
+ 
+-  if (!recordsDepsOnly(Kind) && !isChildrenAction(Action) &&
++  if (!RecordDepsOnly && !isChildrenAction(Action) &&
+       isAlreadyMarked(Entry, Placement)) {
+     // Entry (and its subtree) were already marked, possibly by a racing CU or
+     // another referencing root, and which one wins is non-deterministic. Skip
+-    // the redundant marking, but still record that this root carries the
+-    // dependencies the subtree contributes. Otherwise the recorded dependency
+-    // set depends on thread interleaving, the demotion fixpoint misses
+-    // demotions, and whole type subtrees are left in the artificial type unit
+-    // non-deterministically.
+-    recordSubtreeDependencies(Action, RootEntry, Entry);
+-    return true;
++    // the redundant marking, but re-walk the subtree in record-deps-only mode
++    // so this referencing root still contributes its outgoing completeness
++    // dependencies. Otherwise the recorded dependency set depends on thread
++    // interleaving, the demotion fixpoint misses demotions, and whole type
++    // subtrees are left in the artificial type unit non-deterministically.
++    // Recording extra dependencies is harmless: a dependency only triggers a
++    // demotion when the referenced type is actually placed in plain DWARF.
++    return markDIEEntryAsKeptRec(Action, RootEntry, Entry,
++                                 InterCUProcessingStarted,
++                                 HasNewInterconnectedCUs,
++                                 /*RecordDepsOnly=*/true);
+   }
+ 
+-  if (!recordsDepsOnly(Kind)) {
++  if (!RecordDepsOnly) {
+     // Mark current DIE as kept.
+     Info.setKeep();
+     // Marks compose monotonically so no interleaving loses an update: a general
+@@ -643,22 +557,14 @@ bool DependencyTracker::markDIEEntryAsKeptRec(
+     markParentsAsKeepingChildren(Entry);
+   }
+ 
+-  bool IsSubprogram = Entry.DieEntry->getTag() == dwarf::DW_TAG_subprogram;
+-  UnitEntryPairTy FinalRootEntry = IsSubprogram ? Entry : RootEntry;
+-
+-  // A subprogram becomes the root of everything found below it, so from here on
+-  // the dependencies name the subprogram instead of the root referencing the
+-  // walked subtree, and are the same for every such root.
+-  TreeWalkKindTy FinalKind =
+-      IsSubprogram && Kind == TreeWalkKindTy::RecordSubtreeDeps
+-          ? TreeWalkKindTy::RecordNestedSubprogramDeps
+-          : Kind;
++  UnitEntryPairTy FinalRootEntry =
++      Entry.DieEntry->getTag() == dwarf::DW_TAG_subprogram ? Entry : RootEntry;
+ 
+   // Analyse referenced DIEs.
+   bool Res = true;
+   if (!maybeAddReferencedRoots(Action, FinalRootEntry, Entry,
+                                InterCUProcessingStarted,
+-                               HasNewInterconnectedCUs, FinalKind))
++                               HasNewInterconnectedCUs, RecordDepsOnly))
+     Res = false;
+ 
+   // Return if we do not need to process children.
+@@ -723,9 +629,10 @@ bool DependencyTracker::markDIEEntryAsKeptRec(
+       } break;
+       }
+ 
+-      if (!markDIEEntryAsKeptRec(
+-              Action, FinalRootEntry, UnitEntryPairTy{Entry.CU, CurChild},
+-              InterCUProcessingStarted, HasNewInterconnectedCUs, FinalKind))
++      if (!markDIEEntryAsKeptRec(Action, FinalRootEntry,
++                                 UnitEntryPairTy{Entry.CU, CurChild},
++                                 InterCUProcessingStarted,
++                                 HasNewInterconnectedCUs, RecordDepsOnly))
+         Res = false;
+     }
+ 
+@@ -752,7 +659,7 @@ bool DependencyTracker::markDIEEntryAsKeptRec(
+ 
+     if (!markDIEEntryAsKeptRec(
+             Action, FinalRootEntry, UnitEntryPairTy{Entry.CU, CurChild},
+-            InterCUProcessingStarted, HasNewInterconnectedCUs, FinalKind))
++            InterCUProcessingStarted, HasNewInterconnectedCUs, RecordDepsOnly))
+       Res = false;
+   }
+ 
+@@ -810,40 +717,24 @@ bool DependencyTracker::isTypeTableCandidate(
+ bool DependencyTracker::maybeAddReferencedRoots(
+     LiveRootWorklistActionTy Action, const UnitEntryPairTy &RootEntry,
+     const UnitEntryPairTy &Entry, bool InterCUProcessingStarted,
+-    std::atomic<bool> &HasNewInterconnectedCUs, TreeWalkKindTy Kind) {
++    std::atomic<bool> &HasNewInterconnectedCUs, bool RecordDepsOnly) {
+   const auto *Abbrev = Entry.DieEntry->getAbbreviationDeclarationPtr();
+   if (Abbrev == nullptr)
+     return true;
+ 
+-  // A walk that only records dependencies does not schedule the referenced root
+-  // for marking. The completeness dependency is collected instead, so it
+-  // participates in the demotion fixpoint without triggering any
+-  // reference-following recursion.
++  // In record-deps-only mode the referenced root is not scheduled for marking.
++  // The completeness dependency is appended directly so it participates in the
++  // demotion fixpoint without triggering any reference-following recursion.
+   auto AddRoot = [&](LiveRootWorklistActionTy RootAction,
+                      const UnitEntryPairTy &Root,
+                      const DWARFDebugInfoEntry *ReferencedTypeDieEntry) {
+-    switch (Kind) {
+-    case TreeWalkKindTy::MarkTree:
+-      addActionToRootEntriesWorkList(RootAction, Root, RootEntry,
+-                                     ReferencedTypeDieEntry);
+-      return;
+-
+-    case TreeWalkKindTy::RecordSubtreeDeps:
+-      // The dependency belongs to whichever root references this subtree, so it
+-      // is summarized and applied to each of them in turn.
+-      assert(CollectedSubtreeDeps && "record-deps-only walk without a sink");
+-      CollectedSubtreeDeps->push_back(
+-          {RootAction, Root, ReferencedTypeDieEntry});
+-      return;
+-
+-    case TreeWalkKindTy::RecordNestedSubprogramDeps:
+-      // The dependency belongs to a subprogram nested inside the subtree, so it
+-      // is the same for every referencing root and recording it once is enough.
++    if (RecordDepsOnly) {
+       Dependencies.emplace_back(RootAction, Root, RootEntry,
+                                 ReferencedTypeDieEntry);
+       return;
+     }
+-    llvm_unreachable("Unknown TreeWalkKindTy enum");
++    addActionToRootEntriesWorkList(RootAction, Root, RootEntry,
++                                   ReferencedTypeDieEntry);
+   };
+ 
+   DWARFUnit &Unit = Entry.CU->getOrigUnit();
+@@ -876,7 +767,7 @@ bool DependencyTracker::maybeAddReferencedRoots(
+       // The reference could not be resolved yet. Recording dependencies
+       // happens only after marking has fully resolved interconnections, so skip
+       // it here. The scheduling path below handles the delayed-resolution case.
+-      if (recordsDepsOnly(Kind))
++      if (RecordDepsOnly)
+         continue;
+ 
+       // Delay resolving reference.
+diff --git a/llvm/lib/DWARFLinker/Parallel/DependencyTracker.h b/llvm/lib/DWARFLinker/Parallel/DependencyTracker.h
+index dbf67cce3..abf3ada44 100644
+--- a/llvm/lib/DWARFLinker/Parallel/DependencyTracker.h
++++ b/llvm/lib/DWARFLinker/Parallel/DependencyTracker.h
+@@ -10,7 +10,6 @@
+ #define LLVM_LIB_DWARFLINKER_PARALLEL_DEPENDENCYTRACKER_H
+ 
+ #include "DWARFLinkerCompileUnit.h"
+-#include "llvm/ADT/DenseMap.h"
+ #include "llvm/ADT/PointerIntPair.h"
+ #include "llvm/ADT/SmallVector.h"
+ 
+@@ -130,31 +129,6 @@ protected:
+     }
+   }
+ 
+-  /// What a tree walk does, and for a walk that only records dependencies,
+-  /// which root the dependencies it finds are recorded under. Only a
+-  /// DW_TAG_subprogram re-anchors that root, so the distinction cannot be
+-  /// recovered by comparing root entries: a walk of a subprogram subtree starts
+-  /// out anchored to the subprogram itself.
+-  enum class TreeWalkKindTy : uint8_t {
+-    /// Mark the tree as kept and schedule the roots it references.
+-    MarkTree,
+-
+-    /// Do not mark. Record the dependencies as belonging to whichever root
+-    /// references the walked subtree.
+-    RecordSubtreeDeps,
+-
+-    /// Do not mark. Record the dependencies as belonging to a subprogram inside
+-    /// the walked subtree, which makes them the same for every referencing
+-    /// root.
+-    RecordNestedSubprogramDeps,
+-  };
+-
+-  /// \returns true if the specified walk records dependencies instead of
+-  /// marking the tree.
+-  static bool recordsDepsOnly(TreeWalkKindTy Kind) {
+-    return Kind != TreeWalkKindTy::MarkTree;
+-  }
+-
+   /// Class keeping live worklist item data.
+   class LiveRootWorklistItemTy {
+   public:
+@@ -250,40 +224,6 @@ protected:
+ 
+   using RootEntriesListTy = SmallVector<LiveRootWorklistItemTy>;
+ 
+-  /// A completeness dependency of a subtree that belongs to whichever root
+-  /// references the subtree, which is not known while the subtree is walked.
+-  struct SubtreeDependencyTy {
+-    LiveRootWorklistActionTy Action;
+-    UnitEntryPairTy Root;
+-    const DWARFDebugInfoEntry *ReferencedTypeDieEntry;
+-  };
+-
+-  using SubtreeDependenciesTy = SmallVector<SubtreeDependencyTy>;
+-
+-  /// A subtree paired with the action it is walked with, which selects both the
+-  /// visited children and the action recorded for a reference.
+-  using SubtreeDependenciesKeyTy =
+-      std::tuple<CompileUnit *, const DWARFDebugInfoEntry *,
+-                 LiveRootWorklistActionTy>;
+-
+-  /// A root referencing an already-marked subtree, standing in for all of that
+-  /// subtree's dependencies. The subtree is walked when completeness is
+-  /// checked, once per subtree rather than once per referencing root, which is
+-  /// what keeps recording linear in the number of shared subtrees.
+-  ///
+-  /// Deferring the walk out of marking also keeps it off the state marking is
+-  /// still mutating. A walk that only records dependencies reads a DIE's ODR
+-  /// availability and whether it has an address, both settled before marking
+-  /// begins, and never the keep and placement bits that sibling units raise as
+-  /// they mark. Walking during marking would consult those bits through
+-  /// isAlreadyMarked and yield a result that depends on how the units
+-  /// interleave.
+-  struct SubtreeDependencyRefTy {
+-    UnitEntryPairTy Subtree;
+-    LiveRootWorklistActionTy Action;
+-    UnitEntryPairTy ReferencedBy;
+-  };
+-
+   /// This function navigates DIEs tree starting from specified \p Entry.
+   /// It puts found 'root DIE' into the worklist. The \p CollectLiveEntries
+   /// instructs to collect either live roots(like subprograms having live
+@@ -305,43 +245,16 @@ protected:
+   bool markCollectedLiveRootsAsKept(bool InterCUProcessingStarted,
+                                     std::atomic<bool> &HasNewInterconnectedCUs);
+ 
+-  /// Mark whole DIE tree as kept recursively. A walk that only records
+-  /// dependencies (see \p Kind) does not mark the tree. Instead its
+-  /// completeness dependencies are collected (see maybeAddReferencedRoots) so
+-  /// they can be applied to every root referencing the tree.
+-  /// \see materializeSubtreeSummaries.
++  /// Mark whole DIE tree as kept recursively. When \p RecordDepsOnly is set the
++  /// tree is not marked. Instead its completeness dependencies are recorded
++  /// (see maybeAddReferencedRoots). This is used to re-walk an already-marked
++  /// subtree so a racing referencing root still contributes its dependencies.
+   bool markDIEEntryAsKeptRec(LiveRootWorklistActionTy Action,
+                              const UnitEntryPairTy &RootEntry,
+                              const UnitEntryPairTy &Entry,
+                              bool InterCUProcessingStarted,
+                              std::atomic<bool> &HasNewInterconnectedCUs,
+-                             TreeWalkKindTy Kind = TreeWalkKindTy::MarkTree);
+-
+-  /// Record that \p RootEntry references the already-marked subtree \p Entry,
+-  /// and therefore carries the completeness dependencies of that subtree. The
+-  /// subtree itself is walked later, by materializeSubtreeSummaries().
+-  void recordSubtreeDependencies(LiveRootWorklistActionTy Action,
+-                                 const UnitEntryPairTy &RootEntry,
+-                                 const UnitEntryPairTy &Entry);
+-
+-  /// Walk every subtree that a recorded reference stands for, once per subtree
+-  /// and action, and summarize the dependencies it contributes. Called when
+-  /// completeness is checked, so that liveness marking and inter-unit reference
+-  /// resolution have settled and the summary no longer depends on the order the
+-  /// units were processed in.
+-  void materializeSubtreeSummaries();
+-
+-  /// Apply each summarized subtree's dependencies to every root recorded as
+-  /// referencing it.
+-  /// \returns true if any placement was updated.
+-  bool applySubtreeSummaries();
+-
+-  /// Demote \p ReferencedBy to plain DWARF if it may not stay in the type table
+-  /// while the DIE it references through \p Root is not placed there.
+-  /// \returns true if the placement was updated.
+-  bool demoteIfIncomplete(const UnitEntryPairTy &Root,
+-                          const DWARFDebugInfoEntry *ReferencedTypeDieEntry,
+-                          const UnitEntryPairTy &ReferencedBy);
++                             bool RecordDepsOnly = false);
+ 
+   /// Mark parents as keeping children.
+   void markParentsAsKeepingChildren(const UnitEntryPairTy &Entry);
+@@ -349,21 +262,20 @@ protected:
+   /// Mark whole DIE tree as placed in "PlainDwarf".
+   void setPlainDwarfPlacementRec(const UnitEntryPairTy &Entry);
+ 
+-  /// Check referenced DIEs and add them into the worklist. A walk that only
+-  /// records dependencies (see \p Kind) schedules nothing, so it triggers no
+-  /// reference-following recursion. Each dependency it finds is instead
+-  /// collected for the root that carries it, which is either whichever root
+-  /// references the walked subtree or a subprogram nested inside it. This is
+-  /// used when \p Entry was already marked by a racing CU/root: the marking and
+-  /// subtree are handled elsewhere, but the referencing root's dependencies
+-  /// must still be recorded so the completeness fixpoint sees a complete,
+-  /// order-independent dependency set.
++  /// Check referenced DIEs and add them into the worklist. When \p
++  /// RecordDepsOnly is set, the referenced roots are not scheduled for marking
++  /// (no new worklist items, hence no reference-following recursion). Instead
++  /// each completeness dependency is appended directly to \c Dependencies. This
++  /// is used when \p Entry was already marked by a racing CU/root: the marking
++  /// and subtree are handled elsewhere, but this referencing root's
++  /// dependencies must still be recorded so the completeness fixpoint sees a
++  /// complete, order-independent dependency set.
+   bool maybeAddReferencedRoots(LiveRootWorklistActionTy Action,
+                                const UnitEntryPairTy &RootEntry,
+                                const UnitEntryPairTy &Entry,
+                                bool InterCUProcessingStarted,
+                                std::atomic<bool> &HasNewInterconnectedCUs,
+-                               TreeWalkKindTy Kind = TreeWalkKindTy::MarkTree);
++                               bool RecordDepsOnly = false);
+ 
+   /// \returns true if \p DIEEntry can possibly be put into the artificial type
+   /// unit.
+@@ -385,25 +297,6 @@ protected:
+ 
+   /// List of entries dependencies.
+   RootEntriesListTy Dependencies;
+-
+-  /// Dependency summaries of already-marked subtrees, keyed by subtree and
+-  /// action. Filled once, when completeness is first checked.
+-  DenseMap<SubtreeDependenciesKeyTy, SubtreeDependenciesTy> SubtreeSummaries;
+-
+-  /// Roots referencing an already-marked subtree.
+-  SmallVector<SubtreeDependencyRefTy> SubtreeDependencyRefs;
+-
+-  /// Number of leading SubtreeDependencyRefs whose subtree is summarized.
+-  size_t MaterializedRefs = 0;
+-
+-  /// Where the walk in progress collects the dependencies that belong to the
+-  /// root referencing the walked subtree, or null when no such walk is in
+-  /// progress. Scoped by materializeSubtreeSummaries().
+-  SubtreeDependenciesTy *CollectedSubtreeDeps = nullptr;
+-
+-  /// Whether inter-unit references could be resolved during marking. Reused
+-  /// when the recorded subtrees are walked, which happens outside of marking.
+-  bool InterCUProcessingWasStarted = false;
+ };
+ 
+ } // end of namespace parallel
+diff --git a/llvm/lib/ExecutionEngine/JITLink/CompactUnwindSupport.h b/llvm/lib/ExecutionEngine/JITLink/CompactUnwindSupport.h
+index 9dae7e03f..e510ec391 100644
+--- a/llvm/lib/ExecutionEngine/JITLink/CompactUnwindSupport.h
++++ b/llvm/lib/ExecutionEngine/JITLink/CompactUnwindSupport.h
+@@ -478,8 +478,6 @@ private:
+     SmallVector<CompactUnwindRecord> NonUniqued = std::move(Records);
+     Records.reserve(NonUniqued.size());
+ 
+-    // Retain the final raw record: merging may remove it.
+-    LastFunction = NonUniqued.back().Fn;
+     Records.push_back(NonUniqued.front());
+     for (size_t I = 1; I != NonUniqued.size(); ++I) {
+       auto &Next = NonUniqued[I];
+@@ -559,13 +557,13 @@ private:
+     // Write the index array terminator.
+     {
+       auto FnEndDelta =
+-          LastFunction->getRange().End - CompactUnwindBase->getAddress();
++          Records.back().Fn->getRange().End - CompactUnwindBase->getAddress();
+ 
+       if (LLVM_UNLIKELY(!isUInt<32>(FnEndDelta)))
+         return make_error<JITLinkError>(
+             "In " + G.getName() + " " + UnwindInfoSectionName +
+             ", delta to end of functions  " +
+-            formatv("{0:x}", LastFunction->getRange().End) +
++            formatv("{0:x}", Records.back().Fn->getRange().End) +
+             " exceeds 32 bits");
+ 
+       cantFail(W.writeInteger<uint32_t>(FnEndDelta));
+@@ -690,7 +688,6 @@ private:
+ 
+   size_t NumLSDAs = 0;
+   size_t NumSecondLevelPages = 0;
+-  Symbol *LastFunction = nullptr;
+   SmallVector<Symbol *, MaxPersonalities> Personalities;
+   SmallVector<CompactUnwindRecord> Records;
+ };
+diff --git a/llvm/lib/Target/AArch64/AArch64SchedC1Ultra.td b/llvm/lib/Target/AArch64/AArch64SchedC1Ultra.td
+index f36cf50f4..f4abd2a96 100644
+--- a/llvm/lib/Target/AArch64/AArch64SchedC1Ultra.td
++++ b/llvm/lib/Target/AArch64/AArch64SchedC1Ultra.td
+@@ -174,7 +174,7 @@ class C1USMEStreamingSchedWrite<SchedWrite StreamingWrite,
+                                 SchedWrite SMEWrite>
+     : SchedWriteVariant<[
+         SchedVar<SMEMCStreamingSchedPred, [StreamingWrite]>,
+-        SchedVar<NoSchedPred,             [SMEWrite]>,
++        SchedVar<SMESchedPred,            [SMEWrite]>,
+       ]>;
+ 
+ // Detailed CME scheduling derived from the SME2 software optimization guide.
+diff --git a/llvm/lib/Target/LoongArch/LoongArchFloat32InstrInfo.td b/llvm/lib/Target/LoongArch/LoongArchFloat32InstrInfo.td
+index 27d5fa1fa..a3c37c306 100644
+--- a/llvm/lib/Target/LoongArch/LoongArchFloat32InstrInfo.td
++++ b/llvm/lib/Target/LoongArch/LoongArchFloat32InstrInfo.td
+@@ -232,9 +232,6 @@ def : PatFPSetcc<SETUNE, FCMP_CUNE_S, FPR32>;
+ def : PatFPSetcc<SETUO,  FCMP_CUN_S,  FPR32>;
+ def : PatFPSetcc<SETLT,  FCMP_CLT_S,  FPR32>;
+ 
+-def : Pat<(loongarch_brcond (GRLenVT 0), bb:$imm21), (BNEZ R0, bb:$imm21)>;
+-def : Pat<(loongarch_brcond (GRLenVT 1), bb:$imm21), (BEQZ R0, bb:$imm21)>;
+-
+ multiclass PatFPBrcond<CondCode cc, LAInst CmpInst, RegisterClass RegTy> {
+   def : Pat<(loongarch_brcond (NotBoolXor (GRLenVT (setcc RegTy:$fj, RegTy:$fk, cc))),
+                               bb:$imm21),
+diff --git a/llvm/lib/Target/LoongArch/LoongArchLASXInstrInfo.td b/llvm/lib/Target/LoongArch/LoongArchLASXInstrInfo.td
+index 449457425..a1d1e96fc 100644
+--- a/llvm/lib/Target/LoongArch/LoongArchLASXInstrInfo.td
++++ b/llvm/lib/Target/LoongArch/LoongArchLASXInstrInfo.td
+@@ -2333,21 +2333,15 @@ def : Pat<(v4i32 (sext_invec v16i8:$vj)),
+ def : Pat<(v4i32 (sext_invec v8i16:$vj)),
+           (v4i32 (EXTRACT_SUBREG (VEXT2XV_W_H (SUBREG_TO_REG v8i16:$vj, sub_128)),
+                                  sub_128))>;
+-def : Pat<(v8i16 (sext_invec v16i8:$vj)),
+-          (v8i16 (EXTRACT_SUBREG (VEXT2XV_H_B (SUBREG_TO_REG v16i8:$vj, sub_128)),
+-                                 sub_128))>;
+-
+ def : Pat<(v4i64 (sext_invec v32i8:$xj)), (v4i64 (VEXT2XV_D_B v32i8:$xj))>;
+ def : Pat<(v4i64 (sext_invec v16i16:$xj)), (v4i64 (VEXT2XV_D_H v16i16:$xj))>;
+ def : Pat<(v4i64 (sext_invec v8i32:$xj)), (v4i64 (VEXT2XV_D_W v8i32:$xj))>;
++def : Pat<(v8i16 (sext_invec v16i8:$vj)),
++          (v8i16 (EXTRACT_SUBREG (VEXT2XV_H_B (SUBREG_TO_REG v16i8:$vj, sub_128)),
++                                 sub_128))>;
++def : Pat<(v16i16 (sext_invec v32i8:$xj)), (v16i16 (VEXT2XV_H_B v32i8:$xj))>;
+ def : Pat<(v8i32 (sext_invec v32i8:$xj)), (v8i32 (VEXT2XV_W_B v32i8:$xj))>;
+ def : Pat<(v8i32 (sext_invec v16i16:$xj)), (v8i32 (VEXT2XV_W_H v16i16:$xj))>;
+-def : Pat<(v16i16 (sext_invec v32i8:$xj)), (v16i16 (VEXT2XV_H_B v32i8:$xj))>;
+-
+-def : Pat<(v4i64 (sext_invec v16i8:$vj)),
+-          (v4i64 (VEXT2XV_D_B (SUBREG_TO_REG v16i8:$vj, sub_128)))>;
+-def : Pat<(v4i64 (sext_invec v8i16:$vj)),
+-          (v4i64 (VEXT2XV_D_H (SUBREG_TO_REG v8i16:$vj, sub_128)))>;
+ def : Pat<(v8i32 (sext_invec v16i8:$vj)),
+           (v8i32 (VEXT2XV_W_B (SUBREG_TO_REG v16i8:$vj, sub_128)))>;
+ 
+@@ -2374,21 +2368,15 @@ def : Pat<(v4i32 (zext_invec v16i8:$vj)),
+ def : Pat<(v4i32 (zext_invec v8i16:$vj)),
+           (v4i32 (EXTRACT_SUBREG (VEXT2XV_WU_HU (SUBREG_TO_REG v8i16:$vj, sub_128)),
+                                  sub_128))>;
+-def : Pat<(v8i16 (zext_invec v16i8:$vj)),
+-          (v8i16 (EXTRACT_SUBREG (VEXT2XV_HU_BU (SUBREG_TO_REG v16i8:$vj, sub_128)),
+-                                 sub_128))>;
+-
+ def : Pat<(v4i64 (zext_invec v32i8:$xj)), (v4i64 (VEXT2XV_DU_BU v32i8:$xj))>;
+ def : Pat<(v4i64 (zext_invec v16i16:$xj)), (v4i64 (VEXT2XV_DU_HU v16i16:$xj))>;
+ def : Pat<(v4i64 (zext_invec v8i32:$xj)), (v4i64 (VEXT2XV_DU_WU v8i32:$xj))>;
++def : Pat<(v8i16 (zext_invec v16i8:$vj)),
++          (v8i16 (EXTRACT_SUBREG (VEXT2XV_HU_BU (SUBREG_TO_REG v16i8:$vj, sub_128)),
++                                 sub_128))>;
++def : Pat<(v16i16 (zext_invec v32i8:$xj)), (v16i16 (VEXT2XV_HU_BU v32i8:$xj))>;
+ def : Pat<(v8i32 (zext_invec v32i8:$xj)), (v8i32 (VEXT2XV_WU_BU v32i8:$xj))>;
+ def : Pat<(v8i32 (zext_invec v16i16:$xj)), (v8i32 (VEXT2XV_WU_HU v16i16:$xj))>;
+-def : Pat<(v16i16 (zext_invec v32i8:$xj)), (v16i16 (VEXT2XV_HU_BU v32i8:$xj))>;
+-
+-def : Pat<(v4i64 (zext_invec v16i8:$vj)),
+-          (v4i64 (VEXT2XV_DU_BU (SUBREG_TO_REG v16i8:$vj, sub_128)))>;
+-def : Pat<(v4i64 (zext_invec v8i16:$vj)),
+-          (v4i64 (VEXT2XV_DU_HU (SUBREG_TO_REG v8i16:$vj, sub_128)))>;
+ def : Pat<(v8i32 (zext_invec v16i8:$vj)),
+           (v8i32 (VEXT2XV_WU_BU (SUBREG_TO_REG v16i8:$vj, sub_128)))>;
+ 
+diff --git a/llvm/lib/Target/Mips/AsmParser/MipsAsmParser.cpp b/llvm/lib/Target/Mips/AsmParser/MipsAsmParser.cpp
+index 044437917..ebbab6b48 100644
+--- a/llvm/lib/Target/Mips/AsmParser/MipsAsmParser.cpp
++++ b/llvm/lib/Target/Mips/AsmParser/MipsAsmParser.cpp
+@@ -2958,11 +2958,11 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
+     }
+ 
+     bool IsPtr64 = ABI.ArePtrs64bit();
+-    bool IsLocalSym = Res.getAddSym()->isTemporary() ||
+-                      (getContext().isELF()
+-                           ? static_cast<const MCSymbolELF *>(Res.getAddSym())
+-                                     ->getBinding() == ELF::STB_LOCAL
+-                           : Res.getAddSym()->isInSection());
++    bool IsLocalSym =
++        Res.getAddSym()->isInSection() || Res.getAddSym()->isTemporary() ||
++        (getContext().isELF() &&
++         static_cast<const MCSymbolELF *>(Res.getAddSym())->getBinding() ==
++             ELF::STB_LOCAL);
+     // For O32, "$"-prefixed symbols are recognized as temporary while
+     // .L-prefixed symbols are not (InternalSymbolPrefix is "$"). Recognize ".L"
+     // manually.
+diff --git a/llvm/lib/Target/Mips/MipsISelDAGToDAG.cpp b/llvm/lib/Target/Mips/MipsISelDAGToDAG.cpp
+index 4e90d7804..367062432 100644
+--- a/llvm/lib/Target/Mips/MipsISelDAGToDAG.cpp
++++ b/llvm/lib/Target/Mips/MipsISelDAGToDAG.cpp
+@@ -224,55 +224,6 @@ bool MipsDAGToDAGISel::selectVecAddAsVecSubIfProfitable(SDNode *Node) {
+   return true;
+ }
+ 
+-void MipsDAGToDAGISel::PreprocessISelDAG() {
+-  // The generic DAG combiner folds
+-  //
+-  //   select C, (add $gp, %gp_rel(A)), (add $gp, %gp_rel(B))
+-  //
+-  // into
+-  //
+-  //   add $gp, (select C, %gp_rel(A), %gp_rel(B)).
+-  //
+-  // A GP-relative relocation is only selectable as an operand of the add.
+-  // Restore the original form before instruction selection so the relocation
+-  // is never selected on its own.
+-  bool MadeChange = false;
+-  for (SDNode &Node : llvm::make_early_inc_range(CurDAG->allnodes())) {
+-    if (Node.getOpcode() != ISD::ADD)
+-      continue;
+-
+-    SDValue Base = Node.getOperand(0);
+-    SDValue Sel = Node.getOperand(1);
+-    if (Base.getOpcode() == ISD::SELECT)
+-      std::swap(Base, Sel);
+-
+-    const auto *BaseReg = dyn_cast<RegisterSDNode>(Base);
+-    if (!BaseReg ||
+-        (BaseReg->getReg() != Mips::GP && BaseReg->getReg() != Mips::GP_64) ||
+-        Sel.getOpcode() != ISD::SELECT)
+-      continue;
+-
+-    SDValue TrueValue = Sel.getOperand(1);
+-    SDValue FalseValue = Sel.getOperand(2);
+-    if (TrueValue.getOpcode() != MipsISD::GPRel &&
+-        FalseValue.getOpcode() != MipsISD::GPRel)
+-      continue;
+-
+-    SDLoc DL(&Node);
+-    EVT VT = Node.getValueType(0);
+-    SDNodeFlags Flags = Node.getFlags();
+-    TrueValue = CurDAG->getNode(ISD::ADD, DL, VT, Base, TrueValue, Flags);
+-    FalseValue = CurDAG->getNode(ISD::ADD, DL, VT, Base, FalseValue, Flags);
+-    SDValue NewSel =
+-        CurDAG->getSelect(DL, VT, Sel.getOperand(0), TrueValue, FalseValue);
+-    CurDAG->ReplaceAllUsesOfValueWith(SDValue(&Node, 0), NewSel);
+-    MadeChange = true;
+-  }
+-
+-  if (MadeChange)
+-    CurDAG->RemoveDeadNodes();
+-}
+-
+ /// Select instructions not customized! Used for
+ /// expanded, promoted and normal instructions
+ void MipsDAGToDAGISel::Select(SDNode *Node) {
+diff --git a/llvm/lib/Target/Mips/MipsISelDAGToDAG.h b/llvm/lib/Target/Mips/MipsISelDAGToDAG.h
+index 1c9083552..f19d72d94 100644
+--- a/llvm/lib/Target/Mips/MipsISelDAGToDAG.h
++++ b/llvm/lib/Target/Mips/MipsISelDAGToDAG.h
+@@ -124,8 +124,6 @@ private:
+   /// add X, <-1, -1...> --> sub X, <1, 1...>
+   bool selectVecAddAsVecSubIfProfitable(SDNode *Node);
+ 
+-  void PreprocessISelDAG() override;
+-
+   void Select(SDNode *N) override;
+ 
+   virtual bool trySelect(SDNode *Node) = 0;
+diff --git a/llvm/lib/Target/Mips/MipsISelLowering.cpp b/llvm/lib/Target/Mips/MipsISelLowering.cpp
+index 5f5e5ba41..076ca3164 100644
+--- a/llvm/lib/Target/Mips/MipsISelLowering.cpp
++++ b/llvm/lib/Target/Mips/MipsISelLowering.cpp
+@@ -5002,23 +5002,9 @@ MipsTargetLowering::getRegisterByName(const char *RegName, LLT VT,
+   // 3. Get register.
+   if (regIdx >= 0 && regIdx < 32) {
+     const MCRegisterInfo *MRI = MF.getContext().getRegisterInfo();
+-    unsigned RegClassID = Mips::GPR32RegClassID;
+-    if (VT.isValid()) {
+-      if (VT.getSizeInBits() == 64) {
+-        if (!Subtarget.isGP64bit())
+-          report_fatal_error("64-bit registers not supported on 32-bit target");
+-        RegClassID = Mips::GPR64RegClassID;
+-      } else if (VT.getSizeInBits() == 32) {
+-        RegClassID = Mips::GPR32RegClassID;
+-      } else {
+-        report_fatal_error(Twine("Invalid register \"" + StringRef(RegName) +
+-                                 "\" for " + Twine(VT.getSizeInBits()) +
+-                                 "-bit type."));
+-      }
+-    } else if (Subtarget.isGP64bit()) {
+-      RegClassID = Mips::GPR64RegClassID;
+-    }
+-    const MCRegisterClass &RC = MRI->getRegClass(RegClassID);
++    const MCRegisterClass &RC = Subtarget.isGP64bit()
++                                    ? MRI->getRegClass(Mips::GPR64RegClassID)
++                                    : MRI->getRegClass(Mips::GPR32RegClassID);
+     return RC.getRegister(regIdx);
+   }
+ 
+diff --git a/llvm/lib/Target/Sparc/AsmParser/SparcAsmParser.cpp b/llvm/lib/Target/Sparc/AsmParser/SparcAsmParser.cpp
+index 7bc14b489..bab05f5e0 100644
+--- a/llvm/lib/Target/Sparc/AsmParser/SparcAsmParser.cpp
++++ b/llvm/lib/Target/Sparc/AsmParser/SparcAsmParser.cpp
+@@ -1477,7 +1477,6 @@ SparcAsmParser::parseSparcAsmOperand(std::unique_ptr<SparcOperand> &Op) {
+ 
+   case AsmToken::Plus:
+   case AsmToken::Minus:
+-  case AsmToken::Tilde:
+   case AsmToken::Integer:
+   case AsmToken::LParen:
+   case AsmToken::Dot:
+diff --git a/llvm/lib/Target/Sparc/SparcAsmPrinter.cpp b/llvm/lib/Target/Sparc/SparcAsmPrinter.cpp
+index 2979d78c5..84768bc45 100644
+--- a/llvm/lib/Target/Sparc/SparcAsmPrinter.cpp
++++ b/llvm/lib/Target/Sparc/SparcAsmPrinter.cpp
+@@ -66,7 +66,6 @@ public:
+                        const char *ExtraCode, raw_ostream &O) override;
+   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
+                              const char *ExtraCode, raw_ostream &O) override;
+-  void PrintSymbolOperand(const MachineOperand &MO, raw_ostream &O) override;
+ 
+   void LowerGETPCXAndEmitMCInsts(const MachineInstr *MI,
+                                  const MCSubtargetInfo &STI);
+@@ -418,17 +417,6 @@ void SparcAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
+   }
+ }
+ 
+-void SparcAsmPrinter::PrintSymbolOperand(const MachineOperand &MO,
+-                                         raw_ostream &O) {
+-  const unsigned RelType = MO.getTargetFlags();
+-  StringRef Specifier = Sparc::getSpecifierName(RelType);
+-  if (!Specifier.empty())
+-    O << '%' << Specifier << '(';
+-  AsmPrinter::PrintSymbolOperand(MO, O);
+-  if (!Specifier.empty())
+-    O << ')';
+-}
+-
+ void SparcAsmPrinter::printMemOperand(const MachineInstr *MI, int opNum,
+                                       raw_ostream &O) {
+   printOperand(MI, opNum, O);
+diff --git a/llvm/lib/Target/WebAssembly/WebAssemblyDebugValueManager.cpp b/llvm/lib/Target/WebAssembly/WebAssemblyDebugValueManager.cpp
+index 9ef300b14..abc022c18 100644
+--- a/llvm/lib/Target/WebAssembly/WebAssemblyDebugValueManager.cpp
++++ b/llvm/lib/Target/WebAssembly/WebAssemblyDebugValueManager.cpp
+@@ -15,9 +15,7 @@
+ #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+ #include "WebAssembly.h"
+ #include "WebAssemblyMachineFunctionInfo.h"
+-#include "llvm/ADT/DenseSet.h"
+ #include "llvm/CodeGen/MachineInstr.h"
+-#include "llvm/CodeGen/MachineRegisterInfo.h"
+ #include "llvm/IR/DebugInfoMetadata.h"
+ #include "llvm/IR/Function.h"
+ 
+@@ -37,35 +35,26 @@ WebAssemblyDebugValueManager::WebAssemblyDebugValueManager(MachineInstr *Def)
+ 
+   // Collect all the uses of this def.
+   MachineRegisterInfo &MRI = Def->getMF()->getRegInfo();
+-  MachineBasicBlock *MBB = Def->getParent();
+-  unsigned RemainingUses = 0;
+-  for (MachineInstr &MI : MRI.use_instructions(CurrentReg))
+-    if (MI.isDebugValue() && MI.getParent() == MBB)
+-      ++RemainingUses;
+-  if (RemainingUses == 0)
++  SmallVector<MachineInstr *, 2> Candidates;
++  for (MachineInstr &MI : MRI.use_instructions(CurrentReg)) {
++    if (MI.isDebugValue() && MI.getParent() == Def->getParent())
++      Candidates.push_back(&MI);
++  }
++  if (Candidates.empty())
+     return;
+ 
+-  // Scan forward to collect DBG_VALUEs in block order.
+-  // Scan backward at the same pace to account for earlier uses and stop once
+-  // all possible matches have been found.
+-  // Only the forward scan collects DBG_VALUEs.
+-  MachineBasicBlock::iterator Down = std::next(Def->getIterator()),
+-                              DownEnd = MBB->end(), Up = Def->getIterator(),
+-                              UpBegin = MBB->begin();
+-  while (RemainingUses > 0 && Down != DownEnd) {
+-    if (Down->isDebugValue()) {
+-      if (Down->hasDebugOperandForReg(CurrentReg)) {
+-        DbgValues.push_back(&*Down);
+-        --RemainingUses;
+-      }
+-    } else if (Down->definesRegister(CurrentReg, /*TRI=*/nullptr)) {
++  // To preserve the order of DBG_VALUEs and correctly handle non-SSA cases,
++  // we scan the BB as far as needed to find all candidates.
++  for (MachineBasicBlock::iterator MI = std::next(Def->getIterator()),
++                                   ME = Def->getParent()->end();
++       MI != ME; ++MI) {
++    // If another definition appears, stop
++    if (MI->definesRegister(CurrentReg, /*TRI=*/nullptr))
+       break;
+-    }
+-    ++Down;
+-    if (Up != UpBegin) {
+-      --Up;
+-      if (Up->isDebugValue() && Up->hasDebugOperandForReg(CurrentReg))
+-        --RemainingUses;
++    if (MI->isDebugValue() && MI->hasDebugOperandForReg(CurrentReg)) {
++      DbgValues.push_back(&*MI);
++      if (DbgValues.size() == Candidates.size())
++        break;
+     }
+   }
+ }
+@@ -90,67 +79,58 @@ WebAssemblyDebugValueManager::getSinkableDebugValues(
+     MachineInstr *Insert) const {
+   if (DbgValues.empty())
+     return {};
+-
+-  // If Def and Insert are in different BBs, we only handle a simple case in
+-  // which Insert's BB is a successor of Def's BB.
+-  if (Def->getParent() != Insert->getParent() &&
+-      !Def->getParent()->isSuccessor(Insert->getParent()))
+-    return {};
+-
+-  SmallDenseSet<DebugVariable, 4> OurVars;
+-  for (MachineInstr *DV : DbgValues)
+-    OurVars.insert(DebugVariable(DV->getDebugVariable(),
+-                                 DV->getDebugExpression(),
+-                                 DV->getDebugLoc()->getInlinedAt()));
+-
+-  SmallDenseMap<DebugVariable, SmallVector<MachineInstr *, 2>>
+-      SeenDbgVarToDbgValues;
+-  auto RecordDbgValue = [&](MachineInstr &MI) {
+-    if (!MI.isDebugValue())
+-      return;
+-    DebugVariable Var(MI.getDebugVariable(), MI.getDebugExpression(),
+-                      MI.getDebugLoc()->getInlinedAt());
+-    if (OurVars.contains(Var) && !llvm::is_contained(DbgValues, &MI))
+-      SeenDbgVarToDbgValues[Var].push_back(&MI);
+-  };
++  // DBG_VALUEs between Def and Insert
++  SmallVector<MachineInstr *, 8> DbgValuesInBetween;
+ 
+   if (Def->getParent() == Insert->getParent()) {
+-    // Search both ways to quickly determine whether Insert follows Def.
+-    // Only the forward scan collects DBG_VALUEs.
+-    MachineBasicBlock::iterator Down = std::next(Def->getIterator()),
+-                                DownEnd = Def->getParent()->end(),
+-                                Up = Def->getIterator(),
+-                                UpBegin = Def->getParent()->begin();
++    // When Def and Insert are within the same BB, check if Insert comes after
++    // Def, because we only support sinking.
+     bool DefFirst = false;
+-    while (Down != DownEnd || Up != UpBegin) {
+-      if (Down != DownEnd) {
+-        if (&*Down == Insert) {
+-          DefFirst = true;
+-          break;
+-        }
+-        RecordDbgValue(*Down);
+-        ++Down;
+-      }
+-      if (Up != UpBegin) {
+-        --Up;
+-        if (&*Up == Insert)
+-          break;
++    for (MachineBasicBlock::iterator MI = std::next(Def->getIterator()),
++                                     ME = Def->getParent()->end();
++         MI != ME; ++MI) {
++      if (&*MI == Insert) {
++        DefFirst = true;
++        break;
+       }
++      if (MI->isDebugValue())
++        DbgValuesInBetween.push_back(&*MI);
+     }
+     if (!DefFirst) // Not a sink
+       return {};
+ 
+   } else { // Def and Insert are in different BBs
++    // If Def and Insert are in different BBs, we only handle a simple case in
++    // which Insert's BB is a successor of Def's BB.
++    if (!Def->getParent()->isSuccessor(Insert->getParent()))
++      return {};
++
+     // Gather DBG_VALUEs between 'Def~Def BB's end' and
+     // 'Insert BB's begin~Insert'
+     for (MachineBasicBlock::iterator MI = std::next(Def->getIterator()),
+                                      ME = Def->getParent()->end();
+-         MI != ME; ++MI)
+-      RecordDbgValue(*MI);
++         MI != ME; ++MI) {
++      if (MI->isDebugValue())
++        DbgValuesInBetween.push_back(&*MI);
++    }
+     for (MachineBasicBlock::iterator MI = Insert->getParent()->begin(),
+                                      ME = Insert->getIterator();
+-         MI != ME; ++MI)
+-      RecordDbgValue(*MI);
++         MI != ME; ++MI) {
++      if (MI->isDebugValue())
++        DbgValuesInBetween.push_back(&*MI);
++    }
++  }
++
++  // Gather DebugVariables that are seen between Def and Insert, excluding our
++  // own DBG_VALUEs in DbgValues.
++  SmallDenseMap<DebugVariable, SmallVector<MachineInstr *, 2>>
++      SeenDbgVarToDbgValues;
++  for (auto *DV : DbgValuesInBetween) {
++    if (!llvm::is_contained(DbgValues, DV)) {
++      DebugVariable Var(DV->getDebugVariable(), DV->getDebugExpression(),
++                        DV->getDebugLoc()->getInlinedAt());
++      SeenDbgVarToDbgValues[Var].push_back(DV);
++    }
+   }
+ 
+   // Gather sinkable DBG_VALUEs. We should not sink a DBG_VALUE if there is
+diff --git a/llvm/lib/Target/X86/X86ISelLowering.cpp b/llvm/lib/Target/X86/X86ISelLowering.cpp
+index 9804cd78a..1183ad64f 100644
+--- a/llvm/lib/Target/X86/X86ISelLowering.cpp
++++ b/llvm/lib/Target/X86/X86ISelLowering.cpp
+@@ -9888,31 +9888,30 @@ static SDValue LowerAVXCONCAT_VECTORS(SDValue Op, const SDLoc &dl,
+   assert((ResVT.is256BitVector() || ResVT.is512BitVector()) &&
+          "Value type must be 256-/512-bit wide");
+ 
+-  SmallVector<SDValue, 4> Ops(Op->ops());
+-  unsigned NumSubElems = Ops[0].getSimpleValueType().getVectorNumElements();
+   unsigned NumOperands = Op.getNumOperands();
+-
+   unsigned NumFreezeUndef = 0;
+   unsigned NumZero = 0;
+   unsigned NumNonZero = 0;
+   unsigned NonZeros = 0;
+   SmallSet<SDValue, 4> Undefs;
+-  for (auto [I, SubVec] : enumerate(Ops)) {
++  for (unsigned i = 0; i != NumOperands; ++i) {
++    SDValue SubVec = Op.getOperand(i);
+     if (SubVec.isUndef())
+       continue;
+     if (ISD::isFreezeUndef(SubVec.getNode())) {
+-      // If the freeze(undef) has multiple uses then we must fold to zero.
+-      if (SubVec.hasOneUse()) {
+-        ++NumFreezeUndef;
+-      } else {
+-        ++NumZero;
+-        Undefs.insert(SubVec);
+-      }
+-    } else if (ISD::isBuildVectorAllZeros(SubVec.getNode())) {
++        // If the freeze(undef) has multiple uses then we must fold to zero.
++        if (SubVec.hasOneUse()) {
++          ++NumFreezeUndef;
++        } else {
++          ++NumZero;
++          Undefs.insert(SubVec);
++        }
++    }
++    else if (ISD::isBuildVectorAllZeros(SubVec.getNode()))
+       ++NumZero;
+-    } else {
+-      assert(I < sizeof(NonZeros) * CHAR_BIT); // Ensure the shift is in range.
+-      NonZeros |= 1 << I;
++    else {
++      assert(i < sizeof(NonZeros) * CHAR_BIT); // Ensure the shift is in range.
++      NonZeros |= 1 << i;
+       ++NumNonZero;
+     }
+   }
+@@ -9920,10 +9919,11 @@ static SDValue LowerAVXCONCAT_VECTORS(SDValue Op, const SDLoc &dl,
+   // If we have more than 2 non-zeros, build each half separately.
+   if (NumNonZero > 2) {
+     MVT HalfVT = ResVT.getHalfNumVectorElementsVT();
++    ArrayRef<SDUse> Ops = Op->ops();
+     SDValue Lo = DAG.getNode(ISD::CONCAT_VECTORS, dl, HalfVT,
+-                             ArrayRef<SDValue>(Ops).slice(0, NumOperands / 2));
++                             Ops.slice(0, NumOperands/2));
+     SDValue Hi = DAG.getNode(ISD::CONCAT_VECTORS, dl, HalfVT,
+-                             ArrayRef<SDValue>(Ops).slice(NumOperands / 2));
++                             Ops.slice(NumOperands/2));
+     return DAG.getNode(ISD::CONCAT_VECTORS, dl, ResVT, Lo, Hi);
+   }
+ 
+@@ -9937,12 +9937,14 @@ static SDValue LowerAVXCONCAT_VECTORS(SDValue Op, const SDLoc &dl,
+     DAG.ReplaceAllUsesWith(
+         U, getZeroVector(U.getSimpleValueType(), Subtarget, DAG, dl));
+ 
+-  for (auto [I, SubVec] : enumerate(Ops)) {
+-    if ((NonZeros & (1 << I)) == 0)
++  MVT SubVT = Op.getOperand(0).getSimpleValueType();
++  unsigned NumSubElems = SubVT.getVectorNumElements();
++  for (unsigned i = 0; i != NumOperands; ++i) {
++    if ((NonZeros & (1 << i)) == 0)
+       continue;
+ 
+-    Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, ResVT, Vec, SubVec,
+-                      DAG.getVectorIdxConstant(I * NumSubElems, dl));
++    Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, ResVT, Vec, Op.getOperand(i),
++                      DAG.getVectorIdxConstant(i * NumSubElems, dl));
+   }
+ 
+   return Vec;
+diff --git a/llvm/lib/Transforms/Utils/SCCPSolver.cpp b/llvm/lib/Transforms/Utils/SCCPSolver.cpp
+index 054d1765f..f7e28132e 100644
+--- a/llvm/lib/Transforms/Utils/SCCPSolver.cpp
++++ b/llvm/lib/Transforms/Utils/SCCPSolver.cpp
+@@ -1070,7 +1070,7 @@ void SCCPInstVisitor::pushToWorkList(Instruction *I) {
+   // same blocks that are after the current one, as they will be visited
+   // anyway. We do have to push updates to earlier instructions (e.g. phi
+   // nodes or loads of tracked globals).
+-  if (CurI && I->getParent() == CurI->getParent() && CurI->comesBefore(I))
++  if (CurI && I->getParent() == CurI->getParent() && !I->comesBefore(CurI))
+     return;
+   // Only push instructions in already visited blocks. Otherwise we'll handle
+   // it when we visit the block for the first time.
+diff --git a/llvm/lib/Transforms/Vectorize/SLPVectorizer.cpp b/llvm/lib/Transforms/Vectorize/SLPVectorizer.cpp
+index 0c4d92085..800913081 100644
+--- a/llvm/lib/Transforms/Vectorize/SLPVectorizer.cpp
++++ b/llvm/lib/Transforms/Vectorize/SLPVectorizer.cpp
+@@ -11753,9 +11753,6 @@ bool BoUpSLP::canBuildSplitNode(ArrayRef<Value *> VL,
+   if (VL.size() <= SmallNodeSize || TTI->preferAlternateOpcodeVectorization() ||
+       !SplitAlternateInstructions)
+     return false;
+-  // Split vectorization of struct types is not supported.
+-  if (isa<StructType>(getValueType(VL.front(), SLPReVec)))
+-    return false;
+ 
+   // Check if this is a duplicate of another split entry.
+   LLVM_DEBUG(dbgs() << "SLP: \tChecking bundle: " << *LocalState.getMainOp()
+@@ -13994,12 +13991,6 @@ unsigned BoUpSLP::getNumVectorInsts() const {
+       continue;
+     if (EU.User && EphValues.count(EU.User))
+       continue;
+-    // Vector-typed scalars are consumed as whole vectors, no extract
+-    // instruction is emitted for them.
+-    if (isVectorizedTy(EU.Scalar->getType()) &&
+-        (!SLPReVec ||
+-         (EU.E.hasState() && EU.E.getOpcode() == Instruction::InsertElement)))
+-      continue;
+     if (ExternalUsesAsOriginalScalar.contains(EU.Scalar))
+       continue;
+     if (!CountedExtracts.insert(EU.Scalar).second)
+@@ -19466,17 +19457,8 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
+     return Cost;
+   // The narrow non-profitable tree in loop? Skip, may cause regressions.
+   constexpr unsigned PartLimit = 2;
+-  // Measure the narrowness by the width the tree is vectorized at.
+-  const TreeEntry *RootTE = VectorizableTree.front().get();
+-  unsigned Sz;
+-  if (auto It = MinBWs.find(RootTE); It != MinBWs.end()) {
+-    Sz = It->second.first;
+-  } else {
+-    Sz = std::max<unsigned>(
+-        getVectorElementSize(RootTE->Scalars.front()),
+-        DL->getTypeSizeInBits(
+-            getValueType(RootTE->Scalars.front())->getScalarType()));
+-  }
++  const unsigned Sz =
++      getVectorElementSize(VectorizableTree.front()->Scalars.front());
+   const unsigned MinVF = getMinVF(Sz);
+   if (Cost >= -SLPCostThreshold &&
+       VectorizableTree.front()->Scalars.size() * PartLimit <= MinVF &&
+@@ -19963,35 +19945,32 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
+   // On AArch64, this helps in fusing a mov instruction, associated with
+   // extractelement, with fmul in the backend so that extractelement is free.
+   SmallVector<std::tuple<Value *, User *, int>, 4> ScalarUserAndIdx;
+-  // Record every external use: a missing entry is indistinguishable from
+-  // lane 0 and is priced as a free extract by the extract-fusion cost model.
+-  for (ExternalUser &EU : ExternalUses)
+-    ScalarUserAndIdx.emplace_back(EU.Scalar, EU.User, EU.Lane);
+-  // Detect external uses that drive address computations: the scalar (through
+-  // an optional single-use index-promotion cast) is used as a GEP index.
+   bool AllUsersGEPSWithStoresLoads = true;
++  SmallBitVector UsedLanes(VectorizableTree.front()->getVectorFactor());
+   SmallVector<const Value *> Pointers;
+   Type *UserScalarTy = nullptr;
+   for (ExternalUser &EU : ExternalUses) {
+-    Value *Usr = EU.User;
+-    if (Usr && match(Usr, m_OneUse(m_ZExtOrSExt(m_Value()))))
+-      Usr = cast<Instruction>(Usr)->user_back();
+-    auto *User = dyn_cast_if_present<GetElementPtrInst>(Usr);
+-    // Only a GEP that feeds a single load/store of a fixed access type drives
+-    // a real memory address computation.
+-    Type *AccessTy = nullptr;
+-    if (User && User->hasOneUse() &&
+-        isa<LoadInst, StoreInst>(User->user_back()))
+-      AccessTy = getValueType(User->user_back());
+-    if (AccessTy && !isa<ScalableVectorType>(AccessTy) &&
+-        (!UserScalarTy || UserScalarTy == AccessTy)) {
+-      UserScalarTy = AccessTy;
+-      Pointers.push_back(User);
+-    } else {
+-      AllUsersGEPSWithStoresLoads = false;
+-      break;
++    ScalarUserAndIdx.emplace_back(EU.Scalar, EU.User, EU.Lane);
++    if (EU.E.Idx == 0) {
++      UsedLanes.set(EU.Lane);
++      auto *User = dyn_cast_if_present<GetElementPtrInst>(EU.User);
++      if (User && User->hasOneUse() &&
++          isa<LoadInst, StoreInst>(User->user_back())) {
++        Type *LocalTy = getValueType(User->user_back());
++        if (!UserScalarTy && !isa<ScalableVectorType>(LocalTy)) {
++          UserScalarTy = LocalTy;
++        } else if (UserScalarTy != LocalTy) {
++          AllUsersGEPSWithStoresLoads = false;
++          break;
++        }
++        Pointers.push_back(User);
++      } else {
++        AllUsersGEPSWithStoresLoads = false;
++        break;
++      }
+     }
+   }
++  AllUsersGEPSWithStoresLoads &= UsedLanes.all();
+ 
+   // Pre-pass: for each externally-used scalar, find the basic block at which
+   // the extractelement will be placed by codegen. This mirrors what
+@@ -20368,18 +20347,30 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
+ 
+     ExtractCost += ExtraCost;
+   }
+-  // Charge the pointer-chain cost difference once when every escaped scalar
+-  // is used only to drive an address computation (see the detection loop
+-  // above). Vectorizing the tree in this pattern forces lane extracts (or a
+-  // vector GEP with unknown stride) to drive the address computation, which is
+-  // typically more expensive than keeping the indices scalar in a unit-stride
+-  // address chain. Add the delta once rather than per external use.
++  // Charge the pointer-chain cost difference once for the root entry when
++  // every external use of its scalars is a GEP feeding a single load/store
++  // (see the detection loop above). Vectorizing the root in this pattern
++  // forces lane extracts (or a vector GEP with unknown stride) to drive the
++  // address computation, which is typically more expensive than keeping the
++  // indices scalar in a unit-stride address chain. Add the delta once rather
++  // than per external use.
+   if (AllUsersGEPSWithStoresLoads && !Pointers.empty()) {
+     const TreeEntry &RootEntry = *VectorizableTree.front();
+-    const Value *CommonBase = getUnderlyingObject(Pointers.front());
+-    if (all_of(Pointers, [CommonBase](const Value *P) {
+-          return getUnderlyingObject(P) == CommonBase;
+-        })) {
++    const bool AnyRootKeptAsScalar = any_of(RootEntry.Scalars, [&](Value *V) {
++      return ExternalUsesAsOriginalScalar.contains(V);
++    });
++    const Value *CommonBase = nullptr;
++    bool HaveCommonBase = true;
++    for (const Value *P : Pointers) {
++      const Value *Op = getUnderlyingObject(P);
++      if (!CommonBase)
++        CommonBase = Op;
++      else if (CommonBase != Op) {
++        HaveCommonBase = false;
++        break;
++      }
++    }
++    if (!AnyRootKeptAsScalar && HaveCommonBase) {
+       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+       auto *VecTy = getWidenedType(UserScalarTy, RootEntry.Scalars.size());
+       InstructionCost ScalarGEPCost = TTI->getPointersChainCost(
+diff --git a/llvm/lib/Transforms/Vectorize/VectorCombine.cpp b/llvm/lib/Transforms/Vectorize/VectorCombine.cpp
+index a1dc1b4e9..864812522 100644
+--- a/llvm/lib/Transforms/Vectorize/VectorCombine.cpp
++++ b/llvm/lib/Transforms/Vectorize/VectorCombine.cpp
+@@ -6099,7 +6099,6 @@ bool VectorCombine::foldBitcastOfVPLoad(Instruction &I) {
+   if (NewCost > OldCost || !NewCost.isValid())
+     return false;
+ 
+-  Builder.SetInsertPoint(II);
+   unsigned Factor = NewVecCnt.getKnownScalarFactor(OrigVecCnt);
+   Value *NewEVL = Builder.CreateNUWMul(EVL, Builder.getInt32(Factor));
+   Value *NewMask = Builder.CreateVectorSplat(NewVecCnt, Builder.getTrue());
+diff --git a/llvm/test/CodeGen/Mips/cmov.ll b/llvm/test/CodeGen/Mips/cmov.ll
+index fba0526e7..ee60b353b 100644
+--- a/llvm/test/CodeGen/Mips/cmov.ll
++++ b/llvm/test/CodeGen/Mips/cmov.ll
+@@ -5,7 +5,6 @@
+ ; RUN: llc -mtriple=mips64el -mcpu=mips4                  -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,64-CMOV
+ ; RUN: llc -mtriple=mips64el -mcpu=mips64                 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,64-CMOV
+ ; RUN: llc -mtriple=mips64el -mcpu=mips64r6               -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,64-CMP
+-; RUN: llc -mtriple=mips -mcpu=mips32 -relocation-model=static -mgpopt -mattr=+noabicalls < %s | FileCheck %s -check-prefix=GPREL
+ 
+ @i1 = global [3 x i32] [i32 1, i32 2, i32 3], align 4
+ @i3 = common global ptr null, align 4
+@@ -52,11 +51,6 @@ entry:
+ 
+ ; ALL-LABEL: cmov2:
+ 
+-; GPREL-LABEL: cmov2:
+-; GPREL-DAG:   addiu $[[D:[0-9]+]], $gp, %gp_rel(d)
+-; GPREL-DAG:   addiu $[[C:[0-9]+]], $gp, %gp_rel(c)
+-; GPREL:       movn $[[D]], $[[C]], $4
+-
+ ; 32-CMOV-DAG:  addiu $[[R1:[0-9]+]], ${{[0-9]+}}, %got(d)
+ ; 32-CMOV-DAG:  addiu $[[R0:[0-9]+]], ${{[0-9]+}}, %got(c)
+ ; 32-CMOV-DAG:  movn  $[[R1]], $[[R0]], $4
+diff --git a/llvm/test/CodeGen/Mips/llvm-ir/select-globaladdr.ll b/llvm/test/CodeGen/Mips/llvm-ir/select-globaladdr.ll
+index a43525f4e..7e6a6b0db 100644
+--- a/llvm/test/CodeGen/Mips/llvm-ir/select-globaladdr.ll
++++ b/llvm/test/CodeGen/Mips/llvm-ir/select-globaladdr.ll
+@@ -10,10 +10,11 @@ define ptr @tst_select_ptr_ptr(i1 %tobool.not) {
+ ; MIPS64:       # %bb.0: # %entry
+ ; MIPS64-NEXT:    sll $1, $4, 0
+ ; MIPS64-NEXT:    andi $1, $1, 1
+-; MIPS64-NEXT:    daddiu $2, $gp, %gp_rel(.str)
+-; MIPS64-NEXT:    daddiu $3, $gp, %gp_rel(.str.1)
+-; MIPS64-NEXT:    jr $ra
++; MIPS64-NEXT:    daddiu $2, $zero, %gp_rel(.str)
++; MIPS64-NEXT:    daddiu $3, $zero, %gp_rel(.str.1)
+ ; MIPS64-NEXT:    movn $2, $3, $1
++; MIPS64-NEXT:    jr $ra
++; MIPS64-NEXT:    daddu $2, $gp, $2
+ entry:
+   %cond = select i1 %tobool.not, ptr @.str.1, ptr @.str
+   ret ptr %cond
+diff --git a/llvm/test/CodeGen/X86/intrinsic-cttz-elts.ll b/llvm/test/CodeGen/X86/intrinsic-cttz-elts.ll
+index a2f2ffdfd..65231c484 100644
+--- a/llvm/test/CodeGen/X86/intrinsic-cttz-elts.ll
++++ b/llvm/test/CodeGen/X86/intrinsic-cttz-elts.ll
+@@ -1,5 +1,4 @@
+ ; RUN: llc -mtriple=x86_64-unknown-unknown < %s | FileCheck %s
+-; RUN: llc -mtriple=x86_64-unknown-unknown -mattr=+avx512f < %s | FileCheck %s --check-prefix=AVX512
+ 
+ define i8 @ctz_v8i16(<8 x i16> %a) {
+ ; CHECK-LABEL: .LCPI0_0:
+@@ -30,26 +29,6 @@ define i8 @ctz_v8i16(<8 x i16> %a) {
+ ; CHECK-NEXT:    subl %ecx, %eax
+ ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+ ; CHECK-NEXT:    retq
+-;
+-; AVX512-LABEL: ctz_v8i16:
+-; AVX512:       # %bb.0:
+-; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+-; AVX512-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
+-; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
+-; AVX512-NEXT:    vpmovsxwq %xmm0, %zmm0
+-; AVX512-NEXT:    vptestmq %zmm0, %zmm0, %k1
+-; AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
+-; AVX512-NEXT:    vpmovdb %zmm0, %xmm0
+-; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+-; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
+-; AVX512-NEXT:    vpsrlw $8, %xmm0, %xmm1
+-; AVX512-NEXT:    vpminub %xmm1, %xmm0, %xmm0
+-; AVX512-NEXT:    vphminposuw %xmm0, %xmm0
+-; AVX512-NEXT:    vmovd %xmm0, %eax
+-; AVX512-NEXT:    addb $9, %al
+-; AVX512-NEXT:    # kill: def $al killed $al killed $eax
+-; AVX512-NEXT:    vzeroupper
+-; AVX512-NEXT:    retq
+   %res = call i8 @llvm.experimental.cttz.elts.i8.v8i16(<8 x i16> %a, i1 0)
+   ret i8 %res
+ }
+@@ -83,26 +62,6 @@ define i16 @ctz_v4i32(<4 x i32> %a) {
+ ; CHECK-NEXT:    subl %ecx, %eax
+ ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+ ; CHECK-NEXT:    retq
+-;
+-; AVX512-LABEL: ctz_v4i32:
+-; AVX512:       # %bb.0:
+-; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+-; AVX512-NEXT:    vptestmd %zmm0, %zmm0, %k0
+-; AVX512-NEXT:    kshiftlw $12, %k0, %k0
+-; AVX512-NEXT:    kshiftrw $12, %k0, %k1
+-; AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
+-; AVX512-NEXT:    vpmovdb %zmm0, %xmm0
+-; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+-; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
+-; AVX512-NEXT:    vpsrlw $8, %xmm0, %xmm1
+-; AVX512-NEXT:    vpminub %xmm1, %xmm0, %xmm0
+-; AVX512-NEXT:    vphminposuw %xmm0, %xmm0
+-; AVX512-NEXT:    vmovd %xmm0, %eax
+-; AVX512-NEXT:    addb $5, %al
+-; AVX512-NEXT:    movzbl %al, %eax
+-; AVX512-NEXT:    # kill: def $ax killed $ax killed $eax
+-; AVX512-NEXT:    vzeroupper
+-; AVX512-NEXT:    retq
+   %res = call i16 @llvm.experimental.cttz.elts.i16.v4i32(<4 x i32> %a, i1 0)
+   ret i16 %res
+ }
+@@ -138,130 +97,9 @@ define i8 @ctz_v8i16_poison(<8 x i16> %a) {
+ ; CHECK-NEXT:    subl %ecx, %eax
+ ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+ ; CHECK-NEXT:    retq
+-;
+-; AVX512-LABEL: ctz_v8i16_poison:
+-; AVX512:       # %bb.0:
+-; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+-; AVX512-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
+-; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
+-; AVX512-NEXT:    vpmovsxwq %xmm0, %zmm0
+-; AVX512-NEXT:    vptestmq %zmm0, %zmm0, %k1
+-; AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
+-; AVX512-NEXT:    vpmovdb %zmm0, %xmm0
+-; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+-; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
+-; AVX512-NEXT:    vpsrlw $8, %xmm0, %xmm1
+-; AVX512-NEXT:    vpminub %xmm1, %xmm0, %xmm0
+-; AVX512-NEXT:    vphminposuw %xmm0, %xmm0
+-; AVX512-NEXT:    vmovd %xmm0, %eax
+-; AVX512-NEXT:    addb $9, %al
+-; AVX512-NEXT:    # kill: def $al killed $al killed $eax
+-; AVX512-NEXT:    vzeroupper
+-; AVX512-NEXT:    retq
+   %res = call i8 @llvm.experimental.cttz.elts.i8.v8i16(<8 x i16> %a, i1 1)
+   ret i8 %res
+ }
+ 
+-define i32 @ctz_zero_v4i1() {
+-; CHECK-LABEL: ctz_zero_v4i1:
+-; CHECK:       # %bb.0:
+-; CHECK-NEXT:    movl $4, %eax
+-; CHECK-NEXT:    retq
+-;
+-; AVX512-LABEL: ctz_zero_v4i1:
+-; AVX512:       # %bb.0:
+-; AVX512-NEXT:    vphminposuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+-; AVX512-NEXT:    vmovd %xmm0, %eax
+-; AVX512-NEXT:    addb $5, %al
+-; AVX512-NEXT:    movzbl %al, %eax
+-; AVX512-NEXT:    retq
+-  %res = call i32 @llvm.experimental.cttz.elts.i32.v4i1(<4 x i1> zeroinitializer, i1 false)
+-  ret i32 %res
+-}
+-
+-define i32 @ctz_zero_v8i1() {
+-; CHECK-LABEL: ctz_zero_v8i1:
+-; CHECK:       # %bb.0:
+-; CHECK-NEXT:    movl $8, %eax
+-; CHECK-NEXT:    retq
+-;
+-; AVX512-LABEL: ctz_zero_v8i1:
+-; AVX512:       # %bb.0:
+-; AVX512-NEXT:    vphminposuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+-; AVX512-NEXT:    vmovd %xmm0, %eax
+-; AVX512-NEXT:    addb $9, %al
+-; AVX512-NEXT:    movzbl %al, %eax
+-; AVX512-NEXT:    retq
+-  %res = call i32 @llvm.experimental.cttz.elts.i32.v8i1(<8 x i1> zeroinitializer, i1 false)
+-  ret i32 %res
+-}
+-
+-; Irregular predicate vectors widen to a power-of-two number of lanes. The
+-; widened lanes must be active so an all-zero input returns the original lane
+-; count, without requiring an irregular INSERT_SUBVECTOR during legalization.
+-define i32 @ctz_zero_v17i1() {
+-; CHECK-LABEL: ctz_zero_v17i1:
+-; CHECK:       # %bb.0:
+-; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [84281096,16909060,84281096,16909060]
+-; CHECK-NEXT:    pmaxub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+-; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+-; CHECK-NEXT:    pmaxub %xmm0, %xmm1
+-; CHECK-NEXT:    movdqa %xmm1, %xmm0
+-; CHECK-NEXT:    psrld $16, %xmm0
+-; CHECK-NEXT:    pmaxub %xmm1, %xmm0
+-; CHECK-NEXT:    movdqa %xmm0, %xmm1
+-; CHECK-NEXT:    psrlw $8, %xmm1
+-; CHECK-NEXT:    pmaxub %xmm0, %xmm1
+-; CHECK-NEXT:    movd %xmm1, %eax
+-; CHECK-NEXT:    movb $16, %cl
+-; CHECK-NEXT:    subb %al, %cl
+-; CHECK-NEXT:    movzbl %cl, %eax
+-; CHECK-NEXT:    addl $16, %eax
+-; CHECK-NEXT:    retq
+-;
+-; AVX512-LABEL: ctz_zero_v17i1:
+-; AVX512:       # %bb.0:
+-; AVX512-NEXT:    vpmovzxbw {{.*#+}} xmm0 = [240,242,244,246,248,250,252,254]
+-; AVX512-NEXT:    vpminub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+-; AVX512-NEXT:    vphminposuw %xmm0, %xmm0
+-; AVX512-NEXT:    vmovd %xmm0, %eax
+-; AVX512-NEXT:    addb $17, %al
+-; AVX512-NEXT:    movzbl %al, %eax
+-; AVX512-NEXT:    addl $16, %eax
+-; AVX512-NEXT:    retq
+-  %res = call i32 @llvm.experimental.cttz.elts.i32.v17i1(<17 x i1> zeroinitializer, i1 false)
+-  ret i32 %res
+-}
+-
+-define i32 @ctz_zero_v31i1() {
+-; CHECK-LABEL: ctz_zero_v31i1:
+-; CHECK:       # %bb.0:
+-; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [16777216,16777216,16777216,16777216]
+-; CHECK-NEXT:    pmaxub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+-; CHECK-NEXT:    movdqa %xmm0, %xmm1
+-; CHECK-NEXT:    psrld $24, %xmm1
+-; CHECK-NEXT:    psrld $16, %xmm0
+-; CHECK-NEXT:    pmaxub %xmm1, %xmm0
+-; CHECK-NEXT:    movd %xmm0, %eax
+-; CHECK-NEXT:    movb $16, %cl
+-; CHECK-NEXT:    subb %al, %cl
+-; CHECK-NEXT:    movzbl %cl, %eax
+-; CHECK-NEXT:    addl $16, %eax
+-; CHECK-NEXT:    retq
+-;
+-; AVX512-LABEL: ctz_zero_v31i1:
+-; AVX512:       # %bb.0:
+-; AVX512-NEXT:    vpmovzxbw {{.*#+}} xmm0 = [255,255,255,255,255,255,255,254]
+-; AVX512-NEXT:    vpminub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+-; AVX512-NEXT:    vphminposuw %xmm0, %xmm0
+-; AVX512-NEXT:    vmovd %xmm0, %eax
+-; AVX512-NEXT:    addb $17, %al
+-; AVX512-NEXT:    movzbl %al, %eax
+-; AVX512-NEXT:    addl $16, %eax
+-; AVX512-NEXT:    retq
+-  %res = call i32 @llvm.experimental.cttz.elts.i32.v31i1(<31 x i1> zeroinitializer, i1 false)
+-  ret i32 %res
+-}
+-
+ declare i8 @llvm.experimental.cttz.elts.i8.v8i16(<8 x i16>, i1)
+ declare i16 @llvm.experimental.cttz.elts.i16.v4i32(<4 x i32>, i1)
+diff --git a/llvm/test/CodeGen/X86/vector-shuffle-combining-avx512f.ll b/llvm/test/CodeGen/X86/vector-shuffle-combining-avx512f.ll
+index ae6fa4298..3a83f0452 100644
+--- a/llvm/test/CodeGen/X86/vector-shuffle-combining-avx512f.ll
++++ b/llvm/test/CodeGen/X86/vector-shuffle-combining-avx512f.ll
+@@ -1194,46 +1194,3 @@ define <8 x i64> @PR179008(ptr %p0) {
+   %shuf = shufflevector <8 x i64> %load, <8 x i64> <i64 poison, i64 poison, i64 poison, i64 poison, i64 poison, i64 0, i64 0, i64 0>, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 13, i32 14, i32 15>
+   ret <8 x i64> %shuf
+ }
+-
+-define <16 x float> @PR218379(ptr %p0, ptr %p1) nounwind {
+-; X86-LABEL: PR218379:
+-; X86:       # %bb.0:
+-; X86-NEXT:    pushl %edi
+-; X86-NEXT:    pushl %esi
+-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+-; X86-NEXT:    calll 0
+-; X86-NEXT:    vmovaps %ymm0, %ymm0
+-; X86-NEXT:    vmovaps %zmm0, (%edi)
+-; X86-NEXT:    vmovaps %zmm0, (%esi)
+-; X86-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+-; X86-NEXT:    popl %esi
+-; X86-NEXT:    popl %edi
+-; X86-NEXT:    retl
+-;
+-; X64-LABEL: PR218379:
+-; X64:       # %bb.0:
+-; X64-NEXT:    pushq %r14
+-; X64-NEXT:    pushq %rbx
+-; X64-NEXT:    pushq %rax
+-; X64-NEXT:    movq %rsi, %rbx
+-; X64-NEXT:    movq %rdi, %r14
+-; X64-NEXT:    xorl %eax, %eax
+-; X64-NEXT:    callq *%rax
+-; X64-NEXT:    vmovaps %ymm0, %ymm0
+-; X64-NEXT:    vmovaps %zmm0, (%r14)
+-; X64-NEXT:    vmovaps %zmm0, (%rbx)
+-; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+-; X64-NEXT:    addq $8, %rsp
+-; X64-NEXT:    popq %rbx
+-; X64-NEXT:    popq %r14
+-; X64-NEXT:    retq
+-  %call = call <8 x float> null()
+-  %fr = freeze <8 x float> poison
+-  %shuffle = shufflevector <8 x float> %call, <8 x float> %fr, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+-  store <16 x float> %shuffle, ptr %p0
+-  %shuffle1 = shufflevector <8 x float> %call, <8 x float> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+-  store <16 x float> %shuffle1, ptr %p1
+-  %shuffle2 = shufflevector <8 x float> zeroinitializer, <8 x float> %fr, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
+-  ret <16 x float> %shuffle2
+-}
+diff --git a/llvm/test/Transforms/SLPVectorizer/AArch64/long-non-power-of-2.ll b/llvm/test/Transforms/SLPVectorizer/AArch64/long-non-power-of-2.ll
+index c6489c208..e1ca81edd 100644
+--- a/llvm/test/Transforms/SLPVectorizer/AArch64/long-non-power-of-2.ll
++++ b/llvm/test/Transforms/SLPVectorizer/AArch64/long-non-power-of-2.ll
+@@ -7,8 +7,6 @@ define i1 @test(ptr %arg, ptr %arg1, i64 %arg2, ptr %arg3) {
+ ; CHECK-NEXT:  [[BB:.*:]]
+ ; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr i8, ptr [[ARG1]], i64 [[ARG2]]
+ ; CHECK-NEXT:    [[GETELEMENTPTR4:%.*]] = getelementptr i8, ptr null, i64 0
+-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x ptr> <ptr null, ptr poison>, ptr [[ARG3]], i64 1
+-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, <2 x ptr> [[TMP2]], <2 x i64> <i64 -32, i64 -432>
+ ; CHECK-NEXT:    [[GETELEMENTPTR5:%.*]] = getelementptr i8, ptr null, i64 -32
+ ; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr i8, ptr [[ARG3]], i64 -440
+ ; CHECK-NEXT:    [[GETELEMENTPTR7:%.*]] = getelementptr i8, ptr [[ARG1]], i64 0
+@@ -30,8 +28,8 @@ define i1 @test(ptr %arg, ptr %arg1, i64 %arg2, ptr %arg3) {
+ ; CHECK-NEXT:    [[AND25:%.*]] = and i1 false, [[ICMP24]]
+ ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x ptr> <ptr poison, ptr poison, ptr null, ptr null>, ptr [[ARG]], i64 1
+ ; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x ptr> [[TMP0]], ptr [[GETELEMENTPTR7]], i64 0
+-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x ptr> [[TMP1]], <2 x ptr> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x ptr> <ptr poison, ptr poison, ptr null, ptr null>, <4 x ptr> [[TMP4]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
++; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x ptr> <ptr poison, ptr poison, ptr null, ptr null>, ptr [[GETELEMENTPTR5]], i64 0
++; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x ptr> [[TMP2]], ptr [[GETELEMENTPTR8]], i64 1
+ ; CHECK-NEXT:    [[TMP20:%.*]] = icmp ult <4 x ptr> [[TMP19]], [[TMP7]]
+ ; CHECK-NEXT:    [[ICMP58:%.*]] = icmp ult ptr [[GETELEMENTPTR]], null
+ ; CHECK-NEXT:    [[ICMP62:%.*]] = icmp ult ptr [[GETELEMENTPTR]], null
+diff --git a/llvm/test/Transforms/SLPVectorizer/X86/deleted-instructions-clear.ll b/llvm/test/Transforms/SLPVectorizer/X86/deleted-instructions-clear.ll
+index 94631869b..ae6da0913 100644
+--- a/llvm/test/Transforms/SLPVectorizer/X86/deleted-instructions-clear.ll
++++ b/llvm/test/Transforms/SLPVectorizer/X86/deleted-instructions-clear.ll
+@@ -7,7 +7,7 @@ define void @test(i32 %arg, i32 %arg1, i64 %arg2) {
+ ; CHECK-NEXT:  [[BB:.*]]:
+ ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> <i32 0, i32 0, i32 0, i32 poison>, i32 [[ARG]], i64 3
+ ; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <2 x i32> poison, i32 [[ARG1]], i64 0
+-; CHECK-NEXT:    [[TMP29:%.*]] = insertelement <2 x i32> <i32 0, i32 poison>, i32 [[ARG]], i64 1
++; CHECK-NEXT:    [[TMP28:%.*]] = shufflevector <2 x i32> [[TMP27]], <2 x i32> poison, <2 x i32> zeroinitializer
+ ; CHECK-NEXT:    br label %[[BB3:.*]]
+ ; CHECK:       [[BB3]]:
+ ; CHECK-NEXT:    [[TMP3:%.*]] = phi i64 [ 0, %[[BB3]] ], [ 0, %[[BB]] ]
+@@ -28,9 +28,9 @@ define void @test(i32 %arg, i32 %arg1, i64 %arg2) {
+ ; CHECK-NEXT:    [[OR11:%.*]] = or i32 [[TRUNC27]], 0
+ ; CHECK-NEXT:    [[TMP8:%.*]] = or <4 x i32> zeroinitializer, [[TMP2]]
+ ; CHECK-NEXT:    [[TMP9:%.*]] = mul <4 x i32> [[TMP5]], [[TMP8]]
+-; CHECK-NEXT:    [[TMP28:%.*]] = insertelement <2 x i32> [[TMP27]], i32 [[TRUNC28]], i64 1
++; CHECK-NEXT:    [[XOR38:%.*]] = xor i32 [[ARG]], [[TRUNC28]]
++; CHECK-NEXT:    [[TMP29:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[TRUNC19]], i64 0
+ ; CHECK-NEXT:    [[TMP14:%.*]] = xor <2 x i32> [[TMP28]], [[TMP29]]
+-; CHECK-NEXT:    [[XOR31:%.*]] = xor i32 [[ARG1]], [[TRUNC19]]
+ ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 0, 1
+ ; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <4 x i32> poison, i32 [[SHL]], i64 0
+ ; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <4 x i32> [[TMP23]], i32 [[TRUNC10]], i64 1
+@@ -38,9 +38,9 @@ define void @test(i32 %arg, i32 %arg1, i64 %arg2) {
+ ; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <4 x i32> [[TMP13]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 3>
+ ; CHECK-NEXT:    [[TMP26:%.*]] = xor <4 x i32> [[TMP11]], [[TMP25]]
+ ; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <4 x i32> [[TMP26]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+-; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <8 x i32> [[TMP24]], i32 [[XOR31]], i64 5
+ ; CHECK-NEXT:    [[TMP30:%.*]] = shufflevector <2 x i32> [[TMP14]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+-; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <8 x i32> [[TMP32]], <8 x i32> [[TMP30]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9>
++; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <8 x i32> [[TMP24]], <8 x i32> [[TMP30]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 8, i32 9, i32 7>
++; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <8 x i32> [[TMP15]], i32 [[XOR38]], i64 7
+ ; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <8 x i32> [[TMP16]], <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 5, i32 6, i32 7>
+ ; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <8 x i32> [[TMP17]], <8 x i32> poison, <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
+ ; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <4 x i32> [[TMP9]], <4 x i32> poison, <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+diff --git a/llvm/test/Transforms/SLPVectorizer/X86/multi-parent-instr-copyable-regular.ll b/llvm/test/Transforms/SLPVectorizer/X86/multi-parent-instr-copyable-regular.ll
+index 239bc9ed6..d7ba46ff4 100644
+--- a/llvm/test/Transforms/SLPVectorizer/X86/multi-parent-instr-copyable-regular.ll
++++ b/llvm/test/Transforms/SLPVectorizer/X86/multi-parent-instr-copyable-regular.ll
+@@ -9,23 +9,21 @@ define void @test(ptr %0, ptr %1, ptr %2, ptr %3, double %4, double %5) {
+ ; CHECK-NEXT:    [[TMP7:%.*]] = load double, ptr [[TMP1]], align 8
+ ; CHECK-NEXT:    [[TMP8:%.*]] = load double, ptr [[TMP0]], align 8
+ ; CHECK-NEXT:    [[TMP9:%.*]] = load double, ptr [[TMP2]], align 8
++; CHECK-NEXT:    [[TMP15:%.*]] = fmul double [[TMP9]], 0.000000e+00
++; CHECK-NEXT:    [[TMP16:%.*]] = fmul double [[TMP4]], 0.000000e+00
+ ; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x double> poison, double [[TMP4]], i64 0
+ ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x double> [[TMP19]], double [[TMP5]], i64 1
+ ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x double> [[TMP11]], <4 x double> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 0>
+ ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x double> <double 0.000000e+00, double 0.000000e+00, double 1.000000e+00, double poison>, double [[TMP4]], i64 3
+ ; CHECK-NEXT:    [[TMP14:%.*]] = fmul <4 x double> [[TMP12]], [[TMP13]]
+-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x double> poison, double [[TMP4]], i64 0
+-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <2 x double> [[TMP15]], double [[TMP9]], i64 1
+-; CHECK-NEXT:    [[TMP17:%.*]] = fmul <2 x double> [[TMP16]], zeroinitializer
+-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <2 x double> poison, double [[TMP9]], i64 0
+-; CHECK-NEXT:    [[TMP35:%.*]] = insertelement <2 x double> [[TMP18]], double [[TMP8]], i64 1
+-; CHECK-NEXT:    [[TMP20:%.*]] = fmul <2 x double> [[TMP35]], [[TMP17]]
++; CHECK-NEXT:    [[TMP17:%.*]] = fmul double [[TMP15]], [[TMP8]]
++; CHECK-NEXT:    [[TMP18:%.*]] = fmul double [[TMP9]], [[TMP16]]
+ ; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <4 x double> [[TMP12]], <4 x double> <double 1.000000e+00, double 1.000000e+00, double poison, double poison>, <4 x i32> <i32 4, i32 5, i32 0, i32 0>
+ ; CHECK-NEXT:    [[TMP22:%.*]] = fmul <4 x double> [[TMP12]], [[TMP21]]
+ ; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <4 x double> <double 0.000000e+00, double poison, double 1.000000e+00, double 0.000000e+00>, double [[TMP7]], i64 1
+ ; CHECK-NEXT:    [[TMP24:%.*]] = fmul <4 x double> [[TMP23]], [[TMP14]]
+-; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <2 x double> [[TMP20]], <2 x double> poison, <4 x i32> <i32 0, i32 poison, i32 1, i32 poison>
+-; CHECK-NEXT:    [[TMP26:%.*]] = shufflevector <4 x double> [[TMP24]], <4 x double> [[TMP25]], <4 x i32> <i32 4, i32 1, i32 6, i32 3>
++; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <4 x double> [[TMP24]], double [[TMP18]], i64 0
++; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <4 x double> [[TMP25]], double [[TMP17]], i64 2
+ ; CHECK-NEXT:    [[TMP27:%.*]] = shufflevector <4 x double> [[TMP26]], <4 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 2>
+ ; CHECK-NEXT:    [[TMP28:%.*]] = fmul <4 x double> [[TMP27]], zeroinitializer
+ ; CHECK-NEXT:    [[TMP29:%.*]] = fmul <4 x double> [[TMP22]], <double 1.000000e+00, double 1.000000e+00, double 0.000000e+00, double 0.000000e+00>
+diff --git a/llvm/test/Transforms/VectorCombine/RISCV/fold-vp-load.ll b/llvm/test/Transforms/VectorCombine/RISCV/fold-vp-load.ll
+index f94501d17..066ce0484 100644
+--- a/llvm/test/Transforms/VectorCombine/RISCV/fold-vp-load.ll
++++ b/llvm/test/Transforms/VectorCombine/RISCV/fold-vp-load.ll
+@@ -84,17 +84,3 @@ define <vscale x 32 x i1> @bitcast_vp_load_i1(ptr %p) {
+   %r = bitcast <vscale x 4 x i8> %l to <vscale x 32 x i1>
+   ret <vscale x 32 x i1> %r
+ }
+-
+-; Make sure we create the new vp.load in the same place
+-define <vscale x 8 x i16> @bitcast_vp_load_insertpoint(ptr %p) {
+-; CHECK-LABEL: define <vscale x 8 x i16> @bitcast_vp_load_insertpoint(
+-; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
+-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x i16> @llvm.vp.load.nxv8i16.p0(ptr align 16 [[P]], <vscale x 8 x i1> splat (i1 true), i32 4)
+-; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
+-; CHECK-NEXT:    ret <vscale x 8 x i16> [[R]]
+-;
+-  %l = call <vscale x 4 x i32> @llvm.vp.load(ptr %p, <vscale x 4 x i1> splat (i1 true), i32 2)
+-  store i32 0, ptr %p
+-  %r = bitcast <vscale x 4 x i32> %l to <vscale x 8 x i16>
+-  ret <vscale x 8 x i16> %r
+-}
+-- 
+2.53.0
+
