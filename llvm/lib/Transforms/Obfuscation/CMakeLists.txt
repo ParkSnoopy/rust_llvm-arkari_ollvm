@@ -6,6 +6,7 @@ add_llvm_component_library(LLVMObfuscation
   IndirectCall.cpp
   IndirectGlobalVariable.cpp
   Flattening.cpp
+  DummyCode.cpp
   StringEncryption.cpp
   LegacyLowerSwitch.cpp
   ConstantIntEncryption.cpp

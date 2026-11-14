@@ -4,6 +4,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Transforms/Obfuscation/ObfuscationOptions.h"
+#include "llvm/Transforms/Obfuscation/DummyCode.h"
 #include "llvm/IR/Module.h"
 
 
@@ -43,6 +44,13 @@ static cl::opt<uint32_t> LevelIndirectGV(
 static cl::opt<bool> EnableIRFlattening(
     "irobf-fla", cl::init(false), cl::NotHidden,
     cl::desc("Enable IR Control Flow Flattening Obfuscation."));
+
+static cl::opt<bool> EnableIRDummyCode(
+    "irobf-dummy", cl::init(false), cl::NotHidden,
+    cl::desc("Enable IR Dummy Code Route Obfuscation."));
+static cl::opt<uint32_t> LevelIRDummyCode(
+    "level-dummy", cl::init(0), cl::NotHidden,
+    cl::desc("Set IR Dummy Code Route Obfuscation Level."));
 
 
 static cl::opt<bool>
@@ -143,6 +151,7 @@ struct ObfuscationPassManager : public ModulePass {
     Opt->iCallOpt()->readOpt(EnableIndirectCall, LevelIndirectCall);
     Opt->indGvOpt()->readOpt(EnableIndirectGV, LevelIndirectGV);
     Opt->flaOpt()->readOpt(EnableIRFlattening);
+    Opt->dummyOpt()->readOpt(EnableIRDummyCode, LevelIRDummyCode);
     Opt->cseOpt()->readOpt(EnableIRStringEncryption);
     Opt->cieOpt()->readOpt(EnableIRConstantIntEncryption,
                            LevelIRConstantIntEncryption);
@@ -156,7 +165,7 @@ struct ObfuscationPassManager : public ModulePass {
 
     bool Changed = rewriteRustFingerprintStrings(M);
     if (EnableIndirectBr || EnableIndirectCall || EnableIndirectGV ||
-        EnableIRFlattening || EnableIRStringEncryption ||
+        EnableIRFlattening || EnableIRDummyCode || EnableIRStringEncryption ||
         EnableIRConstantIntEncryption || EnableIRConstantFPEncryption ||
         EnableRttiEraser || !ArkariConfigPath.empty()) {
       EnableIRObfuscation = true;
@@ -184,6 +193,7 @@ struct ObfuscationPassManager : public ModulePass {
 
     add(llvm::createIndirectCallPass(Options.get()));
     add(llvm::createFlatteningPass(pointerSize, Options.get()));
+    add(llvm::createDummyCodePass(Options.get()));
     add(llvm::createIndirectBranchPass(Options.get()));
 
     if (EnableRttiEraser || Options->rttiOpt()->isEnabled()) {

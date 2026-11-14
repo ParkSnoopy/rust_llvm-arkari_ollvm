@@ -41,6 +41,7 @@ gitGraph
 - `--irobf-cse` : C/Rust string encryption  
 - `--irobf-rust-strings` : Opt-in replacement of selected Rust string fingerprints before optimization and encryption (`core` → `base`, `alloc` → `arena`, `std` → `sys`, path component `rustc` → `build`)  
 - `--irobf-fla` : Control-flow flattening (procedure-related)  
+- `--irobf-dummy` : Dummy code routes that run randomly generated compute kernels behind opaque guards (`--level-dummy` 0-3 adds extra routes per basic block)  
 - `--irobf-cie` : Integer constant encryption  
 - `--irobf-cfe` : Floating-point constant encryption  
 

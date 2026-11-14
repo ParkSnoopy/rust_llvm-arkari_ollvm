@@ -76,6 +76,7 @@ protected:
   std::shared_ptr<ObfOpt> ICallOpt = nullptr;
   std::shared_ptr<ObfOpt> IndGvOpt = nullptr;
   std::shared_ptr<ObfOpt> FlaOpt = nullptr;
+  std::shared_ptr<ObfOpt> DummyOpt = nullptr;
   std::shared_ptr<ObfOpt> CseOpt = nullptr;
   std::shared_ptr<ObfOpt> CieOpt = nullptr;
   std::shared_ptr<ObfOpt> CfeOpt = nullptr;
@@ -90,6 +91,7 @@ public:
     allOpt.push_back(ICallOpt);
     allOpt.push_back(IndGvOpt);
     allOpt.push_back(FlaOpt);
+    allOpt.push_back(DummyOpt);
     allOpt.push_back(CseOpt);
     allOpt.push_back(CieOpt);
     allOpt.push_back(CfeOpt);
@@ -101,6 +103,7 @@ public:
                      const std::shared_ptr<ObfOpt> &iCallOpt,
                      const std::shared_ptr<ObfOpt> &indGvOpt,
                      const std::shared_ptr<ObfOpt> &flaOpt,
+                     const std::shared_ptr<ObfOpt> &dummyOpt,
                      const std::shared_ptr<ObfOpt> &cseOpt,
                      const std::shared_ptr<ObfOpt> &cieOpt,
                      const std::shared_ptr<ObfOpt> &cfeOpt,
@@ -109,6 +112,7 @@ public:
     this->ICallOpt = iCallOpt;
     this->IndGvOpt = indGvOpt;
     this->FlaOpt = flaOpt;
+    this->DummyOpt = dummyOpt;
     this->CseOpt = cseOpt;
     this->CieOpt = cieOpt;
     this->CfeOpt = cfeOpt;
@@ -120,6 +124,7 @@ public:
                            std::make_shared<ObfOpt>("icall"),
                            std::make_shared<ObfOpt>("indgv"),
                            std::make_shared<ObfOpt>("fla"),
+                           std::make_shared<ObfOpt>("dummy"),
                            std::make_shared<ObfOpt>("cse"),
                            std::make_shared<ObfOpt>("cie"),
                            std::make_shared<ObfOpt>("cfe"),
@@ -140,6 +145,10 @@ public:
 
   auto flaOpt() const {
     return FlaOpt;
+  }
+
+  auto dummyOpt() const {
+    return DummyOpt;
   }
 
   auto cseOpt() const {
