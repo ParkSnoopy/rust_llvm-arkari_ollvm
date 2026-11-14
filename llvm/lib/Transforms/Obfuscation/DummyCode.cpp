@@ -25,6 +25,31 @@ struct DummyCode : public FunctionPass {
   static char ID;
   ObfuscationOptions *ArgsOptions;
   std::mt19937_64 RNG;
+  bool Changed = false;
+
+  bool doFinalization(Module &M) override {
+    if (!Changed)
+      return false;
+    // Invalidate caller summaries too, including indirect call sites.
+    for (Function &F : M) {
+      if (F.isDeclaration())
+        continue;
+      F.removeFnAttr(Attribute::Memory);
+      F.removeFnAttr(Attribute::Speculatable);
+      F.removeFnAttr(Attribute::NoSync);
+      for (BasicBlock &BB : F)
+        for (Instruction &I : BB)
+          if (auto *Call = dyn_cast<CallBase>(&I)) {
+            if (Call->getCalledFunction() && Call->getCalledFunction()->isIntrinsic())
+              continue;
+            Call->removeFnAttr(Attribute::Memory);
+            Call->removeFnAttr(Attribute::Speculatable);
+            Call->removeFnAttr(Attribute::NoSync);
+          }
+    }
+    Changed = false;
+    return true;
+  }
 
   DummyCode(ObfuscationOptions *argsOptions) : FunctionPass(ID) {
     this->ArgsOptions = argsOptions;
@@ -116,13 +141,9 @@ Value *DummyCode::loopCount(IRBuilder<> &IRB, Value *Seed,
 // The optimizer cannot reason about the contents of a volatile load, so this
 // keeps the guards from ever being folded into a constant condition.
 Value *DummyCode::keyValue(IRBuilder<> &IRB, Module &M, IntegerType *IntPtrTy) {
-  auto *Key = M.getGlobalVariable("__rrea_dummy_key");
-  if (!Key) {
-    Key = new GlobalVariable(M, IntPtrTy, false, GlobalValue::PrivateLinkage,
-                             ConstantInt::get(IntPtrTy, RNG()),
-                             "__rrea_dummy_key");
-    Key->setAlignment(Align(IntPtrTy->getBitWidth() / 8));
-  }
+  auto *Key = new GlobalVariable(M, IntPtrTy, false, GlobalValue::PrivateLinkage,
+                                 ConstantInt::get(IntPtrTy, RNG()), "");
+  Key->setAlignment(M.getDataLayout().getABITypeAlign(IntPtrTy));
   // Freeze so a poison or undef value cannot make the guard undefined.
   return IRB.CreateFreeze(IRB.CreateLoad(IntPtrTy, Key, true, "dummy.seed"),
                           "dummy.seed");
@@ -136,7 +157,8 @@ Value *DummyCode::seedValue(IRBuilder<> &IRB, Function &F,
       return IRB.CreateFreeze(
           IRB.CreateIntCast(&Arg, IntPtrTy, false, "dummy.seed"), "dummy.seed");
     }
-    if (Ty->isPointerTy()) {
+    if (Ty->isPointerTy() &&
+        !F.getParent()->getDataLayout().isNonIntegralPointerType(Ty)) {
       return IRB.CreateFreeze(
           IRB.CreatePtrToInt(&Arg, IntPtrTy, "dummy.seed"), "dummy.seed");
     }
@@ -427,7 +449,8 @@ static bool canInsertRoute(BasicBlock &BB) {
 bool DummyCode::runOnFunction(Function &F) {
   const auto Opt = ArgsOptions->toObfuscate(ArgsOptions->dummyOpt(), &F);
   if (!Opt.isEnabled() || F.empty() || F.isIntrinsic() ||
-      F.isPresplitCoroutine() || F.hasFnAttribute(Attribute::Naked)) {
+      F.isPresplitCoroutine() || F.hasPersonalityFn() ||
+      F.hasFnAttribute(Attribute::Naked)) {
     return false;
   }
 
@@ -485,6 +508,7 @@ bool DummyCode::runOnFunction(Function &F) {
     StubIRB.CreateBr(Body);
   }
 
+  Changed = true;
   return true;
 }
 

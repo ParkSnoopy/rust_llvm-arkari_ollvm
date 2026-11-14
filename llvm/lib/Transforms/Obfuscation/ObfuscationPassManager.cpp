@@ -151,6 +151,8 @@ struct ObfuscationPassManager : public ModulePass {
     Opt->iCallOpt()->readOpt(EnableIndirectCall, LevelIndirectCall);
     Opt->indGvOpt()->readOpt(EnableIndirectGV, LevelIndirectGV);
     Opt->flaOpt()->readOpt(EnableIRFlattening);
+    if (LevelIRDummyCode > 3)
+      report_fatal_error("level-dummy must be between 0 and 3");
     Opt->dummyOpt()->readOpt(EnableIRDummyCode, LevelIRDummyCode);
     Opt->cseOpt()->readOpt(EnableIRStringEncryption);
     Opt->cieOpt()->readOpt(EnableIRConstantIntEncryption,
